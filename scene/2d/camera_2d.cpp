@@ -265,12 +265,12 @@ void Camera2D::_notification(int p_what) {
 			if (!is_inside_tree() || !get_tree()->is_editor_hint())
 				break;
 
-			if (screen_drawing_enabled == true) {
+			if (screen_drawing_enabled) {
 				Color area_axis_color(0.5, 0.42, 0.87, 0.63);
 				float area_axis_width = 1;
 				if (current == true) {
 					area_axis_width = 3;
-					area_axis_color = Color(0.5, 0.42, 0.87, 0.83);
+					area_axis_color.a = 0.83;
 				}
 
 				Transform2D inv_camera_transform = get_camera_transform().affine_inverse();
@@ -290,11 +290,11 @@ void Camera2D::_notification(int p_what) {
 				}
 			}
 
-			if (limit_drawing_enabled == true) {
+			if (limit_drawing_enabled) {
 				Color limit_drawing_color(1, 1, 0, 0.63);
 				float limit_drawing_width = 1;
 				if (current == true) {
-					limit_drawing_color = Color(1, 1, 0, 0.83);
+					limit_drawing_color.a = 0.83;
 					limit_drawing_width = 3;
 				}
 
@@ -312,12 +312,12 @@ void Camera2D::_notification(int p_what) {
 				}
 			}
 
-			if (margin_drawing_enabled == true) {
+			if (margin_drawing_enabled) {
 				Color margin_drawing_color(0, 1, 1, 0.63);
 				float margin_drawing_width = 1;
 				if (current == true) {
 					margin_drawing_width = 3;
-					margin_drawing_color = Color(0, 1, 1, 0.83);
+					margin_drawing_color.a = 0.83;
 				}
 
 				Transform2D inv_camera_transform = get_camera_transform().affine_inverse();
