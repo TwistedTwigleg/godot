@@ -68,13 +68,7 @@ public:
 class Skeleton3D : public Node3D {
 	GDCLASS(Skeleton3D, Node3D);
 
-private:
-	friend class SkinReference;
-
-	Set<SkinReference *> skin_bindings;
-
-	void _skin_changed();
-
+public:
 	struct Bone {
 		String name;
 
@@ -115,6 +109,13 @@ private:
 #endif // _3D_DISABLED
 		}
 	};
+
+private:
+	friend class SkinReference;
+
+	Set<SkinReference *> skin_bindings;
+
+	void _skin_changed();
 
 	bool animate_physical_bones;
 	Vector<Bone> bones;
@@ -186,6 +187,10 @@ public:
 
 	void clear_bones();
 
+	// these functions are for the editor gizmo
+	Bone get_bone_raw_struct(int p_bone);
+	void set_bone_raw_struct(int p_bone, Bone p_bone_struct);
+
 	// posing api
 
 	void set_bone_pose(int p_bone, const Transform &p_pose);
@@ -200,6 +205,10 @@ public:
 
 	Ref<SkinReference> register_skin(const Ref<Skin> &p_skin);
 
+	// Helper functions
+	Transform bone_transform_to_world_transform(Transform p_transform);
+	Transform world_transform_to_bone_transform(Transform p_transform);
+
 #ifndef _3D_DISABLED
 	// Physical bone API
 
@@ -213,7 +222,7 @@ public:
 	PhysicalBone3D *get_physical_bone_parent(int p_bone);
 
 private:
-	/// This is a slow API os it's cached
+	/// This is a slow API, so it's cached
 	PhysicalBone3D *_get_physical_bone_parent(int p_bone);
 	void _rebuild_physical_bones_cache();
 
