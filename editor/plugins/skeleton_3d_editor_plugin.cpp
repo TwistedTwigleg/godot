@@ -188,10 +188,10 @@ Transform BoneTransformEditor::compute_transform_from_vector3s() const {
 	prop_rotation.z = Math::deg2rad(prop_rotation.z);
 
 	return Transform(
-		Basis(
-			prop_rotation,
-			scale_property->get_vector()),
-		translation_property->get_vector());
+			Basis(
+					prop_rotation,
+					scale_property->get_vector()),
+			translation_property->get_vector());
 }
 
 void BoneTransformEditor::_value_changed_transform(const String p_property_name, const Transform p_transform, const StringName p_edited_property_name, const bool p_boolean) {

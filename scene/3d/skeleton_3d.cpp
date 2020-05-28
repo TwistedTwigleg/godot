@@ -565,13 +565,11 @@ void Skeleton3D::clear_bones() {
 	_make_dirty();
 }
 
-Skeleton3D::Bone Skeleton3D::get_bone_raw_struct(int p_bone)
-{
+Skeleton3D::Bone Skeleton3D::get_bone_raw_struct(int p_bone) {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Bone());
 	return bones[p_bone];
 }
-void Skeleton3D::set_bone_raw_struct(int p_bone, Skeleton3D::Bone p_bone_struct)
-{
+void Skeleton3D::set_bone_raw_struct(int p_bone, Skeleton3D::Bone p_bone_struct) {
 	ERR_FAIL_INDEX(p_bone, bones.size());
 	bones.write[p_bone] = p_bone_struct;
 	_make_dirty();
@@ -868,15 +866,13 @@ Ref<SkinReference> Skeleton3D::register_skin(const Ref<Skin> &p_skin) {
 }
 
 // helper functions
-Transform Skeleton3D::bone_transform_to_world_transform(Transform p_bone_transform)
-{
+Transform Skeleton3D::bone_transform_to_world_transform(Transform p_bone_transform) {
 	Transform return_val = Transform();
 	return_val.origin = get_global_transform().xform(p_bone_transform.origin);
 	return_val.basis = get_global_transform().basis * p_bone_transform.basis;
 	return return_val;
 }
-Transform Skeleton3D::world_transform_to_bone_transform(Transform p_world_transform)
-{
+Transform Skeleton3D::world_transform_to_bone_transform(Transform p_world_transform) {
 	Transform return_val = Transform();
 	return_val.origin = get_global_transform().affine_inverse().xform(p_world_transform.origin);
 	return_val.basis = get_global_transform().affine_inverse().basis * p_world_transform.basis;
@@ -958,4 +954,3 @@ Skeleton3D::~Skeleton3D() {
 		E->get()->skeleton_node = nullptr;
 	}
 }
-

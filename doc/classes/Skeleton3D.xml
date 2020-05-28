@@ -37,7 +37,9 @@
 			<argument index="0" name="bone_transform" type="Transform">
 			</argument>
 			<description>
-				Takes the given bone pose/transform and converts it to a world transform.
+				Takes the given bone pose/transform and converts it to a world transform, relative to the [Skeleton3D] node.
+				
+				This is useful for using the bone transform in calculations with transforms from [Node3D]-based nodes.
 			</description>
 		</method>
 		<method name="clear_bones">
@@ -157,7 +159,7 @@
 			</argument>
 			<description>
 				Adds a collision exception to the physical bone.
-				Works just like the [RigidBody] node.
+				Works just like the [RigidBody3D] node.
 			</description>
 		</method>
 		<method name="physical_bones_remove_collision_exception">
@@ -167,7 +169,7 @@
 			</argument>
 			<description>
 				Removes a collision exception to the physical bone.
-				Works just like the [RigidBody] node.
+				Works just like the [RigidBody3D] node.
 			</description>
 		</method>
 		<method name="physical_bones_start_simulation">
@@ -176,7 +178,7 @@
 			<argument index="0" name="bones" type="StringName[]" default="[  ]">
 			</argument>
 			<description>
-				Tells the [PhysicalBone] nodes in the Skeleton to start simulating and reacting to the physics world.
+				Tells the [PhysicalBone3D] nodes in the Skeleton to start simulating and reacting to the physics world.
 				Optionally, a list of bone names can be passed-in, allowing only the passed-in bones to be simulated.
 			</description>
 		</method>
@@ -184,7 +186,7 @@
 			<return type="void">
 			</return>
 			<description>
-				Tells the [PhysicalBone] nodes in the Skeleton to stop simulating.
+				Tells the [PhysicalBone3D] nodes in the Skeleton to stop simulating.
 			</description>
 		</method>
 		<method name="register_skin">
@@ -204,10 +206,10 @@
 			<argument index="1" name="custom_pose" type="Transform">
 			</argument>
 			<description>
-				Sets the custom pose transform, [code]custom_pose[/code], for the bone at [code]bone_idx[/code].
+				Sets the custom pose transform, [code]custom_pose[/code], for the bone at [code]bone_idx[/code]. This pose is an addition to the bone rest pose.
 
 				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_bone_transform]
-				to convert a Spatial transform to bone space.
+				to convert a world transform, lkie one you can get from a [Node3D], to bone space.
 			</description>
 		</method>
 		<method name="set_bone_disable_rest">
@@ -238,7 +240,7 @@
 				[code]persistent[/code] determines if the applied pose will remain.
 
 				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_bone_transform]
-				to convert a [Spatial] transform to bone space.
+				to convert a world transform, lkie one you can get from a [Node3D], to bone space.
 			</description>
 		</method>
 		<method name="set_bone_parent">
@@ -263,8 +265,8 @@
 			<description>
 				Returns the pose transform for bone [code]bone_idx[/code].
 
-				[b]Note[/b]: The returned pose transform is in bone space. Use [method bone_transform_to_world_transform] to convert the
-				transform to world space, so it can be used like a [class Spatial] transform.
+				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_bone_transform]
+				to convert a world transform, lkie one you can get from a [Node3D], to bone space.
 			</description>
 		</method>
 		<method name="set_bone_rest">
@@ -304,7 +306,9 @@
 			<argument index="0" name="world_transform" type="Transform">
 			</argument>
 			<description>
-				Takes the given world transform and converts it to a  bone pose/transform.
+				Takes the given world transform, relative to the [Skeleton3D], and converts it to a bone pose/transform.
+
+				This is useful for using setting bone poses using transforms from [Node3D]-based nodes.
 			</description>
 		</method>
 	</methods>
