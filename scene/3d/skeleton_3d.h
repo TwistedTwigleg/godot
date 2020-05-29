@@ -68,7 +68,9 @@ public:
 class Skeleton3D : public Node3D {
 	GDCLASS(Skeleton3D, Node3D);
 
-public:
+private:
+	friend class SkinReference;
+
 	struct Bone {
 		String name;
 
@@ -109,9 +111,6 @@ public:
 #endif // _3D_DISABLED
 		}
 	};
-
-private:
-	friend class SkinReference;
 
 	Set<SkinReference *> skin_bindings;
 
@@ -186,10 +185,6 @@ public:
 	void get_bound_child_nodes_to_bone(int p_bone, List<Node *> *p_bound) const;
 
 	void clear_bones();
-
-	// these functions are for the editor gizmo
-	Bone get_bone_raw_struct(int p_bone);
-	void set_bone_raw_struct(int p_bone, Bone p_bone_struct);
 
 	// posing api
 

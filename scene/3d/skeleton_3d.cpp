@@ -565,16 +565,6 @@ void Skeleton3D::clear_bones() {
 	_make_dirty();
 }
 
-Skeleton3D::Bone Skeleton3D::get_bone_raw_struct(int p_bone) {
-	ERR_FAIL_INDEX_V(p_bone, bones.size(), Bone());
-	return bones[p_bone];
-}
-void Skeleton3D::set_bone_raw_struct(int p_bone, Skeleton3D::Bone p_bone_struct) {
-	ERR_FAIL_INDEX(p_bone, bones.size());
-	bones.write[p_bone] = p_bone_struct;
-	_make_dirty();
-}
-
 // posing api
 
 void Skeleton3D::set_bone_pose(int p_bone, const Transform &p_pose) {
