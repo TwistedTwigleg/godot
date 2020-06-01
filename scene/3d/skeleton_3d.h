@@ -143,6 +143,7 @@ private:
 
 	bool skeleton_modifications_enabled;
 	float skeleton_modification_strength;
+	int skeleton_modifications_count;
 
 	void _make_dirty();
 	bool dirty;
@@ -240,6 +241,9 @@ public:
 	bool get_skeleton_modifications_enabled();
 	void set_skeleton_modification_strength(float p_strength);
 	float get_skeleton_modification_strength();
+
+	void set_modification_count(int p_count);
+	int get_modification_count();
 
 	void set_bone_modification(int p_bone, const Transform &p_modification);
 	Transform get_bone_modification(int p_bone) const;

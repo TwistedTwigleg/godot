@@ -192,6 +192,10 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 		p_list->push_back(PropertyInfo(Variant::TRANSFORM, prep + "pose", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
 		p_list->push_back(PropertyInfo(Variant::ARRAY, prep + "bound_children", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
 	}
+
+	for (int i = 0; i < modifications.size(); i++) {
+		p_list->push_back(PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i), PROPERTY_HINT_RESOURCE_TYPE, "SkeletonModification3D", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
+	}
 }
 
 void Skeleton3D::_update_process_order() {
@@ -953,6 +957,15 @@ Transform Skeleton3D::get_bone_modification(int p_bone) const {
 	return bones[p_bone].modification_pose;
 }
 
+int Skeleton3D::get_modification_count() {
+	return modifications.size();
+}
+
+void Skeleton3D::set_modification_count(int p_count) {
+	modifications.resize(p_count);
+	_change_notify();
+}
+
 void Skeleton3D::execute_modifications() {
 	if (!skeleton_modifications_enabled)
 		return;
@@ -1026,15 +1039,18 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_skeleton_modifications_enabled"), &Skeleton3D::get_skeleton_modifications_enabled);
 	ClassDB::bind_method(D_METHOD("set_skeleton_modification_strength", "strength"), &Skeleton3D::set_skeleton_modification_strength);
 	ClassDB::bind_method(D_METHOD("get_skeleton_modification_strength"), &Skeleton3D::get_skeleton_modification_strength);
+	ClassDB::bind_method(D_METHOD("set_modification_count", "count"), &Skeleton3D::set_modification_count);
+	ClassDB::bind_method(D_METHOD("get_modification_count"), &Skeleton3D::get_modification_count);
 	ClassDB::bind_method(D_METHOD("execute_modifications"), &Skeleton3D::execute_modifications);
 
 	// Register the modifications class
 	ClassDB::register_class<SkeletonModification3D>();
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");
-	ADD_GROUP("Modifications", "");
+	ADD_GROUP("Modification Options", "Modification_Options");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skeleton_modifications_enabled"), "set_skeleton_modifications_enabled", "get_skeleton_modifications_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "skeleton_modification_strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_skeleton_modification_strength", "get_skeleton_modification_strength");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "skeleton_modifications_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
 
 #endif // _3D_DISABLED
 
@@ -1052,6 +1068,7 @@ Skeleton3D::Skeleton3D() {
 	process_order_dirty = true;
 	skeleton_modifications_enabled = false;
 	skeleton_modification_strength = 0;
+	skeleton_modifications_count = 0;
 }
 
 Skeleton3D::~Skeleton3D() {
