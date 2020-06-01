@@ -65,6 +65,24 @@ public:
 	~SkinReference();
 };
 
+class SkeletonModification3D : public Resource {
+	GDCLASS(SkeletonModification3D, Resource);
+
+    Skeleton3D *skeleton;
+    bool enabled;
+
+protected:
+	static void _bind_methods();
+
+public:
+    virtual void execute();
+
+    void set_enabled(bool p_enabled);
+    bool get_enabled();
+
+	SkeletonModification3D();
+};
+
 class Skeleton3D : public Node3D {
 	GDCLASS(Skeleton3D, Node3D);
 
@@ -96,6 +114,8 @@ private:
 		PhysicalBone3D *cache_parent_physical_bone;
 #endif // _3D_DISABLED
 
+		Transform modification_pose;
+
 		List<ObjectID> nodes_bound;
 
 		Bone() {
@@ -120,6 +140,9 @@ private:
 	Vector<Bone> bones;
 	Vector<int> process_order;
 	bool process_order_dirty;
+
+	bool skeleton_modifications_enabled;
+	float skeleton_modification_strength;
 
 	void _make_dirty();
 	bool dirty;
@@ -146,6 +169,8 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	void _notification(int p_what);
 	static void _bind_methods();
+
+	Vector<Ref<SkeletonModification3D>> modifications;
 
 public:
 	enum {
@@ -203,6 +228,24 @@ public:
 	// Helper functions
 	Transform bone_transform_to_world_transform(Transform p_transform);
 	Transform world_transform_to_bone_transform(Transform p_transform);
+
+	// Modifications
+	void enable_all_modifications(bool p_enable);
+	Ref<SkeletonModification3D> get_modification(int p_mod_idx);
+	void add_modification(Ref<SkeletonModification3D> p_mod);
+	void delete_modification(int p_mod_idx);
+	void set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod);
+
+	void set_skeleton_modifications_enabled(bool p_enabled);
+	bool get_skeleton_modifications_enabled();
+	void set_skeleton_modification_strength(float p_strength);
+	float get_skeleton_modification_strength();
+
+	void set_bone_modification(int p_bone, const Transform &p_modification);
+	Transform get_bone_modification(int p_bone) const;
+
+	void execute_modifications();
+
 
 #ifndef _3D_DISABLED
 	// Physical bone API
