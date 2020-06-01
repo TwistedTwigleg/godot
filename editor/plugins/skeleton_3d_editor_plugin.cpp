@@ -62,6 +62,22 @@ void BoneTransformEditor::create_editors() {
 	enabled_checkbox->set_visible(toggle_enabled);
 	section->get_vbox()->add_child(enabled_checkbox);
 
+	// global_pose_override specific stuff
+	if (is_global_pose_override) {
+		pose_override_weight_property = memnew(EditorPropertyFloat());
+		pose_override_weight_property->setup(0, 1, 0.001f, false, false, false, false);
+		pose_override_weight_property->set_label("Override Weight");
+		pose_override_weight_property->set_use_folding(true);
+		pose_override_weight_property->set_read_only(false);
+		pose_override_weight_property->connect_compat("property_changed", this, "_value_changed_float");
+		section->get_vbox()->add_child(pose_override_weight_property);
+
+		pose_override_persistent_property = memnew(CheckBox(TTR("Pose Enabled")));
+		pose_override_persistent_property->set_flat(true);
+		pose_override_persistent_property->connect_compat("toggled", this, "_value_changed_bool");
+		section->get_vbox()->add_child(pose_override_persistent_property);
+	}
+
 	// Translation property
 	translation_property = memnew(EditorPropertyVector3());
 	translation_property->setup(-10000, 10000, 0.001f, true);
@@ -165,12 +181,16 @@ void BoneTransformEditor::_notification(int p_what) {
 	}
 }
 
-void BoneTransformEditor::_value_changed(const double p_value) {
+void BoneTransformEditor::_value_changed_bool(const bool p_bool) {
 	if (updating)
 		return;
+	_change_transform(compute_transform_from_vector3s());
+}
 
-	Transform tform = compute_transform_from_vector3s();
-	_change_transform(tform);
+void BoneTransformEditor::_value_changed_float(const String p_property_name, const float p_float, const StringName p_edited_property_name, const bool p_boolean) {
+	if (updating)
+		return;
+	_change_transform(compute_transform_from_vector3s());
 }
 
 void BoneTransformEditor::_value_changed_vector3(const String p_property_name, const Vector3 p_vector, const StringName p_edited_property_name, const bool p_boolean) {
@@ -203,8 +223,29 @@ void BoneTransformEditor::_value_changed_transform(const String p_property_name,
 void BoneTransformEditor::_change_transform(Transform p_new_transform) {
 	if (property.get_slicec('/', 0) == "bones" && property.get_slicec('/', 2) == "custom_pose") {
 		undo_redo->create_action(TTR("Set Custom Bone Pose Transform"), UndoRedo::MERGE_ENDS);
-		undo_redo->add_undo_method(skeleton, "set_bone_custom_pose", property.get_slicec('/', 1).to_int(), skeleton->get_bone_custom_pose(property.get_slicec('/', 1).to_int()));
-		undo_redo->add_do_method(skeleton, "set_bone_custom_pose", property.get_slicec('/', 1).to_int(), p_new_transform);
+		undo_redo->add_undo_method(
+				skeleton, "set_bone_custom_pose",
+				property.get_slicec('/', 1).to_int(),
+				skeleton->get_bone_custom_pose(property.get_slicec('/', 1).to_int()));
+		undo_redo->add_do_method(
+				skeleton, "set_bone_custom_pose",
+				property.get_slicec('/', 1).to_int(),
+				p_new_transform);
+		undo_redo->commit_action();
+	} else if (property.get_slicec('/', 0) == "bones" && property.get_slicec('/', 2) == "global_pose_override") {
+		undo_redo->create_action(TTR("Set Global Bone Pose Override Transform"), UndoRedo::MERGE_ENDS);
+		undo_redo->add_undo_method(
+				skeleton, "set_bone_global_pose_override",
+				property.get_slicec('/', 1).to_int(),
+				skeleton->get_bone_global_pose_override(property.get_slicec('/', 1).to_int()),
+				skeleton->get_bone_global_pose_override_weight(property.get_slicec('/', 1).to_int()),
+				skeleton->get_bone_global_pose_persistent(property.get_slicec('/', 1).to_int()));
+		undo_redo->add_do_method(
+				skeleton, "set_bone_global_pose_override",
+				property.get_slicec('/', 1).to_int(),
+				p_new_transform,
+				pose_override_weight_property->get_float(),
+				pose_override_persistent_property->is_pressed());
 		undo_redo->commit_action();
 	} else if (property.get_slicec('/', 0) == "bones") {
 		undo_redo->create_action(TTR("Set Bone Transform"), UndoRedo::MERGE_ENDS);
@@ -222,8 +263,16 @@ void BoneTransformEditor::update_enabled_checkbox() {
 	}
 }
 
+void BoneTransformEditor::update_pose_override_ui() {
+	if (is_global_pose_override == true && updating == false) {
+		pose_override_weight_property->update_using_float(skeleton->get_bone_global_pose_override_weight(property.to_int()));
+		pose_override_persistent_property->set_pressed(skeleton->get_bone_global_pose_persistent(property.to_int()));
+	}
+}
+
 void BoneTransformEditor::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("_value_changed", "value"), &BoneTransformEditor::_value_changed);
+	ClassDB::bind_method(D_METHOD("_value_changed_bool", "value"), &BoneTransformEditor::_value_changed_bool);
+	ClassDB::bind_method(D_METHOD("_value_changed_float", "value"), &BoneTransformEditor::_value_changed_float);
 	ClassDB::bind_method(D_METHOD("_value_changed_vector3", "value"), &BoneTransformEditor::_value_changed_vector3);
 	ClassDB::bind_method(D_METHOD("_value_changed_transform", "value"), &BoneTransformEditor::_value_changed_transform);
 	ClassDB::bind_method(D_METHOD("_key_button_pressed"), &BoneTransformEditor::_key_button_pressed);
@@ -256,7 +305,21 @@ void BoneTransformEditor::_update_custom_pose_properties() {
 	_update_transform_properties(tform);
 }
 
+void BoneTransformEditor::_update_global_pose_override_properties() {
+	if (updating)
+		return;
+
+	if (skeleton == nullptr)
+		return;
+
+	updating = true;
+
+	Transform tform = skeleton->get_bone_global_pose_override(property.to_int());
+	_update_transform_properties(tform);
+}
+
 void BoneTransformEditor::_update_transform_properties(Transform tform) {
+	
 	Basis rotation_basis = tform.get_basis();
 	Vector3 rotation_radians = rotation_basis.get_rotation_euler();
 	Vector3 rotation_degrees = Vector3(Math::rad2deg(rotation_radians.x), Math::rad2deg(rotation_radians.y), Math::rad2deg(rotation_radians.z));
@@ -269,6 +332,7 @@ void BoneTransformEditor::_update_transform_properties(Transform tform) {
 	transform_property->update_using_transform(tform);
 
 	update_enabled_checkbox();
+	//update_pose_override_ui();
 	updating = false;
 }
 
@@ -509,10 +573,12 @@ void Skeleton3DEditor::_joint_tree_selection_changed() {
 		pose_editor->set_target(bone_path + "pose");
 		rest_editor->set_target(bone_path + "rest");
 		custom_pose_editor->set_target(bone_path + "custom_pose");
+		global_pose_override_editor->set_target(bone_path + "global_pose_override");
 
 		pose_editor->set_visible(true);
 		rest_editor->set_visible(true);
 		custom_pose_editor->set_visible(true);
+		global_pose_override_editor->set_visible(true);
 	}
 }
 
@@ -526,6 +592,8 @@ void Skeleton3DEditor::_update_properties() {
 		pose_editor->_update_properties();
 	if (custom_pose_editor)
 		custom_pose_editor->_update_custom_pose_properties();
+	if (global_pose_override_editor)
+		global_pose_override_editor->_update_global_pose_override_properties();
 }
 
 void Skeleton3DEditor::update_joint_tree() {
@@ -621,6 +689,12 @@ void Skeleton3DEditor::create_editors() {
 	custom_pose_editor->set_label(TTR("Bone Custom Pose"));
 	custom_pose_editor->set_visible(false);
 	add_child(custom_pose_editor);
+
+	global_pose_override_editor = memnew(BoneTransformEditor(skeleton));
+	global_pose_override_editor->is_global_pose_override = true;
+	global_pose_override_editor->set_label(TTR("Bone Global Pose Override"));
+	global_pose_override_editor->set_visible(false);
+	add_child(global_pose_override_editor);
 }
 
 void Skeleton3DEditor::_notification(int p_what) {

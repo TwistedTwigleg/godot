@@ -43,6 +43,7 @@ class Button;
 class CheckBox;
 class EditorPropertyTransform;
 class EditorPropertyVector3;
+class EditorPropertyFloat;
 
 class BoneTransformEditor : public VBoxContainer {
 	GDCLASS(BoneTransformEditor, VBoxContainer);
@@ -54,6 +55,9 @@ class BoneTransformEditor : public VBoxContainer {
 	EditorPropertyVector3 *scale_property;
 	EditorInspectorSection *transform_section;
 	EditorPropertyTransform *transform_property;
+
+	EditorPropertyFloat *pose_override_weight_property;
+	CheckBox *pose_override_persistent_property;
 
 	Rect2 background_rects[5];
 
@@ -73,9 +77,11 @@ class BoneTransformEditor : public VBoxContainer {
 
 	void create_editors();
 
-	// Called when one of the EditorSpinSliders are changed.
-	void _value_changed(const double p_value);
-	// Called when the one of the EditorPropertyVector3 are updated.
+	// Called when one of the Checkbox properties are updated.
+	void _value_changed_bool(const bool p_bool);
+	// Called when one of the EditorPropertyFloat properties are updated.
+	void _value_changed_float(const String p_property_name, const float p_float, const StringName p_edited_property_name, const bool p_boolean);
+	// Called when one of the EditorPropertyVector3 properties are updated.
 	void _value_changed_vector3(const String p_property_name, const Vector3 p_vector, const StringName p_edited_property_name, const bool p_boolean);
 	// Called when the transform_property is updated.
 	void _value_changed_transform(const String p_property_name, const Transform p_transform, const StringName p_edited_property_name, const bool p_boolean);
@@ -85,6 +91,7 @@ class BoneTransformEditor : public VBoxContainer {
 	Transform compute_transform_from_vector3s() const;
 
 	void update_enabled_checkbox();
+	void update_pose_override_ui();
 
 protected:
 	void _notification(int p_what);
@@ -93,12 +100,16 @@ protected:
 public:
 	BoneTransformEditor(Skeleton3D *p_skeleton);
 
+	// Needed for special, global_pose_override specific behavior.
+	bool is_global_pose_override = false;
+
 	// Which transform target to modify
 	void set_target(const String &p_prop);
 	void set_label(const String &p_label) { label = p_label; }
 
 	void _update_properties();
 	void _update_custom_pose_properties();
+	void _update_global_pose_override_properties();
 	void _update_transform_properties(Transform p_transform);
 
 	// Can/cannot modify the spinner values for the Transform
@@ -141,6 +152,7 @@ class Skeleton3DEditor : public VBoxContainer {
 	BoneTransformEditor *rest_editor;
 	BoneTransformEditor *pose_editor;
 	BoneTransformEditor *custom_pose_editor;
+	BoneTransformEditor *global_pose_override_editor;
 
 	MenuButton *options;
 	EditorFileDialog *file_dialog;

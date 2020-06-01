@@ -176,6 +176,11 @@ public:
 
 	void clear_bones_global_pose_override();
 	void set_bone_global_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
+	Transform get_bone_global_pose_override(int p_bone) const;
+	float get_bone_global_pose_override_weight(int p_bone) const;
+	void set_bone_global_pose_override_weight(int p_bone, float p_weight);
+	bool get_bone_global_pose_persistent(int p_bone) const;
+	void set_bone_global_pose_persistent(int p_bone, bool p_persistent);
 
 	void set_bone_enabled(int p_bone, bool p_enabled);
 	bool is_bone_enabled(int p_bone) const;

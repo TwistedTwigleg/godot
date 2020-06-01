@@ -854,9 +854,12 @@ void EditorPropertyFloat::_value_changed(double val) {
 }
 
 void EditorPropertyFloat::update_property() {
-	double val = get_edited_object()->get(get_edited_property());
+	update_using_float(get_edited_object()->get(get_edited_property()));
+}
+
+void EditorPropertyFloat::update_using_float(float p_float) {
 	setting = true;
-	spin->set_value(val);
+	spin->set_value(p_float);
 	setting = false;
 }
 
@@ -871,6 +874,10 @@ void EditorPropertyFloat::setup(double p_min, double p_max, double p_step, bool 
 	spin->set_exp_ratio(p_exp_range);
 	spin->set_allow_greater(p_greater);
 	spin->set_allow_lesser(p_lesser);
+}
+
+float EditorPropertyFloat::get_float() {
+	return spin->get_value();
 }
 
 EditorPropertyFloat::EditorPropertyFloat() {

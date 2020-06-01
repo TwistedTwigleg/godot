@@ -303,7 +303,9 @@ protected:
 
 public:
 	virtual void update_property();
+	virtual void update_using_float(float p_float);
 	void setup(double p_min, double p_max, double p_step, bool p_no_slider, bool p_exp_range, bool p_greater, bool p_lesser);
+	float get_float();
 	EditorPropertyFloat();
 };
 
