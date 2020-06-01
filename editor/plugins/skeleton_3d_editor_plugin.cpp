@@ -191,6 +191,7 @@ void BoneTransformEditor::_value_changed_float(const String p_property_name, con
 	if (updating)
 		return;
 	_change_transform(compute_transform_from_vector3s());
+
 }
 
 void BoneTransformEditor::_value_changed_vector3(const String p_property_name, const Vector3 p_vector, const StringName p_edited_property_name, const bool p_boolean) {
@@ -239,7 +240,7 @@ void BoneTransformEditor::_change_transform(Transform p_new_transform) {
 				property.get_slicec('/', 1).to_int(),
 				skeleton->get_bone_global_pose_override(property.get_slicec('/', 1).to_int()),
 				skeleton->get_bone_global_pose_override_weight(property.get_slicec('/', 1).to_int()),
-				skeleton->get_bone_global_pose_persistent(property.get_slicec('/', 1).to_int()));
+				skeleton->get_bone_global_pose_override_persistent(property.get_slicec('/', 1).to_int()));
 		undo_redo->add_do_method(
 				skeleton, "set_bone_global_pose_override",
 				property.get_slicec('/', 1).to_int(),
@@ -264,9 +265,9 @@ void BoneTransformEditor::update_enabled_checkbox() {
 }
 
 void BoneTransformEditor::update_pose_override_ui() {
-	if (is_global_pose_override == true && updating == false) {
+	if (is_global_pose_override == true) {
 		pose_override_weight_property->update_using_float(skeleton->get_bone_global_pose_override_weight(property.to_int()));
-		pose_override_persistent_property->set_pressed(skeleton->get_bone_global_pose_persistent(property.to_int()));
+		pose_override_persistent_property->set_pressed(skeleton->get_bone_global_pose_override_persistent(property.to_int()));
 	}
 }
 
@@ -332,7 +333,7 @@ void BoneTransformEditor::_update_transform_properties(Transform tform) {
 	transform_property->update_using_transform(tform);
 
 	update_enabled_checkbox();
-	//update_pose_override_ui();
+	update_pose_override_ui();
 	updating = false;
 }
 

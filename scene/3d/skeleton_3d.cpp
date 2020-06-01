@@ -421,7 +421,7 @@ void Skeleton3D::set_bone_global_pose_override_weight(int p_bone, float p_weight
 	_make_dirty();
 }
 
-bool Skeleton3D::get_bone_global_pose_persistent(int p_bone) const {
+bool Skeleton3D::get_bone_global_pose_override_persistent(int p_bone) const {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), false);
 	if (dirty) {
 		const_cast<Skeleton3D *>(this)->notification(NOTIFICATION_UPDATE_SKELETON);
@@ -429,7 +429,7 @@ bool Skeleton3D::get_bone_global_pose_persistent(int p_bone) const {
 	return bones[p_bone].global_pose_override_reset;
 }
 
-void Skeleton3D::set_bone_global_pose_persistent(int p_bone, bool p_persistent) {
+void Skeleton3D::set_bone_global_pose_override_persistent(int p_bone, bool p_persistent) {
 	ERR_FAIL_INDEX(p_bone, bones.size());
 	bones.write[p_bone].global_pose_override_reset = !p_persistent;
 	_make_dirty();
@@ -942,8 +942,8 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_bone_global_pose_override", "bone_idx"), &Skeleton3D::get_bone_global_pose_override);
 	ClassDB::bind_method(D_METHOD("set_bone_global_pose_override_weight", "bone_idx", "weight"), &Skeleton3D::set_bone_global_pose_override_weight);
 	ClassDB::bind_method(D_METHOD("get_bone_global_pose_override_weight", "bone_idx"), &Skeleton3D::get_bone_global_pose_override_weight);
-	ClassDB::bind_method(D_METHOD("set_bone_global_pose_override_persistent", "bone_idx", "persistent"), &Skeleton3D::set_bone_global_pose_persistent);
-	ClassDB::bind_method(D_METHOD("get_bone_global_pose_override_persistent", "bone_idx"), &Skeleton3D::get_bone_global_pose_persistent);
+	ClassDB::bind_method(D_METHOD("set_bone_global_pose_override_persistent", "bone_idx", "persistent"), &Skeleton3D::set_bone_global_pose_override_persistent);
+	ClassDB::bind_method(D_METHOD("get_bone_global_pose_override_persistent", "bone_idx"), &Skeleton3D::get_bone_global_pose_override_persistent);
 	ClassDB::bind_method(D_METHOD("get_bone_global_pose", "bone_idx"), &Skeleton3D::get_bone_global_pose);
 
 	ClassDB::bind_method(D_METHOD("get_bone_custom_pose", "bone_idx"), &Skeleton3D::get_bone_custom_pose);
