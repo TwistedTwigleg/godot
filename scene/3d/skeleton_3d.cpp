@@ -917,8 +917,7 @@ void Skeleton3D::add_modification(Ref<SkeletonModification3D> p_mod) {
 }
 void Skeleton3D::delete_modification(int p_mod_idx) {
 	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
-	//modifications.remove(p_mod_idx);
-	modifications.erase(modifications[p_mod_idx]);
+	modifications.remove(p_mod_idx);
 }
 void Skeleton3D::set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod) {
 	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
@@ -984,7 +983,6 @@ void Skeleton3D::execute_modifications() {
 
 		if (mod->get_enabled()) {
 			mod->execute();
-			print_line("Executed mod!");
 		}
 	}
 

@@ -221,7 +221,7 @@ public:
 	void add_modification(Ref<SkeletonModification3D> p_mod);
 	void delete_modification(int p_mod_idx);
 	void set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod);
-
+	
 	void set_skeleton_modifications_enabled(bool p_enabled);
 	bool get_skeleton_modifications_enabled();
 	void set_skeleton_modification_strength(float p_strength);
