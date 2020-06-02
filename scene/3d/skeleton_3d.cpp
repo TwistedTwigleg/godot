@@ -97,6 +97,11 @@ SkeletonModification3D::SkeletonModification3D() {
 bool Skeleton3D::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
+	if (path.begins_with("Modifications/")) {
+		int material_idx = path.get_slicec('/', 1).to_int();
+		set_modification(material_idx, p_value);
+	}
+
 	if (!path.begins_with("bones/")) {
 		return false;
 	}
@@ -142,6 +147,12 @@ bool Skeleton3D::_set(const StringName &p_path, const Variant &p_value) {
 
 bool Skeleton3D::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
+
+	if (path.begins_with("Modifications/")) {
+		int mod_idx = path.get_slicec('/', 1).to_int();
+		r_ret = get_modification(mod_idx);
+		return true;
+	}
 
 	if (!path.begins_with("bones/")) {
 		return false;
@@ -915,7 +926,7 @@ void Skeleton3D::enable_all_modifications(bool p_enable) {
 		mod->set_enabled(p_enable);
 	}
 }
-Ref<SkeletonModification3D> Skeleton3D::get_modification(int p_mod_idx) {
+Ref<SkeletonModification3D> Skeleton3D::get_modification(int p_mod_idx) const {
 	ERR_FAIL_INDEX_V(p_mod_idx, modifications.size(), nullptr);
 	return modifications[p_mod_idx];
 }
@@ -1043,7 +1054,6 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_modification_count"), &Skeleton3D::get_modification_count);
 	ClassDB::bind_method(D_METHOD("execute_modifications"), &Skeleton3D::execute_modifications);
 
-	// Register the modifications class
 	ClassDB::register_class<SkeletonModification3D>();
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");

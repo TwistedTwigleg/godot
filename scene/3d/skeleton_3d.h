@@ -232,7 +232,7 @@ public:
 
 	// Modifications
 	void enable_all_modifications(bool p_enable);
-	Ref<SkeletonModification3D> get_modification(int p_mod_idx);
+	Ref<SkeletonModification3D> get_modification(int p_mod_idx) const;
 	void add_modification(Ref<SkeletonModification3D> p_mod);
 	void delete_modification(int p_mod_idx);
 	void set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod);
