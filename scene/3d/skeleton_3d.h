@@ -34,6 +34,7 @@
 #include "core/rid.h"
 #include "scene/3d/node_3d.h"
 #include "scene/resources/skin.h"
+#include "scene/resources/skeleton_modification_3d.h"
 
 #ifndef _3D_DISABLED
 typedef int BoneId;
@@ -65,23 +66,7 @@ public:
 	~SkinReference();
 };
 
-class SkeletonModification3D : public Resource {
-	GDCLASS(SkeletonModification3D, Resource);
-
-    Skeleton3D *skeleton;
-    bool enabled;
-
-protected:
-	static void _bind_methods();
-
-public:
-    virtual void execute();
-
-    void set_enabled(bool p_enabled);
-    bool get_enabled();
-
-	SkeletonModification3D();
-};
+class SkeletonModification3D;
 
 class Skeleton3D : public Node3D {
 	GDCLASS(Skeleton3D, Node3D);

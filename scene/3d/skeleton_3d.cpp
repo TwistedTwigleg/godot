@@ -37,6 +37,7 @@
 #include "scene/3d/physics_body_3d.h"
 #include "scene/resources/surface_tool.h"
 #include "scene/scene_string_names.h"
+#include "scene/resources/skeleton_modification_3d.h"
 
 void SkinReference::_skin_changed() {
 	if (skeleton_node) {
@@ -65,31 +66,6 @@ SkinReference::~SkinReference() {
 	}
 
 	RS::get_singleton()->free(skeleton);
-}
-
-///////////////////////////////////////
-
-void SkeletonModification3D::execute() {
-    if (!enabled)
-		return;
-}
-
-void SkeletonModification3D::set_enabled(bool p_enabled) {
-    enabled = p_enabled;
-}
-
-bool SkeletonModification3D::get_enabled() {
-    return enabled;
-}
-
-void SkeletonModification3D::_bind_methods() {
-
-	BIND_VMETHOD(MethodInfo("execute"));
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "get_enabled");
-}
-
-SkeletonModification3D::SkeletonModification3D() {
-    
 }
 
 ///////////////////////////////////////
@@ -205,7 +181,12 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 	}
 
 	for (int i = 0; i < modifications.size(); i++) {
-		p_list->push_back(PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i), PROPERTY_HINT_RESOURCE_TYPE, "SkeletonModification3D", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
+		p_list->push_back(
+			PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
+				PROPERTY_HINT_RESOURCE_TYPE,
+				//"SkeletonModification3D, SkeletonModification3D_LookAt",
+				"SkeletonModification3D",
+				PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
 	}
 }
 
@@ -931,15 +912,23 @@ Ref<SkeletonModification3D> Skeleton3D::get_modification(int p_mod_idx) const {
 	return modifications[p_mod_idx];
 }
 void Skeleton3D::add_modification(Ref<SkeletonModification3D> p_mod) {
-	modifications.append(p_mod);
+	p_mod->set_skeleton(this);
+	modifications.push_back(p_mod);
 }
 void Skeleton3D::delete_modification(int p_mod_idx) {
 	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
-	modifications.remove(p_mod_idx);
+	//modifications.remove(p_mod_idx);
+	modifications.erase(modifications[p_mod_idx]);
 }
 void Skeleton3D::set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod) {
 	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
-	modifications.set(p_mod_idx, p_mod);
+
+	if (p_mod == nullptr) {
+		modifications.set(p_mod_idx, nullptr);
+	} else {
+		p_mod->set_skeleton(this);
+		modifications.set(p_mod_idx, p_mod);
+	}
 }
 
 void Skeleton3D::set_skeleton_modifications_enabled(bool p_enabled) {
@@ -981,11 +970,25 @@ void Skeleton3D::execute_modifications() {
 	if (!skeleton_modifications_enabled)
 		return;
 
+	// TODO: figure out a more elegant way to handle this!
+	//for (int i = 0; i < bones.size(); i++) {
+	//	bones.write[i].modification_pose = bones[i].pose_global;
+	//}
+
 	for (int i = 0; i < modifications.size(); i++) {
-		Ref<SkeletonModification3D> mod = modifications.get(i);
-		if (mod->get_enabled())
+		Ref<SkeletonModification3D> mod = modifications[i];
+
+		if (mod->is_setup == false) {
+			mod->setup_modification();
+		}
+
+		if (mod->get_enabled()) {
 			mod->execute();
+			print_line("Executed mod!");
+		}
 	}
+
+	print_line("Execute modifications finished!");
 }
 
 void Skeleton3D::_bind_methods() {
@@ -1054,7 +1057,12 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_modification_count"), &Skeleton3D::get_modification_count);
 	ClassDB::bind_method(D_METHOD("execute_modifications"), &Skeleton3D::execute_modifications);
 
-	ClassDB::register_class<SkeletonModification3D>();
+	ClassDB::bind_method(D_METHOD("set_bone_modification"), &Skeleton3D::set_bone_modification);
+	ClassDB::bind_method(D_METHOD("get_bone_modification"), &Skeleton3D::get_bone_modification);
+
+	// TODO: find a better way to do this!
+	//ClassDB::register_class<SkeletonModification3D>();
+	//ClassDB::register_class<SkeletonModification3D_LookAt>();
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");
 	ADD_GROUP("Modification Options", "Modification_Options");
