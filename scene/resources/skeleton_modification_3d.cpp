@@ -76,24 +76,30 @@ SkeletonModification3D::SkeletonModification3D() {
 ///////////////////////////////////////
 
 void SkeletonModification3D_LookAt::execute() {
+    print_line("LookAt execute called!");
     if (!skeleton) {
+        print_line("Skeleton missing!");
         return;
     }
 
     if (!skeleton->is_inside_tree()) {
+        print_line("Skeleton not in tree!");
 		return;
 	}
 
 	if (target_node_cache.is_null()) {
+        print_line("Target is null");
 		return;
 	}
 
 	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
 	if (!n) {
+        print_line("Node could not be cast to Node3D");
 		return;
 	}
 
 	if (!n->is_inside_tree()) {
+        print_line("Node is not in tree");
 		return;
 	}
 
