@@ -105,7 +105,7 @@ void SkeletonModification3D_LookAt::execute() {
         Transform bone_trans = skeleton->get_bone_modification(bone_idx);
         bone_trans = bone_trans.looking_at(
             skeleton->world_transform_to_bone_transform(n->get_global_transform()).origin,
-            skeleton->get_global_transform().basis[1].normalized());
+            skeleton->world_transform_to_bone_transform(skeleton->get_global_transform()).basis[lookat_axis].normalized());
         skeleton->set_bone_modification(bone_idx, bone_trans);
     }
 }
@@ -171,9 +171,17 @@ void SkeletonModification3D_LookAt::update_cache() {
 void SkeletonModification3D_LookAt::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 }
-
 NodePath SkeletonModification3D_LookAt::get_target_node() const {
 	return target_node;
+}
+
+void SkeletonModification3D_LookAt::set_lookat_axis(int p_axis) {
+    ERR_FAIL_COND_MSG(p_axis > 2, "Unknown axis! lookat_axis cannot have be more than 2!");
+    ERR_FAIL_COND_MSG(p_axis < 0, "Unkown axis! lookat_axis cannot have be negative!");
+    lookat_axis = p_axis;
+}
+int SkeletonModification3D_LookAt::get_lookat_axis() {
+    return lookat_axis;
 }
 
 void SkeletonModification3D_LookAt::_bind_methods() {
@@ -184,12 +192,17 @@ void SkeletonModification3D_LookAt::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_LookAt::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_LookAt::get_target_node);
 
+    ClassDB::bind_method(D_METHOD("set_lookat_axis", "lookat_axis"), &SkeletonModification3D_LookAt::set_lookat_axis);
+	ClassDB::bind_method(D_METHOD("get_lookat_axis"), &SkeletonModification3D_LookAt::get_lookat_axis);
+
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
-    ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath"), "set_target_node", "get_target_node");
+    ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "lookat_axis", PROPERTY_HINT_ENUM, "axis x, axis y, axis z"), "set_lookat_axis", "get_lookat_axis");
+
 }
 
 SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
-
+    lookat_axis = 1;
 }
 
 SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {

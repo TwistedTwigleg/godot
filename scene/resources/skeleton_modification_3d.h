@@ -70,6 +70,7 @@ private:
     String bone_name;
     NodePath target_node;
     ObjectID target_node_cache;
+    int lookat_axis;
 
     void update_cache();
 
@@ -87,6 +88,9 @@ public:
 
     void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;
+
+    void set_lookat_axis(int p_axis);
+    int get_lookat_axis();
 
 	SkeletonModification3D_LookAt();
 	~SkeletonModification3D_LookAt();
