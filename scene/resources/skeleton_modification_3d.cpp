@@ -39,7 +39,7 @@ void SkeletonModification3D::execute() {
 }
 
 void SkeletonModification3D::setup_modification () {
-
+    is_setup = true;
 }
 
 void SkeletonModification3D::set_enabled(bool p_enabled) {

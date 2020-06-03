@@ -980,10 +980,7 @@ void Skeleton3D::execute_modifications() {
 		if (mod->is_setup == false) {
 			mod->setup_modification();
 		}
-
-		if (mod->get_enabled()) {
-			mod->execute();
-		}
+		mod->execute();
 	}
 
 	print_line("Execute modifications finished!");
