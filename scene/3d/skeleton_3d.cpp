@@ -970,9 +970,10 @@ void Skeleton3D::execute_modifications() {
 		return;
 
 	// TODO: figure out a more elegant way to handle this!
-	//for (int i = 0; i < bones.size(); i++) {
-	//	bones.write[i].modification_pose = bones[i].pose_global;
-	//}
+	// (Also need to only do this for modified bones, and make it where parent-child bone transforms are kept... Hmm...)
+	for (int i = 0; i < bones.size(); i++) {
+		bones.write[i].modification_pose = bones[i].pose_global;
+	}
 
 	for (int i = 0; i < modifications.size(); i++) {
 		Ref<SkeletonModification3D> mod = modifications[i];
@@ -982,8 +983,6 @@ void Skeleton3D::execute_modifications() {
 		}
 		mod->execute();
 	}
-
-	print_line("Execute modifications finished!");
 }
 
 void Skeleton3D::_bind_methods() {
@@ -1055,15 +1054,12 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bone_modification"), &Skeleton3D::set_bone_modification);
 	ClassDB::bind_method(D_METHOD("get_bone_modification"), &Skeleton3D::get_bone_modification);
 
-	// TODO: find a better way to do this!
-	//ClassDB::register_class<SkeletonModification3D>();
-	//ClassDB::register_class<SkeletonModification3D_LookAt>();
-
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");
 	ADD_GROUP("Modification Options", "Modification_Options");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skeleton_modifications_enabled"), "set_skeleton_modifications_enabled", "get_skeleton_modifications_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "skeleton_modification_strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_skeleton_modification_strength", "get_skeleton_modification_strength");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "skeleton_modifications_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
+	ADD_GROUP("", "");
 
 #endif // _3D_DISABLED
 

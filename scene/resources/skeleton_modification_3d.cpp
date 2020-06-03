@@ -76,31 +76,27 @@ SkeletonModification3D::SkeletonModification3D() {
 ///////////////////////////////////////
 
 void SkeletonModification3D_LookAt::execute() {
-    print_line("LookAt execute called!");
+    
     if (!skeleton) {
-        print_line("Skeleton missing!");
         return;
     }
 
     if (!skeleton->is_inside_tree()) {
-        print_line("Skeleton not in tree!");
-		return;
+        return;
 	}
 
 	if (target_node_cache.is_null()) {
-        print_line("Target is null");
-		return;
+        update_cache();
+        return;
 	}
 
 	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
 	if (!n) {
-        print_line("Node could not be cast to Node3D");
-		return;
+        return;
 	}
 
 	if (!n->is_inside_tree()) {
-        print_line("Node is not in tree");
-		return;
+        return;
 	}
 
     if (bone_name != "")
@@ -115,6 +111,7 @@ void SkeletonModification3D_LookAt::execute() {
 }
 
 void SkeletonModification3D_LookAt::setup_modification() {
+    is_setup = true;
     update_cache();
 }
 
@@ -153,8 +150,9 @@ String SkeletonModification3D_LookAt::get_bone_name() {
 }
 
 void SkeletonModification3D_LookAt::update_cache() {
-    if (!is_setup)
+    if (!is_setup) {
         return;
+    }
 
     target_node_cache = ObjectID();
     if (skeleton) {
