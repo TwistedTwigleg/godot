@@ -106,6 +106,11 @@ void SkeletonModification3D_LookAt::execute() {
         bone_trans = bone_trans.looking_at(
             skeleton->world_transform_to_bone_transform(n->get_global_transform()).origin,
             skeleton->world_transform_to_bone_transform(skeleton->get_global_transform()).basis[lookat_axis].normalized());
+        
+        // NOTE: because Godot bones are Y+ forward, but looking_at returns a transform with Z+ forward,
+        // we need to rotate the returned Transform to adjust for this.
+        bone_trans.basis.rotate_local(Vector3(1, 0, 0), -M_PI / 2.0);
+
         skeleton->set_bone_modification(bone_idx, bone_trans);
     }
 }
