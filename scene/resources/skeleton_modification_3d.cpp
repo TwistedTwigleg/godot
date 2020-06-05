@@ -52,6 +52,7 @@ bool SkeletonModification3D::get_enabled() {
 
 void SkeletonModification3D::set_skeleton(Skeleton3D *p_skeleton) {
 	skeleton = p_skeleton;
+    _change_notify();
 }
 
 Skeleton3D* SkeletonModification3D::get_skeleton() {
@@ -107,10 +108,11 @@ void SkeletonModification3D_LookAt::execute() {
             skeleton->world_transform_to_bone_transform(n->get_global_transform()).origin,
             skeleton->world_transform_to_bone_transform(skeleton->get_global_transform()).basis[lookat_axis].normalized());
         
-        // NOTE: because Godot bones are Y+ forward, but looking_at returns a transform with Z+ forward,
-        // we need to rotate the returned Transform to adjust for this.
-        bone_trans.basis.rotate_local(Vector3(1, 0, 0), -M_PI / 2.0);
-
+        // NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
+        // Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
+        if (skeleton->get_bone_axis_mode() != skeleton->BONE_AXIS_MODE_Z) {
+            bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(), -M_PI / 2.0);
+        }
         skeleton->set_bone_modification(bone_idx, bone_trans);
     }
 }

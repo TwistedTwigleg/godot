@@ -100,6 +100,7 @@ private:
 #endif // _3D_DISABLED
 
 		Transform modification_pose;
+		bool use_modification_pose;
 
 		List<ObjectID> nodes_bound;
 
@@ -113,6 +114,7 @@ private:
 #ifndef _3D_DISABLED
 			physical_bone = nullptr;
 			cache_parent_physical_bone = nullptr;
+			use_modification_pose = false;
 #endif // _3D_DISABLED
 		}
 	};
@@ -129,6 +131,10 @@ private:
 	bool skeleton_modifications_enabled;
 	float skeleton_modification_strength;
 	int skeleton_modifications_count;
+
+	int bone_axis_mode;
+	Vector3 bone_axis_forward;
+	Vector3 bone_axis_perpendicular;
 
 	void _make_dirty();
 	bool dirty;
@@ -148,6 +154,7 @@ private:
 	}
 
 	void _update_process_order();
+	void _update_bone_axis_vectors();
 
 protected:
 	bool _get(const StringName &p_path, Variant &r_ret) const;
@@ -188,11 +195,10 @@ public:
 	void clear_bones_global_pose_override();
 	void set_bone_global_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
 
-	void set_bone_enabled(int p_bone, bool p_enabled);
 	bool is_bone_enabled(int p_bone) const;
-
 	void bind_child_node_to_bone(int p_bone, Node *p_node);
 	void unbind_child_node_from_bone(int p_bone, Node *p_node);
+	void set_bone_enabled(int p_bone, bool p_enabled);
 	void get_bound_child_nodes_to_bone(int p_bone, List<Node *> *p_bound) const;
 
 	void clear_bones();
@@ -232,8 +238,29 @@ public:
 
 	void set_bone_modification(int p_bone, const Transform &p_modification);
 	Transform get_bone_modification(int p_bone) const;
+	void reset_bone_modifications();
 
 	void execute_modifications();
+
+	// Because Skeletons in Godot can have bones that consider forward on the X+, Y+, and Z+ axes, we
+	// need to allow this to be configured. Thankfully, what is considered the 'forward' axis for
+	// bones is consistent across the entire skeleton.
+	enum Bone_Axis_Modes {
+		BONE_AXIS_MODE_X,
+		BONE_AXIS_MODE_Y,
+		BONE_AXIS_MODE_Z,
+		BONE_AXIS_MODE_NEGATIVE_X,
+		BONE_AXIS_MODE_NEGATIVE_Y,
+		BONE_AXIS_MODE_NEGATIVE_Z,
+		BONE_AXIS_MODE_CUSTOM
+	};
+
+	int get_bone_axis_mode();
+	void set_bone_axis_mode(int p_mode);
+	Vector3 get_bone_axis_forward();
+	void set_bone_axis_forward(Vector3 p_axis);
+	Vector3 get_bone_axis_perpendicular();
+	void set_bone_axis_perpendicular(Vector3 p_axis);
 
 
 #ifndef _3D_DISABLED
