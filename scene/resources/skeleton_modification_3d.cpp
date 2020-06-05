@@ -115,8 +115,8 @@ void SkeletonModification3D_LookAt::execute() {
         }
         skeleton->set_bone_modification(bone_idx, bone_trans);
 
-        // TEST
-        skeleton->force_update_bone_transforms();
+        // TODO: make this configurable.
+        skeleton->force_update_bone_children_transforms(bone_idx);
     }
 }
 

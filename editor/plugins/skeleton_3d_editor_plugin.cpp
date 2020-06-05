@@ -529,10 +529,39 @@ void Skeleton3DEditor::update_joint_tree() {
 	Map<int, TreeItem *> items;
 
 	items.insert(-1, root);
-
-	const Vector<int> &joint_porder = skeleton->get_bone_process_orders();
+	
 	Ref<Texture> bone_icon = get_theme_icon("BoneAttachment3D", "EditorIcons");
 
+	Vector<int> bones_to_process = Vector<int>();
+	Vector<int> parentless_bones = skeleton->get_parentless_bones();
+	int parentless_bones_size = parentless_bones.size();
+	for (int i = 0; i < parentless_bones_size; i++) {
+		bones_to_process.push_back(parentless_bones[i]);
+	}
+	while (bones_to_process.size() > 0) {
+		int current_bone_idx = bones_to_process[0];
+		bones_to_process.erase(current_bone_idx);
+
+		const int parent_idx = skeleton->get_bone_parent(current_bone_idx);
+		TreeItem *parent_item = items.find(parent_idx)->get();
+
+		TreeItem *joint_item = joint_tree->create_item(parent_item);
+		items.insert(current_bone_idx, joint_item);
+
+		joint_item->set_text(0, skeleton->get_bone_name(current_bone_idx));
+		joint_item->set_icon(0, bone_icon);
+		joint_item->set_selectable(0, true);
+		joint_item->set_metadata(0, "bones/" + itos(current_bone_idx));
+
+		// Add the bone's children to the list of bones to be processed
+		Vector<int> current_bone_child_bones = skeleton->get_bone_children(current_bone_idx);
+		int child_bone_size = current_bone_child_bones.size();
+		for (int i=0; i < child_bone_size; i++) {
+			bones_to_process.push_back(current_bone_child_bones[i]);
+		}
+	}
+
+	/*
 	for (int i = 0; i < joint_porder.size(); ++i) {
 		const int b_idx = joint_porder[i];
 
@@ -547,6 +576,8 @@ void Skeleton3DEditor::update_joint_tree() {
 		joint_item->set_selectable(0, true);
 		joint_item->set_metadata(0, "bones/" + itos(b_idx));
 	}
+	*/
+
 }
 
 void Skeleton3DEditor::update_editors() {

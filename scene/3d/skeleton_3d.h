@@ -192,6 +192,8 @@ public:
 	void add_bone_child(int p_bone, int p_child);
 	void remove_bone_child(int p_bone, int p_child);
 
+	Vector<int> get_parentless_bones() const;
+
 	void set_bone_disable_rest(int p_bone, bool p_disable);
 	bool is_bone_rest_disabled(int p_bone) const;
 
@@ -225,7 +227,7 @@ public:
 	Ref<SkinReference> register_skin(const Ref<Skin> &p_skin);
 
 	void force_update_all_bone_transforms();
-	void force_update_bone_child_transform(int bone_idx);
+	void force_update_bone_children_transforms(int bone_idx);
 
 	// Helper functions
 	Transform bone_transform_to_world_transform(Transform p_transform);

@@ -524,6 +524,10 @@ void Skeleton3D::remove_bone_child(int p_bone, int p_child) {
 	_make_dirty();
 }
 
+Vector<int> Skeleton3D::get_parentless_bones() const {
+	return parentless_bones;
+}
+
 void Skeleton3D::set_bone_rest(int p_bone, const Transform &p_rest) {
 	ERR_FAIL_INDEX(p_bone, bones.size());
 
@@ -640,15 +644,25 @@ void Skeleton3D::localize_rests() {
 		}
 	}
 	*/
-	
-	// I think this should do the same thing as above.
-	for (int i = 0; i < bones.size(); i++) {
-		int child_bones_size = bones[i].child_bones.size();
-		for (int j = 0; j < child_bones_size; j++) {
-			set_bone_rest(
-				bones[i].child_bones[j],
-				bones[i].rest.affine_inverse() * bones[bones[i].child_bones[j]].rest
-			);
+
+	Vector<int> bones_to_process = Vector<int>();
+	int parentless_bones_size = parentless_bones.size();
+	for (int i = 0; i < parentless_bones_size; i++) {
+		bones_to_process.push_back(parentless_bones[i]);
+	}
+
+	while (bones_to_process.size() > 0) {
+		int current_bone_idx = bones_to_process[0];
+		bones_to_process.erase(current_bone_idx);
+
+		if (bones[current_bone_idx].parent >= 0) {
+			set_bone_rest(current_bone_idx, bones[bones[current_bone_idx].parent].rest.affine_inverse() * bones[current_bone_idx].rest);
+		}
+
+		// Add the bone's children to the list of bones to be processed
+		int child_bone_size = bones[current_bone_idx].child_bones.size();
+		for (int i=0; i < child_bone_size; i++) {
+			bones_to_process.push_back(bones[current_bone_idx].child_bones[i]);
 		}
 	}
 }
@@ -894,12 +908,12 @@ void Skeleton3D::force_update_all_bone_transforms() {
 	_update_process_order();
 
 	int parentless_bones_size = parentless_bones.size();
-	for (int i = 0; i < parentless_bones.size(); i++) {
-		force_update_bone_child_transform(parentless_bones[i]);
+	for (int i = 0; i < parentless_bones_size; i++) {
+		force_update_bone_children_transforms(parentless_bones[i]);
 	}
 }
 
-void Skeleton3D::force_update_bone_child_transform(int p_bone_idx) {
+void Skeleton3D::force_update_bone_children_transforms(int p_bone_idx) {
 	Bone *bonesptr = bones.ptrw();
 	List<int> bones_to_process = List<int>();
 	bones_to_process.push_back(p_bone_idx);
@@ -1156,8 +1170,10 @@ void Skeleton3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_bone_children", "bone_idx"), &Skeleton3D::get_bone_children);
 	ClassDB::bind_method(D_METHOD("set_bone_children", "bone_idx", "bone_children"), &Skeleton3D::set_bone_children);
-	ClassDB::bind_method(D_METHOD("set_bone_children", "bone_idx", "child_bone_idx"), &Skeleton3D::add_bone_child);
-	ClassDB::bind_method(D_METHOD("set_bone_children", "bone_idx", "child_bone_idx"), &Skeleton3D::remove_bone_child);
+	ClassDB::bind_method(D_METHOD("add_bone_child", "bone_idx", "child_bone_idx"), &Skeleton3D::add_bone_child);
+	ClassDB::bind_method(D_METHOD("remove_bone_child", "bone_idx", "child_bone_idx"), &Skeleton3D::remove_bone_child);
+
+	ClassDB::bind_method(D_METHOD("get_parentless_bones"), &Skeleton3D::get_parentless_bones);
 
 	ClassDB::bind_method(D_METHOD("get_bone_rest", "bone_idx"), &Skeleton3D::get_bone_rest);
 	ClassDB::bind_method(D_METHOD("set_bone_rest", "bone_idx", "rest"), &Skeleton3D::set_bone_rest);
@@ -1186,7 +1202,7 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bone_custom_pose", "bone_idx", "custom_pose"), &Skeleton3D::set_bone_custom_pose);
 
 	ClassDB::bind_method(D_METHOD("force_update_all_bone_transforms"), &Skeleton3D::force_update_all_bone_transforms);
-	ClassDB::bind_method(D_METHOD("force_update_bone_child_transform", "bone_idx"), &Skeleton3D::force_update_bone_child_transform);
+	ClassDB::bind_method(D_METHOD("force_update_bone_child_transform", "bone_idx"), &Skeleton3D::force_update_bone_children_transforms);
 
 	ClassDB::bind_method(D_METHOD("bone_transform_to_world_transform", "bone_transform"), &Skeleton3D::bone_transform_to_world_transform);
 	ClassDB::bind_method(D_METHOD("world_transform_to_bone_transform", "world_transform"), &Skeleton3D::world_transform_to_bone_transform);
