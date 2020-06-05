@@ -114,6 +114,9 @@ void SkeletonModification3D_LookAt::execute() {
             bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(), -M_PI / 2.0);
         }
         skeleton->set_bone_modification(bone_idx, bone_trans);
+
+        // TEST
+        skeleton->force_update_bone_transforms();
     }
 }
 

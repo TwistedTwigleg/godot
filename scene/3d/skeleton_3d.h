@@ -79,7 +79,7 @@ private:
 
 		bool enabled;
 		int parent;
-		int sort_index; //used for re-sorting process order
+		//int sort_index; //used for re-sorting process order
 
 		bool disable_rest;
 		Transform rest;
@@ -103,6 +103,7 @@ private:
 		bool use_modification_pose;
 
 		List<ObjectID> nodes_bound;
+		Vector<int> child_bones;
 
 		Bone() {
 			parent = -1;
@@ -115,6 +116,7 @@ private:
 			physical_bone = nullptr;
 			cache_parent_physical_bone = nullptr;
 			use_modification_pose = false;
+			child_bones = Vector<int>();
 #endif // _3D_DISABLED
 		}
 	};
@@ -125,8 +127,10 @@ private:
 
 	bool animate_physical_bones;
 	Vector<Bone> bones;
-	Vector<int> process_order;
+	//Vector<int> process_order;
 	bool process_order_dirty;
+
+	Vector<int> parentless_bones;
 
 	bool skeleton_modifications_enabled;
 	float skeleton_modification_strength;
@@ -183,6 +187,11 @@ public:
 
 	void unparent_bone_and_rest(int p_bone);
 
+	Vector<int> get_bone_children(int p_bone) const;
+	void set_bone_children(int p_bone, Vector<int> p_children);
+	void add_bone_child(int p_bone, int p_child);
+	void remove_bone_child(int p_bone, int p_child);
+
 	void set_bone_disable_rest(int p_bone, bool p_disable);
 	bool is_bone_rest_disabled(int p_bone) const;
 
@@ -212,10 +221,11 @@ public:
 	Transform get_bone_custom_pose(int p_bone) const;
 
 	void localize_rests(); // used for loaders and tools
-	int get_process_order(int p_idx);
-	Vector<int> get_bone_process_orders();
 
 	Ref<SkinReference> register_skin(const Ref<Skin> &p_skin);
+
+	void force_update_all_bone_transforms();
+	void force_update_bone_child_transform(int bone_idx);
 
 	// Helper functions
 	Transform bone_transform_to_world_transform(Transform p_transform);
