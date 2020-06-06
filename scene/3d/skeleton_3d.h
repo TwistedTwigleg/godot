@@ -102,6 +102,10 @@ private:
 		Transform modification_pose;
 		bool use_modification_pose;
 
+		// TEST - but could replace modification pose entirely!
+		float local_pose_override_amount;
+		Transform local_pose_override;
+
 		List<ObjectID> nodes_bound;
 		Vector<int> child_bones;
 
@@ -115,9 +119,10 @@ private:
 #ifndef _3D_DISABLED
 			physical_bone = nullptr;
 			cache_parent_physical_bone = nullptr;
-			use_modification_pose = false;
-			child_bones = Vector<int>();
 #endif // _3D_DISABLED
+			use_modification_pose = false;
+			local_pose_override_amount = 0;
+			child_bones = Vector<int>();
 		}
 	};
 
@@ -206,6 +211,10 @@ public:
 	void clear_bones_global_pose_override();
 	void set_bone_global_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
 
+	// TODO: add support for clearing local bone pose overrides!
+	Transform get_bone_local_pose_override(int p_bone) const;
+	void set_bone_local_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
+
 	bool is_bone_enabled(int p_bone) const;
 	void bind_child_node_to_bone(int p_bone, Node *p_node);
 	void unbind_child_node_from_bone(int p_bone, Node *p_node);
@@ -232,6 +241,8 @@ public:
 	// Helper functions
 	Transform bone_transform_to_world_transform(Transform p_transform);
 	Transform world_transform_to_bone_transform(Transform p_transform);
+	Transform bone_transform_to_local_bone_transform(int p_bone_idx, Transform p_transform);
+	Transform local_bone_transform_to_bone_transform(int p_bone_idx, Transform p_transform);
 
 	// Modifications
 	void enable_all_modifications(bool p_enable);

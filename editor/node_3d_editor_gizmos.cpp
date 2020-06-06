@@ -1594,6 +1594,7 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 	Color bonecolor = Color(1.0, 0.4, 0.4, 0.3);
 	Color rootcolor = Color(0.4, 1.0, 0.4, 0.1);
 
+	// TODO: not drawing correctly! Additionally, this code can (and should) be optimized.
 	Vector<int> bones_to_process = Vector<int>();
 	Vector<int> parentless_bones = skel->get_parentless_bones();
 	int parentless_bones_size = parentless_bones.size();
