@@ -79,7 +79,6 @@ private:
 
 		bool enabled;
 		int parent;
-		//int sort_index; //used for re-sorting process order
 
 		bool disable_rest;
 		Transform rest;
@@ -99,11 +98,8 @@ private:
 		PhysicalBone3D *cache_parent_physical_bone;
 #endif // _3D_DISABLED
 
-		Transform modification_pose;
-		bool use_modification_pose;
-
-		// TEST - but could replace modification pose entirely!
 		float local_pose_override_amount;
+		bool local_pose_override_reset;
 		Transform local_pose_override;
 
 		List<ObjectID> nodes_bound;
@@ -120,8 +116,8 @@ private:
 			physical_bone = nullptr;
 			cache_parent_physical_bone = nullptr;
 #endif // _3D_DISABLED
-			use_modification_pose = false;
 			local_pose_override_amount = 0;
+			local_pose_override_reset = false;
 			child_bones = Vector<int>();
 		}
 	};
@@ -132,7 +128,6 @@ private:
 
 	bool animate_physical_bones;
 	Vector<Bone> bones;
-	//Vector<int> process_order;
 	bool process_order_dirty;
 
 	Vector<int> parentless_bones;
@@ -196,7 +191,6 @@ public:
 	void set_bone_children(int p_bone, Vector<int> p_children);
 	void add_bone_child(int p_bone, int p_child);
 	void remove_bone_child(int p_bone, int p_child);
-
 	Vector<int> get_parentless_bones() const;
 
 	void set_bone_disable_rest(int p_bone, bool p_disable);
@@ -207,13 +201,6 @@ public:
 	void set_bone_rest(int p_bone, const Transform &p_rest);
 	Transform get_bone_rest(int p_bone) const;
 	Transform get_bone_global_pose(int p_bone) const;
-
-	void clear_bones_global_pose_override();
-	void set_bone_global_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
-
-	// TODO: add support for clearing local bone pose overrides!
-	Transform get_bone_local_pose_override(int p_bone) const;
-	void set_bone_local_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
 
 	bool is_bone_enabled(int p_bone) const;
 	void bind_child_node_to_bone(int p_bone, Node *p_node);
@@ -230,6 +217,14 @@ public:
 
 	void set_bone_custom_pose(int p_bone, const Transform &p_custom_pose);
 	Transform get_bone_custom_pose(int p_bone) const;
+
+	void clear_bones_global_pose_override();
+	Transform get_bone_global_pose_override(int p_bone) const;
+	void set_bone_global_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
+
+	void clear_bones_local_pose_override();
+	Transform get_bone_local_pose_override(int p_bone) const;
+	void set_bone_local_pose_override(int p_bone, const Transform &p_pose, float p_amount, bool p_persistent = false);
 
 	void localize_rests(); // used for loaders and tools
 
@@ -258,10 +253,6 @@ public:
 
 	void set_modification_count(int p_count);
 	int get_modification_count();
-
-	void set_bone_modification(int p_bone, const Transform &p_modification);
-	Transform get_bone_modification(int p_bone) const;
-	void reset_bone_modifications();
 
 	void execute_modifications();
 

@@ -78,6 +78,9 @@ SkeletonModification3D::SkeletonModification3D() {
 
 void SkeletonModification3D_LookAt::execute() {
     
+    if (!enabled)
+		return;
+
     if (!skeleton) {
         return;
     }
@@ -102,24 +105,6 @@ void SkeletonModification3D_LookAt::execute() {
 
     if (bone_name != "")
     {
-        /*
-        int bone_idx = skeleton->find_bone(bone_name);
-        Transform bone_trans = skeleton->get_bone_modification(bone_idx);
-        bone_trans = bone_trans.looking_at(
-            skeleton->world_transform_to_bone_transform(n->get_global_transform()).origin,
-            skeleton->world_transform_to_bone_transform(skeleton->get_global_transform()).basis[lookat_axis].normalized());
-        
-        // NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
-        // Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
-        if (skeleton->get_bone_axis_mode() != skeleton->BONE_AXIS_MODE_Z) {
-            bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(), -M_PI / 2.0);
-        }
-        skeleton->set_bone_modification(bone_idx, bone_trans);
-
-        // TODO: make this configurable.
-        skeleton->force_update_bone_children_transforms(bone_idx);
-        */
-
         int bone_idx = skeleton->find_bone(bone_name);
         Transform bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
         // Convert to a global bone transform
@@ -134,12 +119,10 @@ void SkeletonModification3D_LookAt::execute() {
         if (skeleton->get_bone_axis_mode() != skeleton->BONE_AXIS_MODE_Z) {
             bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(), -M_PI / 2.0);
         }
-        //skeleton->set_bone_modification(bone_idx, bone_trans);
-
-        // Convert to a local bone transform, so it retains rotation from parent bones, etc
+        
+        // Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
         bone_trans = skeleton->bone_transform_to_local_bone_transform(bone_idx, bone_trans);
-        // TMP
-        skeleton->set_bone_local_pose_override(bone_idx, bone_trans, skeleton->get_skeleton_modification_strength(), false);
+        skeleton->set_bone_local_pose_override(bone_idx, bone_trans, skeleton->get_skeleton_modification_strength(), true);
 
         // TODO: make this configurable.
         skeleton->force_update_bone_children_transforms(bone_idx);
