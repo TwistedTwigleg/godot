@@ -1594,7 +1594,6 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 	Color bonecolor = Color(1.0, 0.4, 0.4, 0.3);
 	Color rootcolor = Color(0.4, 1.0, 0.4, 0.1);
 
-	// TODO: not drawing correctly!
 	Vector<int> bones_to_process = skel->get_parentless_bones();
 	while (bones_to_process.size() > 0) {
 		int current_bone_idx = bones_to_process[0];
@@ -1611,13 +1610,11 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 		for (int i=0; i < child_bones_size; i++) {
 			int child_bone_idx = child_bones_vector[i];
 
-			// Not perfect, but at least it is closer to looking correct. Makes stick bones instead of fully-featured bone meshes
 			grests.write[child_bone_idx] = skel->bone_transform_to_local_bone_transform(child_bone_idx, skel->get_bone_global_pose(child_bone_idx));
-			
 			Vector3 v0 = grests[current_bone_idx].origin;
 			Vector3 v1 = grests[child_bone_idx].origin;
-			Vector3 d = (v1 - v0).normalized();
-			float dist = v0.distance_to(v1);
+			Vector3 d = skel->get_bone_rest(child_bone_idx).origin.normalized();
+			float dist = skel->get_bone_rest(child_bone_idx).origin.length();
 
 			// Find closest axis
 			int closest = -1;
