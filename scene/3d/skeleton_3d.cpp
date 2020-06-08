@@ -73,10 +73,12 @@ SkinReference::~SkinReference() {
 bool Skeleton3D::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
+#ifndef _3D_DISABLED
 	if (path.begins_with("Modifications/")) {
 		int material_idx = path.get_slicec('/', 1).to_int();
 		set_modification(material_idx, p_value);
 	}
+#endif //_3D_DISABLED
 
 	if (!path.begins_with("bones/")) {
 		return false;
@@ -124,11 +126,13 @@ bool Skeleton3D::_set(const StringName &p_path, const Variant &p_value) {
 bool Skeleton3D::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
+#ifndef _3D_DISABLED
 	if (path.begins_with("Modifications/")) {
 		int mod_idx = path.get_slicec('/', 1).to_int();
 		r_ret = get_modification(mod_idx);
 		return true;
 	}
+#endif //_3D_DISABLED
 
 	if (!path.begins_with("bones/")) {
 		return false;
@@ -180,6 +184,7 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 		p_list->push_back(PropertyInfo(Variant::ARRAY, prep + "bound_children", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
 	}
 
+#ifndef _3D_DISABLED
 	for (int i = 0; i < modifications.size(); i++) {
 		p_list->push_back(
 				PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
@@ -187,6 +192,7 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 						"SkeletonModification3D",
 						PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
 	}
+#endif //_3D_DISABLED
 }
 
 void Skeleton3D::_update_process_order() {
@@ -1234,13 +1240,13 @@ void Skeleton3D::_bind_methods() {
 
 #ifndef _3D_DISABLED
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");
-#endif // _3D_DISABLED
 	ADD_GROUP("Modification Options", "Modification_Options");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skeleton_modifications_enabled"), "set_skeleton_modifications_enabled", "get_skeleton_modifications_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "skeleton_modification_strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_skeleton_modification_strength", "get_skeleton_modification_strength");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_axis_mode", PROPERTY_HINT_ENUM, "X Axis, Y Axis, Z Axis, -X Axis, -Y Axis, -Z axis, Custom"), "set_bone_axis_mode", "get_bone_axis_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "skeleton_modifications_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
 	ADD_GROUP("", "");
+#endif // _3D_DISABLED
 
 #ifdef TOOLS_ENABLED
 	ADD_SIGNAL(MethodInfo("pose_updated"));
