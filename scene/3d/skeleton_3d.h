@@ -235,6 +235,13 @@ public:
 	void force_update_all_bone_transforms();
 	void force_update_bone_children_transforms(int bone_idx);
 
+	// Note: Technically, I think these functions get the length, forward vector, and perpendicular vector
+	// relative to the parent bone. I have not fully tested this though, but it works okay in the lookat solver.
+	// May need to be renamed in the future!
+	float get_bone_length(int p_bone);
+	Vector3 get_bone_axis_forward(int p_bone);
+	Vector3 get_bone_axis_perpendicular(int p_bone);
+
 	// Helper functions
 	Transform bone_transform_to_world_transform(Transform p_transform);
 	Transform world_transform_to_bone_transform(Transform p_transform);
@@ -259,27 +266,6 @@ public:
 
 	void execute_modifications();
 #endif // _3D_DISABLED
-
-	// Because Skeletons in Godot can have bones that consider forward on the X+, Y+, and Z+ axes, we
-	// need to allow this to be configured. Thankfully, what is considered the 'forward' axis for
-	// bones is consistent across the entire skeleton.
-	// Note: May not be needed anymore. See node_3d_editor_gizmos.cpp, at/around line 1615.
-	enum Bone_Axis_Modes {
-		BONE_AXIS_MODE_X,
-		BONE_AXIS_MODE_Y,
-		BONE_AXIS_MODE_Z,
-		BONE_AXIS_MODE_NEGATIVE_X,
-		BONE_AXIS_MODE_NEGATIVE_Y,
-		BONE_AXIS_MODE_NEGATIVE_Z,
-		BONE_AXIS_MODE_CUSTOM
-	};
-
-	int get_bone_axis_mode();
-	void set_bone_axis_mode(int p_mode);
-	Vector3 get_bone_axis_forward();
-	void set_bone_axis_forward(Vector3 p_axis);
-	Vector3 get_bone_axis_perpendicular();
-	void set_bone_axis_perpendicular(Vector3 p_axis);
 
 #ifndef _3D_DISABLED
 	// Physical bone API

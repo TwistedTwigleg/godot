@@ -322,14 +322,14 @@ void Skeleton3D::_notification(int p_what) {
 		} break;
 #endif // _3D_DISABLED
 
-		case NOTIFICATION_READY: {
 #ifndef _3D_DISABLED
+		case NOTIFICATION_READY: {
 			if (Engine::get_singleton()->is_editor_hint()) {
 				set_physics_process_internal(true);
-#endif // _3D_DISABLED
 				set_process_internal(true);
 			}
 		} break;
+#endif // _3D_DISABLED
 
 #ifndef _3D_DISABLED
 		case NOTIFICATION_INTERNAL_PROCESS: {
@@ -385,6 +385,30 @@ void Skeleton3D::set_bone_local_pose_override(int p_bone, const Transform &p_pos
 Transform Skeleton3D::get_bone_local_pose_override(int p_bone) const {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Transform());
 	return bones[p_bone].local_pose_override;
+}
+
+float Skeleton3D::get_bone_length(int p_bone) {
+	ERR_FAIL_INDEX_V(p_bone, bones.size(), -1.0f);
+	return bones[p_bone].rest.origin.length();
+}
+
+Vector3 Skeleton3D::get_bone_axis_forward(int p_bone) {
+	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
+	return bones[p_bone].rest.origin.normalized();
+}
+
+Vector3 Skeleton3D::get_bone_axis_perpendicular(int p_bone) {
+	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
+
+	Vector3 dir = get_bone_axis_forward(p_bone);
+	if (dir.x < dir.y && dir.x < dir.z) {
+		dir = dir.rotated(Vector3(1, 0, 0), -M_PI_2);
+	} else if (dir.y < dir.x && dir.y < dir.z) {
+		dir = dir.rotated(Vector3(0, 1, 0), -M_PI_2);
+	} else {
+		dir = dir.rotated(Vector3(0, 0, 1), -M_PI_2);
+	}
+	return dir.normalized();
 }
 
 // skeleton creation api
@@ -1092,59 +1116,6 @@ void Skeleton3D::execute_modifications() {
 
 #endif // _3D_DISABLED
 
-void Skeleton3D::_update_bone_axis_vectors() {
-	switch (bone_axis_mode) {
-		case BONE_AXIS_MODE_X: {
-			bone_axis_forward = Vector3(1, 0, 0);
-			bone_axis_perpendicular = Vector3(0, 0, 1);
-		} break;
-		case BONE_AXIS_MODE_Y: {
-			bone_axis_forward = Vector3(0, 1, 0);
-			bone_axis_perpendicular = Vector3(1, 0, 0);
-		} break;
-		case BONE_AXIS_MODE_Z: {
-			bone_axis_forward = Vector3(0, 0, 1);
-			bone_axis_perpendicular = Vector3(0, 1, 0);
-		} break;
-		case BONE_AXIS_MODE_NEGATIVE_X: {
-			bone_axis_forward = Vector3(-1, 0, 0);
-			bone_axis_perpendicular = Vector3(0, 0, -1);
-		} break;
-		case BONE_AXIS_MODE_NEGATIVE_Y: {
-			bone_axis_forward = Vector3(0, -1, 0);
-			bone_axis_perpendicular = Vector3(-1, 0, 0);
-		} break;
-		case BONE_AXIS_MODE_NEGATIVE_Z: {
-			bone_axis_forward = Vector3(0, 0, -1);
-			bone_axis_perpendicular = Vector3(0, -1, 0);
-		} break;
-
-		default: {
-			WARN_PRINT("Warning: Custom bone axis mode currently not supported!");
-		} break;
-	}
-}
-
-int Skeleton3D::get_bone_axis_mode() {
-	return bone_axis_mode;
-}
-void Skeleton3D::set_bone_axis_mode(int p_mode) {
-	bone_axis_mode = p_mode;
-	_update_bone_axis_vectors();
-}
-Vector3 Skeleton3D::get_bone_axis_forward() {
-	return bone_axis_forward;
-}
-void Skeleton3D::set_bone_axis_forward(Vector3 p_forward) {
-	bone_axis_forward = p_forward;
-}
-Vector3 Skeleton3D::get_bone_axis_perpendicular() {
-	return bone_axis_perpendicular;
-}
-void Skeleton3D::set_bone_axis_perpendicular(Vector3 p_perpendicular) {
-	bone_axis_perpendicular = p_perpendicular;
-}
-
 void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_bone", "name"), &Skeleton3D::add_bone);
 	ClassDB::bind_method(D_METHOD("find_bone", "name"), &Skeleton3D::find_bone);
@@ -1230,20 +1201,11 @@ void Skeleton3D::_bind_methods() {
 
 #endif // _3D_DISABLED
 
-	// Bone axis functions
-	ClassDB::bind_method(D_METHOD("set_bone_axis_mode", "mode"), &Skeleton3D::set_bone_axis_mode);
-	ClassDB::bind_method(D_METHOD("get_bone_axis_mode"), &Skeleton3D::get_bone_axis_mode);
-	ClassDB::bind_method(D_METHOD("set_bone_axis_forward", "forward"), &Skeleton3D::set_bone_axis_forward);
-	ClassDB::bind_method(D_METHOD("get_bone_axis_forward"), &Skeleton3D::get_bone_axis_forward);
-	ClassDB::bind_method(D_METHOD("set_bone_axis_perpendicular", "perpendicular"), &Skeleton3D::set_bone_axis_perpendicular);
-	ClassDB::bind_method(D_METHOD("get_bone_axis_perpendicular"), &Skeleton3D::get_bone_axis_perpendicular);
-
 #ifndef _3D_DISABLED
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");
 	ADD_GROUP("Modification Options", "Modification_Options");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skeleton_modifications_enabled"), "set_skeleton_modifications_enabled", "get_skeleton_modifications_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "skeleton_modification_strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_skeleton_modification_strength", "get_skeleton_modification_strength");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_axis_mode", PROPERTY_HINT_ENUM, "X Axis, Y Axis, Z Axis, -X Axis, -Y Axis, -Z axis, Custom"), "set_bone_axis_mode", "get_bone_axis_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "skeleton_modifications_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
 	ADD_GROUP("", "");
 #endif // _3D_DISABLED
@@ -1263,9 +1225,6 @@ Skeleton3D::Skeleton3D() {
 	skeleton_modifications_enabled = false;
 	skeleton_modification_strength = 0;
 	skeleton_modifications_count = 0;
-
-	bone_axis_mode = 2;
-	_update_bone_axis_vectors();
 }
 
 Skeleton3D::~Skeleton3D() {

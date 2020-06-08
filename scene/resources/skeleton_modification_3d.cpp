@@ -113,8 +113,8 @@ void SkeletonModification3D_LookAt::execute() {
 
 		// NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
 		// Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
-		if (skeleton->get_bone_axis_mode() != skeleton->BONE_AXIS_MODE_Z) {
-			bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(), -M_PI / 2.0);
+		if (skeleton->get_bone_axis_forward(bone_idx) != Vector3(0, 0, 1)) {
+			bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(bone_idx), -M_PI / 2.0);
 		}
 
 		// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
