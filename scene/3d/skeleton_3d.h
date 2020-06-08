@@ -136,10 +136,6 @@ private:
 	float skeleton_modification_strength;
 	int skeleton_modifications_count;
 
-	int bone_axis_mode;
-	Vector3 bone_axis_forward;
-	Vector3 bone_axis_perpendicular;
-
 	void _make_dirty();
 	bool dirty;
 
