@@ -72,6 +72,11 @@ private:
 	ObjectID target_node_cache;
 	int lookat_axis;
 
+    Vector3 additional_rotation;
+    bool lock_rotation_x;
+    bool lock_rotation_y;
+    bool lock_rotation_z;
+
 	void update_cache();
 
 protected:
@@ -90,6 +95,16 @@ public:
 
 	void set_lookat_axis(int p_axis);
 	int get_lookat_axis();
+
+    void set_rotation_offset(Vector3 p_offset);
+    Vector3 get_rotation_offset() const;
+
+    void set_lock_rotation_x(bool p_lock);
+    void set_lock_rotation_y(bool p_lock);
+    void set_lock_rotation_z(bool p_lock);
+    bool get_lock_rotation_x() const;
+    bool get_lock_rotation_y() const;
+    bool get_lock_rotation_z() const;
 
 	SkeletonModification3D_LookAt();
 	~SkeletonModification3D_LookAt();
