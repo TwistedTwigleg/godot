@@ -35,9 +35,9 @@
 #include "core/project_settings.h"
 #include "core/type_info.h"
 #include "scene/3d/physics_body_3d.h"
+#include "scene/resources/skeleton_modification_3d.h"
 #include "scene/resources/surface_tool.h"
 #include "scene/scene_string_names.h"
-#include "scene/resources/skeleton_modification_3d.h"
 
 void SkinReference::_skin_changed() {
 	if (skeleton_node) {
@@ -182,10 +182,10 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 
 	for (int i = 0; i < modifications.size(); i++) {
 		p_list->push_back(
-			PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
-				PROPERTY_HINT_RESOURCE_TYPE,
-				"SkeletonModification3D",
-				PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
+				PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
+						PROPERTY_HINT_RESOURCE_TYPE,
+						"SkeletonModification3D",
+						PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
 	}
 }
 
@@ -214,13 +214,10 @@ void Skeleton3D::_update_process_order() {
 			if (bonesptr[parent_bone_idx].child_bones.find(i) < 0) {
 				// Add the child node
 				bonesptr[parent_bone_idx].child_bones.push_back(i);
-			}
-			else {
+			} else {
 				ERR_PRINT("Skeleton3D parenthood graph is cyclic");
 			}
-		}
-		else
-		{
+		} else {
 			parentless_bones.push_back(i);
 		}
 	}
@@ -317,21 +314,22 @@ void Skeleton3D::_notification(int p_what) {
 				}
 			}
 		} break;
-#endif
+#endif // _3D_DISABLED
 
 		case NOTIFICATION_READY: {
 #ifndef _3D_DISABLED
 			if (Engine::get_singleton()->is_editor_hint()) {
 				set_physics_process_internal(true);
-#endif
-			set_process_internal(true);
+#endif // _3D_DISABLED
+				set_process_internal(true);
 			}
 		} break;
 
+#ifndef _3D_DISABLED
 		case NOTIFICATION_INTERNAL_PROCESS: {
 			execute_modifications();
 		} break;
-
+#endif // _3D_DISABLED
 	}
 }
 
@@ -634,7 +632,7 @@ void Skeleton3D::localize_rests() {
 
 		// Add the bone's children to the list of bones to be processed
 		int child_bone_size = bones[current_bone_idx].child_bones.size();
-		for (int i=0; i < child_bone_size; i++) {
+		for (int i = 0; i < child_bone_size; i++) {
 			bones_to_process.push_back(bones[current_bone_idx].child_bones[i]);
 		}
 	}
@@ -967,10 +965,9 @@ void Skeleton3D::force_update_bone_children_transforms(int p_bone_idx) {
 
 		// Add the bone's children to the list of bones to be processed
 		int child_bone_size = b.child_bones.size();
-		for (int i=0; i < child_bone_size; i++) {
+		for (int i = 0; i < child_bone_size; i++) {
 			bones_to_process.push_back(b.child_bones[i]);
 		}
-
 	}
 }
 
@@ -983,12 +980,11 @@ Transform Skeleton3D::world_transform_to_bone_transform(Transform p_world_transf
 	return get_global_transform().affine_inverse() * p_world_transform;
 }
 Transform Skeleton3D::bone_transform_to_local_bone_transform(int p_bone_idx, Transform p_world_transform) {
-
 	if (bones[p_bone_idx].parent >= 0) {
 		Transform return_val = Transform();
 		int parent_bone_idx = bones[p_bone_idx].parent;
 		Transform conversion_transform = (bones[parent_bone_idx].pose_global * bones[p_bone_idx].rest);
-		
+
 		return_val.origin = conversion_transform.affine_inverse().xform(p_world_transform.origin);
 		return_val.basis = conversion_transform.affine_inverse().basis * p_world_transform.basis;
 
@@ -1004,7 +1000,7 @@ Transform Skeleton3D::local_bone_transform_to_bone_transform(int p_bone_idx, Tra
 		Transform return_val = Transform();
 		int parent_bone_idx = bones[p_bone_idx].parent;
 		Transform conversion_transform = (bones[parent_bone_idx].pose_global * bones[p_bone_idx].rest);
-		
+
 		return_val.origin = conversion_transform.xform(p_world_transform.origin);
 		return_val.basis = conversion_transform.basis * p_world_transform.basis;
 
@@ -1017,6 +1013,7 @@ Transform Skeleton3D::local_bone_transform_to_bone_transform(int p_bone_idx, Tra
 }
 
 // Modifications
+#ifndef _3D_DISABLED
 void Skeleton3D::enable_all_modifications(bool p_enable) {
 	for (int i = 0; i < modifications.size(); i++) {
 		Ref<SkeletonModification3D> mod = modifications.get(i);
@@ -1087,10 +1084,10 @@ void Skeleton3D::execute_modifications() {
 	}
 }
 
-void Skeleton3D::_update_bone_axis_vectors() {
+#endif // _3D_DISABLED
 
-	switch (bone_axis_mode)
-	{
+void Skeleton3D::_update_bone_axis_vectors() {
+	switch (bone_axis_mode) {
 		case BONE_AXIS_MODE_X: {
 			bone_axis_forward = Vector3(1, 0, 0);
 			bone_axis_perpendicular = Vector3(0, 0, 1);
@@ -1115,7 +1112,7 @@ void Skeleton3D::_update_bone_axis_vectors() {
 			bone_axis_forward = Vector3(0, 0, -1);
 			bone_axis_perpendicular = Vector3(0, -1, 0);
 		} break;
-		
+
 		default: {
 			WARN_PRINT("Warning: Custom bone axis mode currently not supported!");
 		} break;
@@ -1211,8 +1208,6 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("physical_bones_add_collision_exception", "exception"), &Skeleton3D::physical_bones_add_collision_exception);
 	ClassDB::bind_method(D_METHOD("physical_bones_remove_collision_exception", "exception"), &Skeleton3D::physical_bones_remove_collision_exception);
 
-#endif // _3D_DISABLED
-
 	// Modifications
 	ClassDB::bind_method(D_METHOD("enable_all_modifications", "enabled"), &Skeleton3D::enable_all_modifications);
 	ClassDB::bind_method(D_METHOD("get_modification", "mod_idx"), &Skeleton3D::get_modification);
@@ -1226,6 +1221,8 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_modification_count", "count"), &Skeleton3D::set_modification_count);
 	ClassDB::bind_method(D_METHOD("get_modification_count"), &Skeleton3D::get_modification_count);
 	ClassDB::bind_method(D_METHOD("execute_modifications"), &Skeleton3D::execute_modifications);
+
+#endif // _3D_DISABLED
 
 	// Bone axis functions
 	ClassDB::bind_method(D_METHOD("set_bone_axis_mode", "mode"), &Skeleton3D::set_bone_axis_mode);

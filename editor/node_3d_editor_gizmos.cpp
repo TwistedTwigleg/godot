@@ -1607,7 +1607,7 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 			grests.write[current_bone_idx] = skel->bone_transform_to_local_bone_transform(current_bone_idx, skel->get_bone_global_pose(current_bone_idx));
 		}
 
-		for (int i=0; i < child_bones_size; i++) {
+		for (int i = 0; i < child_bones_size; i++) {
 			int child_bone_idx = child_bones_vector[i];
 
 			grests.write[child_bone_idx] = skel->bone_transform_to_local_bone_transform(child_bone_idx, skel->get_bone_global_pose(child_bone_idx));

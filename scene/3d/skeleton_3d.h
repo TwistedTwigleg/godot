@@ -33,8 +33,8 @@
 
 #include "core/rid.h"
 #include "scene/3d/node_3d.h"
-#include "scene/resources/skin.h"
 #include "scene/resources/skeleton_modification_3d.h"
+#include "scene/resources/skin.h"
 
 #ifndef _3D_DISABLED
 typedef int BoneId;
@@ -167,7 +167,9 @@ protected:
 	void _notification(int p_what);
 	static void _bind_methods();
 
+#ifndef _3D_DISABLED
 	Vector<Ref<SkeletonModification3D>> modifications;
+#endif // _3D_DISABLED
 
 public:
 	enum {
@@ -240,12 +242,13 @@ public:
 	Transform local_bone_transform_to_bone_transform(int p_bone_idx, Transform p_transform);
 
 	// Modifications
+#ifndef _3D_DISABLED
 	void enable_all_modifications(bool p_enable);
 	Ref<SkeletonModification3D> get_modification(int p_mod_idx) const;
 	void add_modification(Ref<SkeletonModification3D> p_mod);
 	void delete_modification(int p_mod_idx);
 	void set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod);
-	
+
 	void set_skeleton_modifications_enabled(bool p_enabled);
 	bool get_skeleton_modifications_enabled();
 	void set_skeleton_modification_strength(float p_strength);
@@ -255,10 +258,12 @@ public:
 	int get_modification_count();
 
 	void execute_modifications();
+#endif // _3D_DISABLED
 
 	// Because Skeletons in Godot can have bones that consider forward on the X+, Y+, and Z+ axes, we
 	// need to allow this to be configured. Thankfully, what is considered the 'forward' axis for
 	// bones is consistent across the entire skeleton.
+	// Note: May not be needed anymore. See node_3d_editor_gizmos.cpp, at/around line 1615.
 	enum Bone_Axis_Modes {
 		BONE_AXIS_MODE_X,
 		BONE_AXIS_MODE_Y,
@@ -275,7 +280,6 @@ public:
 	void set_bone_axis_forward(Vector3 p_axis);
 	Vector3 get_bone_axis_perpendicular();
 	void set_bone_axis_perpendicular(Vector3 p_axis);
-
 
 #ifndef _3D_DISABLED
 	// Physical bone API

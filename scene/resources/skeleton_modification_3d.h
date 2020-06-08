@@ -39,21 +39,21 @@ class Skeleton3D;
 
 class SkeletonModification3D : public Resource {
 	GDCLASS(SkeletonModification3D, Resource);
-    friend class Skeleton3D;
+	friend class Skeleton3D;
 
 protected:
 	static void _bind_methods();
 
 	Skeleton3D *skeleton;
-    bool enabled;
-    bool is_setup;
+	bool enabled;
+	bool is_setup;
 
 public:
-    virtual void execute();
-    virtual void setup_modification();
+	virtual void execute();
+	virtual void setup_modification();
 
-    void set_enabled(bool p_enabled);
-    bool get_enabled();
+	void set_enabled(bool p_enabled);
+	bool get_enabled();
 
 	void set_skeleton(Skeleton3D *p_skeleton);
 	Skeleton3D *get_skeleton();
@@ -67,30 +67,29 @@ class SkeletonModification3D_LookAt : public SkeletonModification3D {
 	GDCLASS(SkeletonModification3D_LookAt, SkeletonModification3D);
 
 private:
-    String bone_name;
-    NodePath target_node;
-    ObjectID target_node_cache;
-    int lookat_axis;
+	String bone_name;
+	NodePath target_node;
+	ObjectID target_node_cache;
+	int lookat_axis;
 
-    void update_cache();
+	void update_cache();
 
 protected:
 	static void _bind_methods();
-    void _validate_property(PropertyInfo &property) const;
+	void _validate_property(PropertyInfo &property) const;
 
 public:
+	virtual void execute();
+	virtual void setup_modification();
 
-    virtual void execute();
-    virtual void setup_modification();
+	void set_bone_name(String p_name);
+	String get_bone_name();
 
-    void set_bone_name(String p_name);
-    String get_bone_name();
-
-    void set_target_node(const NodePath &p_target_node);
+	void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;
 
-    void set_lookat_axis(int p_axis);
-    int get_lookat_axis();
+	void set_lookat_axis(int p_axis);
+	int get_lookat_axis();
 
 	SkeletonModification3D_LookAt();
 	~SkeletonModification3D_LookAt();

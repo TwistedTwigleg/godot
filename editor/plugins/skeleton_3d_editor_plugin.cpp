@@ -551,11 +551,10 @@ void Skeleton3DEditor::update_joint_tree() {
 		// Add the bone's children to the list of bones to be processed
 		Vector<int> current_bone_child_bones = skeleton->get_bone_children(current_bone_idx);
 		int child_bone_size = current_bone_child_bones.size();
-		for (int i=0; i < child_bone_size; i++) {
+		for (int i = 0; i < child_bone_size; i++) {
 			bones_to_process.push_back(current_bone_child_bones[i]);
 		}
 	}
-
 }
 
 void Skeleton3DEditor::update_editors() {
