@@ -1594,24 +1594,28 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 	Color bonecolor = Color(1.0, 0.4, 0.4, 0.3);
 	Color rootcolor = Color(0.4, 1.0, 0.4, 0.1);
 
-	// TODO: not drawing correctly! Additionally, this code can (and should) be optimized.
-	Vector<int> bones_to_process = Vector<int>();
-	Vector<int> parentless_bones = skel->get_parentless_bones();
-	int parentless_bones_size = parentless_bones.size();
-	for (int i = 0; i < parentless_bones_size; i++) {
-		bones_to_process.push_back(parentless_bones[i]);
-	}
+	// TODO: not drawing correctly!
+	Vector<int> bones_to_process = skel->get_parentless_bones();
 	while (bones_to_process.size() > 0) {
 		int current_bone_idx = bones_to_process[0];
 		bones_to_process.erase(current_bone_idx);
 
-		int parent_bone_idx = skel->get_bone_parent(current_bone_idx);
+		Vector<int> child_bones_vector = skel->get_bone_children(current_bone_idx);
+		int child_bones_size = child_bones_vector.size();
 
-		if (parent_bone_idx >= 0) {
-			grests.write[current_bone_idx] = grests[parent_bone_idx] * skel->get_bone_rest(current_bone_idx);
+		// You have children but no parent, then you must be a root/parentless bone.
+		if (child_bones_size >= 0 && skel->get_bone_parent(current_bone_idx) <= 0) {
+			grests.write[current_bone_idx] = skel->bone_transform_to_local_bone_transform(current_bone_idx, skel->get_bone_global_pose(current_bone_idx));
+		}
 
-			Vector3 v0 = grests[parent_bone_idx].origin;
-			Vector3 v1 = grests[current_bone_idx].origin;
+		for (int i=0; i < child_bones_size; i++) {
+			int child_bone_idx = child_bones_vector[i];
+
+			// Not perfect, but at least it is closer to looking correct. Makes stick bones instead of fully-featured bone meshes
+			grests.write[child_bone_idx] = skel->bone_transform_to_local_bone_transform(child_bone_idx, skel->get_bone_global_pose(child_bone_idx));
+			
+			Vector3 v0 = grests[current_bone_idx].origin;
+			Vector3 v1 = grests[child_bone_idx].origin;
 			Vector3 d = (v1 - v0).normalized();
 			float dist = v0.distance_to(v1);
 
@@ -1619,7 +1623,7 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 			int closest = -1;
 			float closest_d = 0.0;
 			for (int j = 0; j < 3; j++) {
-				float dp = Math::abs(grests[parent_bone_idx].basis[j].normalized().dot(d));
+				float dp = Math::abs(grests[current_bone_idx].basis[j].normalized().dot(d));
 				if (j == 0 || dp > closest_d) {
 					closest = j;
 				}
@@ -1630,15 +1634,15 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 			Vector3 points[4];
 			int point_idx = 0;
 			for (int j = 0; j < 3; j++) {
-				bones.write[0] = parent_bone_idx;
+				bones.write[0] = current_bone_idx;
 				surface_tool->add_bones(bones);
 				surface_tool->add_weights(weights);
 				surface_tool->add_color(rootcolor);
-				surface_tool->add_vertex(v0 - grests[parent_bone_idx].basis[j].normalized() * dist * 0.05);
+				surface_tool->add_vertex(v0 - grests[current_bone_idx].basis[j].normalized() * dist * 0.05);
 				surface_tool->add_bones(bones);
 				surface_tool->add_weights(weights);
 				surface_tool->add_color(rootcolor);
-				surface_tool->add_vertex(v0 + grests[parent_bone_idx].basis[j].normalized() * dist * 0.05);
+				surface_tool->add_vertex(v0 + grests[current_bone_idx].basis[j].normalized() * dist * 0.05);
 
 				if (j == closest) {
 					continue;
@@ -1646,7 +1650,7 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
 				Vector3 axis;
 				if (first == Vector3()) {
-					axis = d.cross(d.cross(grests[parent_bone_idx].basis[j])).normalized();
+					axis = d.cross(d.cross(grests[current_bone_idx].basis[j])).normalized();
 					first = axis;
 				} else {
 					axis = d.cross(first).normalized();
@@ -1659,7 +1663,7 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 					Vector3 point = v0 + d * dist * 0.2;
 					point += axis * dist * 0.1;
 
-					bones.write[0] = parent_bone_idx;
+					bones.write[0] = current_bone_idx;
 					surface_tool->add_bones(bones);
 					surface_tool->add_weights(weights);
 					surface_tool->add_color(bonecolor);
@@ -1669,12 +1673,12 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 					surface_tool->add_color(bonecolor);
 					surface_tool->add_vertex(point);
 
-					bones.write[0] = parent_bone_idx;
+					bones.write[0] = current_bone_idx;
 					surface_tool->add_bones(bones);
 					surface_tool->add_weights(weights);
 					surface_tool->add_color(bonecolor);
 					surface_tool->add_vertex(point);
-					bones.write[0] = current_bone_idx;
+					bones.write[0] = child_bone_idx;
 					surface_tool->add_bones(bones);
 					surface_tool->add_weights(weights);
 					surface_tool->add_color(bonecolor);
@@ -1684,7 +1688,7 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 			}
 			SWAP(points[1], points[2]);
 			for (int j = 0; j < 4; j++) {
-				bones.write[0] = parent_bone_idx;
+				bones.write[0] = current_bone_idx;
 				surface_tool->add_bones(bones);
 				surface_tool->add_weights(weights);
 				surface_tool->add_color(bonecolor);
@@ -1695,14 +1699,6 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 				surface_tool->add_vertex(points[(j + 1) % 4]);
 			}
 
-		} else {
-			grests.write[current_bone_idx] = skel->get_bone_rest(current_bone_idx);
-			bones.write[0] = current_bone_idx;
-		}
-
-		Vector<int> child_bones_vector = skel->get_bone_children(current_bone_idx);
-		int child_bones_size = child_bones_vector.size();
-		for (int i=0; i < child_bones_size; i++) {
 			// Add the bone's children to the list of bones to be processed
 			bones_to_process.push_back(child_bones_vector[i]);
 		}

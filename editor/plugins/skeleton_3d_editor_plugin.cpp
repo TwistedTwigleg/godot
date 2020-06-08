@@ -532,13 +532,7 @@ void Skeleton3DEditor::update_joint_tree() {
 	
 	Ref<Texture> bone_icon = get_theme_icon("BoneAttachment3D", "EditorIcons");
 
-	// TODO: This code can (and should) be optimized.
-	Vector<int> bones_to_process = Vector<int>();
-	Vector<int> parentless_bones = skeleton->get_parentless_bones();
-	int parentless_bones_size = parentless_bones.size();
-	for (int i = 0; i < parentless_bones_size; i++) {
-		bones_to_process.push_back(parentless_bones[i]);
-	}
+	Vector<int> bones_to_process = skeleton->get_parentless_bones();
 	while (bones_to_process.size() > 0) {
 		int current_bone_idx = bones_to_process[0];
 		bones_to_process.erase(current_bone_idx);

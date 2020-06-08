@@ -623,12 +623,7 @@ void Skeleton3D::_make_dirty() {
 void Skeleton3D::localize_rests() {
 	_update_process_order();
 
-	Vector<int> bones_to_process = Vector<int>();
-	int parentless_bones_size = parentless_bones.size();
-	for (int i = 0; i < parentless_bones_size; i++) {
-		bones_to_process.push_back(parentless_bones[i]);
-	}
-
+	Vector<int> bones_to_process = get_parentless_bones();
 	while (bones_to_process.size() > 0) {
 		int current_bone_idx = bones_to_process[0];
 		bones_to_process.erase(current_bone_idx);
@@ -836,11 +831,7 @@ Ref<SkinReference> Skeleton3D::register_skin(const Ref<Skin> &p_skin) {
 		int len = bones.size();
 
 		// calculate global rests and invert them
-		Vector<int> bones_to_process;
-		int parentless_bones_size = parentless_bones.size();
-		for (int i = 0; i < parentless_bones_size; i++) {
-			bones_to_process.push_back(parentless_bones[i]);
-		}
+		Vector<int> bones_to_process = get_parentless_bones();
 		while (bones_to_process.size() > 0) {
 			int current_bone_idx = bones_to_process[0];
 			bones_to_process.erase(current_bone_idx);
