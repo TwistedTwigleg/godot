@@ -65,14 +65,6 @@ bool SkeletonModificationStack3D::_get(const StringName &p_path, Variant &r_ret)
 	return true;
 }
 
-void SkeletonModificationStack3D::_notification(int what) {
-	if (what == NOTIFICATION_POSTINITIALIZE) {
-		can_execute = true;
-	} else if (what == NOTIFICATION_PREDELETE) {
-		can_execute = false;
-	}
-}
-
 void SkeletonModificationStack3D::setup() {
 	if (is_setup) {
 		return;
@@ -92,7 +84,10 @@ void SkeletonModificationStack3D::setup() {
 }
 
 void SkeletonModificationStack3D::execute() {
-	if (!is_setup || skeleton == nullptr || !enabled || !can_execute || is_queued_for_deletion()) {
+	if (!is_setup || skeleton == nullptr || !enabled || is_queued_for_deletion()) {
+		return;
+	}
+	if (!skeleton->is_inside_tree() || !skeleton->is_inside_world()) {
 		return;
 	}
 
@@ -213,7 +208,6 @@ SkeletonModificationStack3D::SkeletonModificationStack3D() {
 	enabled = false;
 	modifications_count = 0;
 	strength = 0;
-	can_execute = false;
 }
 
 ///////////////////////////////////////
@@ -257,16 +251,17 @@ SkeletonModification3D::SkeletonModification3D() {
 ///////////////////////////////////////
 
 void SkeletonModification3D_LookAt::execute() {
-	if (!enabled || !stack || !is_setup)
-		return;
-
-	if (stack->skeleton == nullptr) {
+	if (!enabled || !stack || !is_setup || stack->skeleton == nullptr) {
 		return;
 	}
 
 	if (target_node_cache.is_null()) {
 		update_cache();
 		return;
+	}
+
+	if (bone_idx <= -2) {
+		bone_idx = stack->skeleton->find_bone(bone_name);
 	}
 
 	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
@@ -279,7 +274,10 @@ void SkeletonModification3D_LookAt::execute() {
 	}
 
 	if (bone_name != "") {
-		int bone_idx = stack->skeleton->find_bone(bone_name);
+		if (bone_idx <= -1) {
+			return;
+		}
+
 		Skeleton3D *skeleton = stack->skeleton;
 		Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
 
@@ -323,7 +321,6 @@ void SkeletonModification3D_LookAt::execute() {
 		// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
 		new_bone_trans = skeleton->bone_transform_to_local_bone_transform(bone_idx, new_bone_trans);
 		skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
-		//skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, skeleton->get_skeleton_modification_strength(), true);
 
 		// TODO: make this configurable.
 		skeleton->force_update_bone_children_transforms(bone_idx);
@@ -335,49 +332,18 @@ void SkeletonModification3D_LookAt::setup_modification(SkeletonModificationStack
 
 	if (stack != nullptr) {
 		is_setup = true;
-		is_pre_deleting = false;
 		update_cache();
-	}
-}
-
-void SkeletonModification3D_LookAt::_validate_property(PropertyInfo &property) const {
-	if (!is_setup || !stack || is_pre_deleting || is_queued_for_deletion()) {
-		return;
-	}
-
-	if (property.name == "bone_name") {
-		if (stack->skeleton != nullptr) {
-			String names;
-			for (int i = 0; i < stack->skeleton->get_bone_count(); i++) {
-				if (i > 0) {
-					names += ",";
-				}
-				names += stack->skeleton->get_bone_name(i);
-			}
-
-			property.hint = PROPERTY_HINT_ENUM;
-			property.hint_string = names;
-		} else {
-			property.hint = PROPERTY_HINT_NONE;
-			property.hint_string = "";
-		}
-	}
-}
-
-void SkeletonModification3D_LookAt::_notification(int what) {
-	if (what == NOTIFICATION_POSTINITIALIZE) {
-		is_pre_deleting = false;
-	} else if (what == NOTIFICATION_PREDELETE) {
-		is_pre_deleting = true;
 	}
 }
 
 void SkeletonModification3D_LookAt::set_bone_name(String p_name) {
 	bone_name = p_name;
-	update_cache();
+	if (stack && stack->skeleton) {
+		bone_idx = stack->skeleton->find_bone(bone_name);
+	}
 }
 
-String SkeletonModification3D_LookAt::get_bone_name() {
+String SkeletonModification3D_LookAt::get_bone_name() const {
 	return bone_name;
 }
 
@@ -402,6 +368,7 @@ void SkeletonModification3D_LookAt::update_cache() {
 
 void SkeletonModification3D_LookAt::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
+	update_cache();
 }
 NodePath SkeletonModification3D_LookAt::get_target_node() const {
 	return target_node;
@@ -475,12 +442,13 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
 	stack = nullptr;
 	is_setup = false;
+	bone_name = "";
+	bone_idx = -2;
 	lookat_axis = 1;
 	additional_rotation = Vector3();
 	lock_rotation_x = false;
 	lock_rotation_y = false;
 	lock_rotation_z = false;
-	is_pre_deleting = false;
 }
 
 SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {

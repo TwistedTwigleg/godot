@@ -48,14 +48,12 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _set(const StringName &p_path, const Variant &p_value);
 	bool _get(const StringName &p_path, Variant &r_ret) const;
-	void _notification(int p_what);
 
 public:
 	Skeleton3D *skeleton;
 	bool is_setup;
 	bool enabled;
 	float strength;
-	bool can_execute;
 
 	Vector<Ref<SkeletonModification3D>> modifications;
 	int modifications_count;
@@ -117,10 +115,10 @@ class SkeletonModification3D_LookAt : public SkeletonModification3D {
 
 private:
 	String bone_name;
+	int bone_idx;
 	NodePath target_node;
 	ObjectID target_node_cache;
 	int lookat_axis;
-	bool is_pre_deleting = false;
 
 	Vector3 additional_rotation;
 	bool lock_rotation_x;
@@ -131,15 +129,13 @@ private:
 
 protected:
 	static void _bind_methods();
-	void _validate_property(PropertyInfo &property) const;
-	void _notification(int p_what);
 
 public:
 	virtual void execute();
 	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_bone_name(String p_name);
-	String get_bone_name();
+	String get_bone_name() const;
 
 	void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;

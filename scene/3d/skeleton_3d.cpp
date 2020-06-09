@@ -437,7 +437,6 @@ int Skeleton3D::find_bone(const String &p_name) const {
 
 String Skeleton3D::get_bone_name(int p_bone) const {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), "");
-
 	return bones[p_bone].name;
 }
 
