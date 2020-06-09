@@ -666,6 +666,7 @@ void register_scene_types() {
 	ClassDB::register_class<ConvexPolygonShape3D>();
 	ClassDB::register_class<ConcavePolygonShape3D>();
 
+	ClassDB::register_class<SkeletonModificationStack3D>();
 	ClassDB::register_class<SkeletonModification3D>();
 	ClassDB::register_class<SkeletonModification3D_LookAt>();
 

@@ -66,7 +66,7 @@ public:
 	~SkinReference();
 };
 
-class SkeletonModification3D;
+class SkeletonModificationStack3D;
 
 class Skeleton3D : public Node3D {
 	GDCLASS(Skeleton3D, Node3D);
@@ -132,10 +132,6 @@ private:
 
 	Vector<int> parentless_bones;
 
-	bool skeleton_modifications_enabled;
-	float skeleton_modification_strength;
-	int skeleton_modifications_count;
-
 	void _make_dirty();
 	bool dirty;
 
@@ -164,7 +160,7 @@ protected:
 	static void _bind_methods();
 
 #ifndef _3D_DISABLED
-	Vector<Ref<SkeletonModification3D>> modifications;
+	Ref<SkeletonModificationStack3D> modification_stack;
 #endif // _3D_DISABLED
 
 public:
@@ -246,20 +242,8 @@ public:
 
 	// Modifications
 #ifndef _3D_DISABLED
-	void enable_all_modifications(bool p_enable);
-	Ref<SkeletonModification3D> get_modification(int p_mod_idx) const;
-	void add_modification(Ref<SkeletonModification3D> p_mod);
-	void delete_modification(int p_mod_idx);
-	void set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod);
-
-	void set_skeleton_modifications_enabled(bool p_enabled);
-	bool get_skeleton_modifications_enabled();
-	void set_skeleton_modification_strength(float p_strength);
-	float get_skeleton_modification_strength();
-
-	void set_modification_count(int p_count);
-	int get_modification_count();
-
+	Ref<SkeletonModificationStack3D> get_modification_stack();
+	void set_modification_stack(Ref<SkeletonModificationStack3D> p_stack);
 	void execute_modifications();
 #endif // _3D_DISABLED
 

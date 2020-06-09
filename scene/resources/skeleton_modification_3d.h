@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  skeleton_modification.h                                              */
+/*  skeleton_modification_3d.h                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -36,6 +36,57 @@
 ///////////////////////////////////////
 
 class Skeleton3D;
+class SkeletonModification3D;
+
+class SkeletonModificationStack3D : public Resource {
+	GDCLASS(SkeletonModificationStack3D, Resource);
+	friend class Skeleton3D;
+	friend class SkeletonModification3D;
+
+protected:
+	static void _bind_methods();
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+	bool _set(const StringName &p_path, const Variant &p_value);
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	void _notification(int p_what);
+
+public:
+	Skeleton3D *skeleton;
+	bool is_setup;
+	bool enabled;
+	float strength;
+	bool can_execute;
+
+	Vector<Ref<SkeletonModification3D>> modifications;
+	int modifications_count;
+
+	void setup();
+	void execute();
+
+	void enable_all_modifications(bool p_enable);
+	Ref<SkeletonModification3D> get_modification(int p_mod_idx) const;
+	void add_modification(Ref<SkeletonModification3D> p_mod);
+	void delete_modification(int p_mod_idx);
+	void set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod);
+
+	void set_modification_count(int p_count);
+	int get_modification_count() const;
+
+	void set_skeleton(Skeleton3D *p_skeleton);
+	Skeleton3D *get_skeleton() const;
+
+	bool get_is_setup() const;
+
+	void set_enabled(bool p_enabled);
+	bool get_enabled() const;
+
+	void set_strength(float p_strength);
+	float get_strength() const;
+
+	SkeletonModificationStack3D();
+};
+
+///////////////////////////////////////
 
 class SkeletonModification3D : public Resource {
 	GDCLASS(SkeletonModification3D, Resource);
@@ -44,19 +95,17 @@ class SkeletonModification3D : public Resource {
 protected:
 	static void _bind_methods();
 
-	Skeleton3D *skeleton;
+	SkeletonModificationStack3D *stack;
+
 	bool enabled;
 	bool is_setup;
 
 public:
 	virtual void execute();
-	virtual void setup_modification();
+	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_enabled(bool p_enabled);
 	bool get_enabled();
-
-	void set_skeleton(Skeleton3D *p_skeleton);
-	Skeleton3D *get_skeleton();
 
 	SkeletonModification3D();
 };
@@ -71,21 +120,23 @@ private:
 	NodePath target_node;
 	ObjectID target_node_cache;
 	int lookat_axis;
+	bool is_pre_deleting = false;
 
-    Vector3 additional_rotation;
-    bool lock_rotation_x;
-    bool lock_rotation_y;
-    bool lock_rotation_z;
+	Vector3 additional_rotation;
+	bool lock_rotation_x;
+	bool lock_rotation_y;
+	bool lock_rotation_z;
 
 	void update_cache();
 
 protected:
 	static void _bind_methods();
 	void _validate_property(PropertyInfo &property) const;
+	void _notification(int p_what);
 
 public:
 	virtual void execute();
-	virtual void setup_modification();
+	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_bone_name(String p_name);
 	String get_bone_name();
@@ -96,15 +147,15 @@ public:
 	void set_lookat_axis(int p_axis);
 	int get_lookat_axis();
 
-    void set_rotation_offset(Vector3 p_offset);
-    Vector3 get_rotation_offset() const;
+	void set_rotation_offset(Vector3 p_offset);
+	Vector3 get_rotation_offset() const;
 
-    void set_lock_rotation_x(bool p_lock);
-    void set_lock_rotation_y(bool p_lock);
-    void set_lock_rotation_z(bool p_lock);
-    bool get_lock_rotation_x() const;
-    bool get_lock_rotation_y() const;
-    bool get_lock_rotation_z() const;
+	void set_lock_rotation_x(bool p_lock);
+	void set_lock_rotation_y(bool p_lock);
+	void set_lock_rotation_z(bool p_lock);
+	bool get_lock_rotation_x() const;
+	bool get_lock_rotation_y() const;
+	bool get_lock_rotation_z() const;
 
 	SkeletonModification3D_LookAt();
 	~SkeletonModification3D_LookAt();

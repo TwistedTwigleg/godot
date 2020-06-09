@@ -74,9 +74,9 @@ bool Skeleton3D::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
 #ifndef _3D_DISABLED
-	if (path.begins_with("Modifications/")) {
-		int material_idx = path.get_slicec('/', 1).to_int();
-		set_modification(material_idx, p_value);
+	if (path.begins_with("Modification_Stack")) {
+		set_modification_stack(p_value);
+		return true;
 	}
 #endif //_3D_DISABLED
 
@@ -127,9 +127,8 @@ bool Skeleton3D::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
 #ifndef _3D_DISABLED
-	if (path.begins_with("Modifications/")) {
-		int mod_idx = path.get_slicec('/', 1).to_int();
-		r_ret = get_modification(mod_idx);
+	if (path.begins_with("Modification_Stack")) {
+		r_ret = modification_stack;
 		return true;
 	}
 #endif //_3D_DISABLED
@@ -185,13 +184,11 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 	}
 
 #ifndef _3D_DISABLED
-	for (int i = 0; i < modifications.size(); i++) {
-		p_list->push_back(
-				PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
-						PROPERTY_HINT_RESOURCE_TYPE,
-						"SkeletonModification3D",
-						PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
-	}
+	p_list->push_back(
+			PropertyInfo(Variant::OBJECT, "Modification_Stack",
+					PROPERTY_HINT_RESOURCE_TYPE,
+					"SkeletonModificationStack3D",
+					PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
 #endif //_3D_DISABLED
 }
 
@@ -1044,74 +1041,28 @@ Transform Skeleton3D::local_bone_transform_to_bone_transform(int p_bone_idx, Tra
 
 // Modifications
 #ifndef _3D_DISABLED
-void Skeleton3D::enable_all_modifications(bool p_enable) {
-	for (int i = 0; i < modifications.size(); i++) {
-		Ref<SkeletonModification3D> mod = modifications.get(i);
-		mod->set_enabled(p_enable);
+
+void Skeleton3D::set_modification_stack(Ref<SkeletonModificationStack3D> p_stack) {
+	if (modification_stack.is_valid()) {
+		modification_stack->is_setup = false;
+		modification_stack->set_skeleton(nullptr);
+	}
+
+	modification_stack = p_stack;
+	if (modification_stack.is_valid()) {
+		modification_stack->set_skeleton(this);
+		modification_stack->setup();
 	}
 }
-Ref<SkeletonModification3D> Skeleton3D::get_modification(int p_mod_idx) const {
-	ERR_FAIL_INDEX_V(p_mod_idx, modifications.size(), nullptr);
-	return modifications[p_mod_idx];
-}
-void Skeleton3D::add_modification(Ref<SkeletonModification3D> p_mod) {
-	p_mod->set_skeleton(this);
-	modifications.push_back(p_mod);
-}
-void Skeleton3D::delete_modification(int p_mod_idx) {
-	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
-	modifications.remove(p_mod_idx);
-}
-void Skeleton3D::set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod) {
-	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
-
-	if (p_mod == nullptr) {
-		modifications.set(p_mod_idx, nullptr);
-	} else {
-		p_mod->set_skeleton(this);
-		modifications.set(p_mod_idx, p_mod);
-	}
-}
-
-void Skeleton3D::set_skeleton_modifications_enabled(bool p_enabled) {
-	skeleton_modifications_enabled = p_enabled;
-}
-bool Skeleton3D::get_skeleton_modifications_enabled() {
-	return skeleton_modifications_enabled;
-}
-
-void Skeleton3D::set_skeleton_modification_strength(float p_strength) {
-	// TODO: make an error when the value falls outside of the 0-1 range.
-	skeleton_modification_strength = p_strength;
-}
-float Skeleton3D::get_skeleton_modification_strength() {
-	return skeleton_modification_strength;
-}
-
-int Skeleton3D::get_modification_count() {
-	return modifications.size();
-}
-
-void Skeleton3D::set_modification_count(int p_count) {
-	modifications.resize(p_count);
-	_change_notify();
+Ref<SkeletonModificationStack3D> Skeleton3D::get_modification_stack() {
+	return modification_stack;
 }
 
 void Skeleton3D::execute_modifications() {
-	if (!skeleton_modifications_enabled)
+	if (!modification_stack.is_valid()) {
 		return;
-
-	// TODO: not sure if this is needed
-	clear_bones_local_pose_override();
-
-	for (int i = 0; i < modifications.size(); i++) {
-		Ref<SkeletonModification3D> mod = modifications[i];
-
-		if (mod->is_setup == false) {
-			mod->setup_modification();
-		}
-		mod->execute();
 	}
+	modification_stack->execute();
 }
 
 #endif // _3D_DISABLED
@@ -1186,28 +1137,14 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("physical_bones_remove_collision_exception", "exception"), &Skeleton3D::physical_bones_remove_collision_exception);
 
 	// Modifications
-	ClassDB::bind_method(D_METHOD("enable_all_modifications", "enabled"), &Skeleton3D::enable_all_modifications);
-	ClassDB::bind_method(D_METHOD("get_modification", "mod_idx"), &Skeleton3D::get_modification);
-	ClassDB::bind_method(D_METHOD("add_modification", "modification"), &Skeleton3D::add_modification);
-	ClassDB::bind_method(D_METHOD("delete_modification", "mod_idx"), &Skeleton3D::delete_modification);
-	ClassDB::bind_method(D_METHOD("set_modification", "mod_idx", "modification"), &Skeleton3D::set_modification);
-	ClassDB::bind_method(D_METHOD("set_skeleton_modifications_enabled", "enabled"), &Skeleton3D::set_skeleton_modifications_enabled);
-	ClassDB::bind_method(D_METHOD("get_skeleton_modifications_enabled"), &Skeleton3D::get_skeleton_modifications_enabled);
-	ClassDB::bind_method(D_METHOD("set_skeleton_modification_strength", "strength"), &Skeleton3D::set_skeleton_modification_strength);
-	ClassDB::bind_method(D_METHOD("get_skeleton_modification_strength"), &Skeleton3D::get_skeleton_modification_strength);
-	ClassDB::bind_method(D_METHOD("set_modification_count", "count"), &Skeleton3D::set_modification_count);
-	ClassDB::bind_method(D_METHOD("get_modification_count"), &Skeleton3D::get_modification_count);
+	ClassDB::bind_method(D_METHOD("set_modification_stack", "modification_stack"), &Skeleton3D::set_modification_stack);
+	ClassDB::bind_method(D_METHOD("get_modification_stack"), &Skeleton3D::get_modification_stack);
 	ClassDB::bind_method(D_METHOD("execute_modifications"), &Skeleton3D::execute_modifications);
 
 #endif // _3D_DISABLED
 
 #ifndef _3D_DISABLED
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "animate_physical_bones"), "set_animate_physical_bones", "get_animate_physical_bones");
-	ADD_GROUP("Modification Options", "Modification_Options");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "skeleton_modifications_enabled"), "set_skeleton_modifications_enabled", "get_skeleton_modifications_enabled");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "skeleton_modification_strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_skeleton_modification_strength", "get_skeleton_modification_strength");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "skeleton_modifications_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
-	ADD_GROUP("", "");
 #endif // _3D_DISABLED
 
 #ifdef TOOLS_ENABLED
@@ -1222,9 +1159,6 @@ Skeleton3D::Skeleton3D() {
 	dirty = false;
 	version = 1;
 	process_order_dirty = true;
-	skeleton_modifications_enabled = false;
-	skeleton_modification_strength = 0;
-	skeleton_modifications_count = 0;
 }
 
 Skeleton3D::~Skeleton3D() {

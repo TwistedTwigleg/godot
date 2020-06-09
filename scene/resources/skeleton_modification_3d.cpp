@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  skeleton_modification.cpp                                            */
+/*  skeleton_modification_3d.cpp                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -33,13 +33,202 @@
 
 ///////////////////////////////////////
 
+void SkeletonModificationStack3D::_get_property_list(List<PropertyInfo> *p_list) const {
+	for (int i = 0; i < modifications.size(); i++) {
+		p_list->push_back(
+				PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
+						PROPERTY_HINT_RESOURCE_TYPE,
+						"SkeletonModification3D",
+						PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
+	}
+}
+
+bool SkeletonModificationStack3D::_set(const StringName &p_path, const Variant &p_value) {
+	String path = p_path;
+
+	if (path.begins_with("Modifications/")) {
+		int mod_idx = path.get_slicec('/', 1).to_int();
+		set_modification(mod_idx, p_value);
+		return true;
+	}
+	return true;
+}
+
+bool SkeletonModificationStack3D::_get(const StringName &p_path, Variant &r_ret) const {
+	String path = p_path;
+
+	if (path.begins_with("Modifications/")) {
+		int mod_idx = path.get_slicec('/', 1).to_int();
+		r_ret = get_modification(mod_idx);
+		return true;
+	}
+	return true;
+}
+
+void SkeletonModificationStack3D::_notification(int what) {
+	if (what == NOTIFICATION_POSTINITIALIZE) {
+		can_execute = true;
+	} else if (what == NOTIFICATION_PREDELETE) {
+		can_execute = false;
+	}
+}
+
+void SkeletonModificationStack3D::setup() {
+	if (is_setup) {
+		return;
+	}
+
+	if (skeleton != nullptr) {
+		is_setup = true;
+		for (int i = 0; i < modifications.size(); i++) {
+			if (!modifications[i].is_valid()) {
+				continue;
+			}
+			modifications.get(i)->setup_modification(this);
+		}
+	} else {
+		WARN_PRINT("Cannot setup SkeletonModificationStack3D: no skeleton set!");
+	}
+}
+
+void SkeletonModificationStack3D::execute() {
+	if (!is_setup || skeleton == nullptr || !enabled || !can_execute || is_queued_for_deletion()) {
+		return;
+	}
+
+	// TODO: not sure if this is needed
+	skeleton->clear_bones_local_pose_override();
+
+	for (int i = 0; i < modifications.size(); i++) {
+		if (!modifications[i].is_valid()) {
+			continue;
+		}
+		modifications.get(i)->execute();
+	}
+}
+
+void SkeletonModificationStack3D::enable_all_modifications(bool p_enabled) {
+	for (int i = 0; i < modifications.size(); i++) {
+		if (!modifications[i].is_valid()) {
+			continue;
+		}
+		modifications.get(i)->set_enabled(p_enabled);
+	}
+}
+
+Ref<SkeletonModification3D> SkeletonModificationStack3D::get_modification(int p_mod_idx) const {
+	ERR_FAIL_INDEX_V(p_mod_idx, modifications.size(), nullptr);
+	return modifications[p_mod_idx];
+}
+
+void SkeletonModificationStack3D::add_modification(Ref<SkeletonModification3D> p_mod) {
+	p_mod->setup_modification(this);
+	modifications.push_back(p_mod);
+}
+
+void SkeletonModificationStack3D::delete_modification(int p_mod_idx) {
+	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
+	modifications.remove(p_mod_idx);
+}
+
+void SkeletonModificationStack3D::set_modification(int p_mod_idx, Ref<SkeletonModification3D> p_mod) {
+	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
+
+	if (p_mod == nullptr) {
+		modifications.set(p_mod_idx, nullptr);
+	} else {
+		p_mod->setup_modification(this);
+		modifications.set(p_mod_idx, p_mod);
+	}
+}
+
+void SkeletonModificationStack3D::set_modification_count(int p_count) {
+	modifications.resize(p_count);
+	_change_notify();
+}
+int SkeletonModificationStack3D::get_modification_count() const {
+	return modifications.size();
+}
+
+void SkeletonModificationStack3D::set_skeleton(Skeleton3D *p_skeleton) {
+	skeleton = p_skeleton;
+}
+Skeleton3D *SkeletonModificationStack3D::get_skeleton() const {
+	return skeleton;
+}
+
+bool SkeletonModificationStack3D::get_is_setup() const {
+	return is_setup;
+}
+
+void SkeletonModificationStack3D::set_enabled(bool p_enabled) {
+	enabled = p_enabled;
+}
+bool SkeletonModificationStack3D::get_enabled() const {
+	return enabled;
+}
+
+void SkeletonModificationStack3D::set_strength(float p_strength) {
+	ERR_FAIL_COND_MSG(p_strength < 0, "Strength cannot be less than zero!");
+	ERR_FAIL_COND_MSG(p_strength > 1, "Strength cannot be more than one!");
+	strength = p_strength;
+}
+float SkeletonModificationStack3D::get_strength() const {
+	return strength;
+}
+
+void SkeletonModificationStack3D::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("setup"), &SkeletonModificationStack3D::setup);
+	ClassDB::bind_method(D_METHOD("execute"), &SkeletonModificationStack3D::execute);
+
+	ClassDB::bind_method(D_METHOD("enable_all_modifications", "enabled"), &SkeletonModificationStack3D::enable_all_modifications);
+	ClassDB::bind_method(D_METHOD("get_modification", "mod_idx"), &SkeletonModificationStack3D::get_modification);
+	ClassDB::bind_method(D_METHOD("add_modification", "modification"), &SkeletonModificationStack3D::add_modification);
+	ClassDB::bind_method(D_METHOD("delete_modification", "mod_idx"), &SkeletonModificationStack3D::delete_modification);
+	ClassDB::bind_method(D_METHOD("set_modification", "mod_idx", "modification"), &SkeletonModificationStack3D::set_modification);
+
+	ClassDB::bind_method(D_METHOD("set_modification_count"), &SkeletonModificationStack3D::set_modification_count);
+	ClassDB::bind_method(D_METHOD("get_modification_count"), &SkeletonModificationStack3D::get_modification_count);
+
+	//ClassDB::bind_method(D_METHOD("set_skeleton", "skeleton"), &SkeletonModificationStack3D::set_skeleton);
+	//ClassDB::bind_method(D_METHOD("get_skeleton"), &SkeletonModificationStack3D::get_skeleton);
+
+	ClassDB::bind_method(D_METHOD("get_is_setup"), &SkeletonModificationStack3D::get_is_setup);
+
+	ClassDB::bind_method(D_METHOD("set_enabled", "enabled"), &SkeletonModificationStack3D::set_enabled);
+	ClassDB::bind_method(D_METHOD("get_enabled"), &SkeletonModificationStack3D::get_enabled);
+
+	ClassDB::bind_method(D_METHOD("set_strength", "strength"), &SkeletonModificationStack3D::set_strength);
+	ClassDB::bind_method(D_METHOD("get_strength"), &SkeletonModificationStack3D::get_strength);
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "get_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_strength", "get_strength");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "modification_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
+}
+
+SkeletonModificationStack3D::SkeletonModificationStack3D() {
+	skeleton = nullptr;
+	modifications = Vector<Ref<SkeletonModification3D>>();
+	is_setup = false;
+	enabled = false;
+	modifications_count = 0;
+	strength = 0;
+	can_execute = false;
+}
+
+///////////////////////////////////////
+
 void SkeletonModification3D::execute() {
 	if (!enabled)
 		return;
 }
 
-void SkeletonModification3D::setup_modification() {
-	is_setup = true;
+void SkeletonModification3D::setup_modification(SkeletonModificationStack3D *p_stack) {
+	stack = p_stack;
+
+	if (stack != nullptr) {
+		is_setup = true;
+	}
 }
 
 void SkeletonModification3D::set_enabled(bool p_enabled) {
@@ -48,15 +237,6 @@ void SkeletonModification3D::set_enabled(bool p_enabled) {
 
 bool SkeletonModification3D::get_enabled() {
 	return enabled;
-}
-
-void SkeletonModification3D::set_skeleton(Skeleton3D *p_skeleton) {
-	skeleton = p_skeleton;
-	_change_notify();
-}
-
-Skeleton3D *SkeletonModification3D::get_skeleton() {
-	return skeleton;
 }
 
 void SkeletonModification3D::_bind_methods() {
@@ -70,20 +250,17 @@ void SkeletonModification3D::_bind_methods() {
 }
 
 SkeletonModification3D::SkeletonModification3D() {
+	stack = nullptr;
 	is_setup = false;
 }
 
 ///////////////////////////////////////
 
 void SkeletonModification3D_LookAt::execute() {
-	if (!enabled)
+	if (!enabled || !stack || !is_setup)
 		return;
 
-	if (!skeleton) {
-		return;
-	}
-
-	if (!skeleton->is_inside_tree()) {
+	if (stack->skeleton == nullptr) {
 		return;
 	}
 
@@ -102,8 +279,10 @@ void SkeletonModification3D_LookAt::execute() {
 	}
 
 	if (bone_name != "") {
-		int bone_idx = skeleton->find_bone(bone_name);
+		int bone_idx = stack->skeleton->find_bone(bone_name);
+		Skeleton3D *skeleton = stack->skeleton;
 		Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
+
 		// Convert to a global bone transform
 		new_bone_trans = skeleton->local_bone_transform_to_bone_transform(bone_idx, new_bone_trans);
 
@@ -117,66 +296,79 @@ void SkeletonModification3D_LookAt::execute() {
 			new_bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(bone_idx), -M_PI / 2.0);
 		}
 
-        // Apply additional rotation
-        new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
-        new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
-        new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
-        
-        // Look rotation if needed
-        if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
-            Transform rest_transform = skeleton->get_bone_rest(bone_idx);
-            rest_transform = skeleton->local_bone_transform_to_bone_transform(bone_idx, rest_transform);
+		// Apply additional rotation
+		new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
+		new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
+		new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
 
-            Vector3 new_rotation = new_bone_trans.basis.get_rotation();
-            Vector3 old_rotation = rest_transform.basis.get_rotation();
-            if (lock_rotation_x) {
-                new_rotation.x = old_rotation.x;
-            }
-            if (lock_rotation_y) {
-                new_rotation.y = old_rotation.y;
-            }
-            if (lock_rotation_z) {
-                new_rotation.z = old_rotation.z;
-            }
-            new_bone_trans.basis.set_euler(new_rotation);
-        }
+		// Look rotation if needed
+		if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
+			Transform rest_transform = skeleton->get_bone_rest(bone_idx);
+			rest_transform = skeleton->local_bone_transform_to_bone_transform(bone_idx, rest_transform);
 
+			Vector3 new_rotation = new_bone_trans.basis.get_rotation();
+			Vector3 old_rotation = rest_transform.basis.get_rotation();
+			if (lock_rotation_x) {
+				new_rotation.x = old_rotation.x;
+			}
+			if (lock_rotation_y) {
+				new_rotation.y = old_rotation.y;
+			}
+			if (lock_rotation_z) {
+				new_rotation.z = old_rotation.z;
+			}
+			new_bone_trans.basis.set_euler(new_rotation);
+		}
 
 		// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
 		new_bone_trans = skeleton->bone_transform_to_local_bone_transform(bone_idx, new_bone_trans);
-		skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, skeleton->get_skeleton_modification_strength(), true);
+		skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
+		//skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, skeleton->get_skeleton_modification_strength(), true);
 
 		// TODO: make this configurable.
 		skeleton->force_update_bone_children_transforms(bone_idx);
 	}
 }
 
-void SkeletonModification3D_LookAt::setup_modification() {
-	is_setup = true;
-	update_cache();
+void SkeletonModification3D_LookAt::setup_modification(SkeletonModificationStack3D *p_stack) {
+	stack = p_stack;
+
+	if (stack != nullptr) {
+		is_setup = true;
+		is_pre_deleting = false;
+		update_cache();
+	}
 }
 
 void SkeletonModification3D_LookAt::_validate_property(PropertyInfo &property) const {
-	if (!is_setup) {
+	if (!is_setup || !stack || is_pre_deleting || is_queued_for_deletion()) {
 		return;
 	}
-    
-    if (property.name == "bone_name") {
-		if (skeleton) {
-            String names;
-            for (int i = 0; i < skeleton->get_bone_count(); i++) {
-                if (i > 0) {
-                    names += ",";
-                }
-                names += skeleton->get_bone_name(i);
-            }
 
-            property.hint = PROPERTY_HINT_ENUM;
-            property.hint_string = names;
+	if (property.name == "bone_name") {
+		if (stack->skeleton != nullptr) {
+			String names;
+			for (int i = 0; i < stack->skeleton->get_bone_count(); i++) {
+				if (i > 0) {
+					names += ",";
+				}
+				names += stack->skeleton->get_bone_name(i);
+			}
+
+			property.hint = PROPERTY_HINT_ENUM;
+			property.hint_string = names;
 		} else {
 			property.hint = PROPERTY_HINT_NONE;
 			property.hint_string = "";
 		}
+	}
+}
+
+void SkeletonModification3D_LookAt::_notification(int what) {
+	if (what == NOTIFICATION_POSTINITIALIZE) {
+		is_pre_deleting = false;
+	} else if (what == NOTIFICATION_PREDELETE) {
+		is_pre_deleting = true;
 	}
 }
 
@@ -190,16 +382,16 @@ String SkeletonModification3D_LookAt::get_bone_name() {
 }
 
 void SkeletonModification3D_LookAt::update_cache() {
-	if (!is_setup) {
+	if (!is_setup || !stack) {
 		return;
 	}
 
 	target_node_cache = ObjectID();
-	if (skeleton) {
-		if (skeleton->is_inside_tree()) {
-			if (skeleton->has_node(target_node)) {
-				Node *node = skeleton->get_node(target_node);
-				if (!node || skeleton == node) {
+	if (stack->skeleton) {
+		if (stack->skeleton->is_inside_tree()) {
+			if (stack->skeleton->has_node(target_node)) {
+				Node *node = stack->skeleton->get_node(target_node);
+				if (!node || stack->skeleton == node) {
 					return;
 				}
 				target_node_cache = node->get_instance_id();
@@ -225,29 +417,29 @@ int SkeletonModification3D_LookAt::get_lookat_axis() {
 }
 
 Vector3 SkeletonModification3D_LookAt::get_rotation_offset() const {
-    return additional_rotation;
+	return additional_rotation;
 }
 void SkeletonModification3D_LookAt::set_rotation_offset(Vector3 p_offset) {
-    additional_rotation = p_offset;
+	additional_rotation = p_offset;
 }
 
 bool SkeletonModification3D_LookAt::get_lock_rotation_x() const {
-    return lock_rotation_x;
+	return lock_rotation_x;
 }
 bool SkeletonModification3D_LookAt::get_lock_rotation_y() const {
-    return lock_rotation_y;
+	return lock_rotation_y;
 }
 bool SkeletonModification3D_LookAt::get_lock_rotation_z() const {
-    return lock_rotation_z;
+	return lock_rotation_z;
 }
 void SkeletonModification3D_LookAt::set_lock_rotation_x(bool p_lock) {
-    lock_rotation_x = p_lock;
+	lock_rotation_x = p_lock;
 }
 void SkeletonModification3D_LookAt::set_lock_rotation_y(bool p_lock) {
-    lock_rotation_y = p_lock;
+	lock_rotation_y = p_lock;
 }
 void SkeletonModification3D_LookAt::set_lock_rotation_z(bool p_lock) {
-    lock_rotation_z = p_lock;
+	lock_rotation_z = p_lock;
 }
 
 void SkeletonModification3D_LookAt::_bind_methods() {
@@ -260,35 +452,35 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_lookat_axis", "lookat_axis"), &SkeletonModification3D_LookAt::set_lookat_axis);
 	ClassDB::bind_method(D_METHOD("get_lookat_axis"), &SkeletonModification3D_LookAt::get_lookat_axis);
 
-    ClassDB::bind_method(D_METHOD("set_rotation_offset", "offset"), &SkeletonModification3D_LookAt::set_rotation_offset);
+	ClassDB::bind_method(D_METHOD("set_rotation_offset", "offset"), &SkeletonModification3D_LookAt::set_rotation_offset);
 	ClassDB::bind_method(D_METHOD("get_rotation_offset"), &SkeletonModification3D_LookAt::get_rotation_offset);
 
-    ClassDB::bind_method(D_METHOD("set_lock_rotation_x", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_x);
+	ClassDB::bind_method(D_METHOD("set_lock_rotation_x", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_x);
 	ClassDB::bind_method(D_METHOD("get_lock_rotation_x"), &SkeletonModification3D_LookAt::get_lock_rotation_x);
-    ClassDB::bind_method(D_METHOD("set_lock_rotation_y", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_y);
+	ClassDB::bind_method(D_METHOD("set_lock_rotation_y", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_y);
 	ClassDB::bind_method(D_METHOD("get_lock_rotation_y"), &SkeletonModification3D_LookAt::get_lock_rotation_y);
-    ClassDB::bind_method(D_METHOD("set_lock_rotation_z", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_z);
+	ClassDB::bind_method(D_METHOD("set_lock_rotation_z", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_z);
 	ClassDB::bind_method(D_METHOD("get_lock_rotation_z"), &SkeletonModification3D_LookAt::get_lock_rotation_z);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "lookat_axis", PROPERTY_HINT_ENUM, "axis x, axis y, axis z"), "set_lookat_axis", "get_lookat_axis");
-    ADD_GROUP("Additional Settings", "");
-    ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "rotation_offset"), "set_rotation_offset", "get_rotation_offset");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_x"), "set_lock_rotation_x", "get_lock_rotation_x");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_y"), "set_lock_rotation_y", "get_lock_rotation_y");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_z"), "set_lock_rotation_z", "get_lock_rotation_z");
-    
+	ADD_GROUP("Additional Settings", "");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "rotation_offset"), "set_rotation_offset", "get_rotation_offset");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_x"), "set_lock_rotation_x", "get_lock_rotation_x");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_y"), "set_lock_rotation_y", "get_lock_rotation_y");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_z"), "set_lock_rotation_z", "get_lock_rotation_z");
 }
 
 SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
-	skeleton = nullptr;
-    is_setup = false;
-    lookat_axis = 1;
-    additional_rotation = Vector3();
-    lock_rotation_x = false;
-    lock_rotation_y = false;
-    lock_rotation_z = false;
+	stack = nullptr;
+	is_setup = false;
+	lookat_axis = 1;
+	additional_rotation = Vector3();
+	lock_rotation_x = false;
+	lock_rotation_y = false;
+	lock_rotation_z = false;
+	is_pre_deleting = false;
 }
 
 SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {
