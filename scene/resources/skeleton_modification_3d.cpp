@@ -604,15 +604,14 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 
 	// Adopted from: https://github.com/zalo/MathUtilities/blob/master/Assets/IK/CCDIK/CCDIKJoint.cs
 	// With modifications by TwistedTwigleg.
-	// TODO: investiage adding something like the rotate_to_direction bool found at link above. 
 	Quat ccdik_rotation = Quat();
-	ccdik_rotation.rotate_from_vector_to_vector(
-		stack->skeleton->world_transform_to_bone_transform(tip->get_global_transform()).origin,
-		stack->skeleton->world_transform_to_bone_transform(target->get_global_transform()).origin
-	);
 	Transform bone_trans = stack->skeleton->local_bone_transform_to_bone_transform(
 		ccdik_data.bone_idx,
 		stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx)
+	);
+	ccdik_rotation.rotate_from_vector_to_vector(
+		stack->skeleton->world_transform_to_bone_transform(tip->get_global_transform()).origin,
+		stack->skeleton->world_transform_to_bone_transform(target->get_global_transform()).origin
 	);
 	ccdik_rotation = ccdik_rotation * stack->skeleton->local_bone_transform_to_bone_transform(ccdik_data.bone_idx, bone_trans).basis.get_rotation_quat();
 
@@ -717,6 +716,7 @@ void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name(int p_joint_idx, St
 			ccdik_data_chain.write[p_joint_idx].bone_idx = stack->skeleton->find_bone(p_bone_name);
 		}
 	}
+	_change_notify();
 }
 
 int SkeletonModification3D_CCDIK::ccdik_joint_get_bone_index(int p_joint_idx) const {
@@ -738,6 +738,7 @@ void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_index(int p_joint_idx, i
 			ccdik_data_chain.write[p_joint_idx].bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 		}
 	}
+	_change_notify();
 }
 
 int SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis(int p_joint_idx) const {
@@ -757,6 +758,7 @@ void SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis(int p_joint_idx, i
 	} else if (p_axis == AXIS_Z) {
 		ccdik_joint_set_ccdik_axis_vector(p_joint_idx, Vector3(0, 0, 1));
 	}
+	_change_notify();
 }
 
 Vector3 SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis_vector(int p_joint_idx) const {
