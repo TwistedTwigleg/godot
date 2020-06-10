@@ -164,4 +164,92 @@ public:
 
 ///////////////////////////////////////
 
+///////////////////////////////////////
+
+class SkeletonModification3D_CCDIK : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3D_CCDIK, SkeletonModification3D);
+
+private:
+
+	enum CCDIK_Axes {
+		AXIS_X,
+		AXIS_Y,
+		AXIS_Z,
+		AXIS_CUSTOM
+	};
+
+	struct CCDIK_Joint_Data
+	{
+		String bone_name = "";
+		int bone_idx = -1;
+		int ccdik_axis = 0;
+		Vector3 ccdik_axis_vector = Vector3(1,0,0);
+
+		bool enable_constraint = false;
+		float constraint_angle_min = 0;
+		float constraint_angle_max = (2.0 * M_PI);
+		bool constraint_angles_invert = false;
+	};
+	
+	Vector<CCDIK_Joint_Data> ccdik_data_chain;
+	NodePath target_node;
+	ObjectID target_node_cache;
+
+	NodePath tip_node;
+	ObjectID tip_node_cache;
+
+	bool instantly_apply_modification;
+
+	void update_target_cache();
+	void update_tip_cache();
+
+	void _execute_ccdik_joint(int p_joint_idx, Node3D *target, Node3D *tip);
+
+protected:
+	static void _bind_methods();
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	bool _set(const StringName &p_path, const Variant &p_value);
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+
+public:
+	virtual void execute();
+	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
+
+	void set_target_node(const NodePath &p_target_node);
+	NodePath get_target_node() const;
+
+	void set_tip_node(const NodePath &p_tip_node);
+	NodePath get_tip_node() const;
+
+	String ccdik_joint_get_bone_name(int p_joint_idx) const;
+	void ccdik_joint_set_bone_name(int p_joint_idx, String p_bone_name);
+	int ccdik_joint_get_bone_index(int p_joint_idx) const;
+	void ccdik_joint_set_bone_index(int p_joint_idx, int p_bone_idx);
+	int ccdik_joint_get_ccdik_axis(int p_joint_idx) const;
+	void ccdik_joint_set_ccdik_axis(int p_joint_idx, int p_axis);
+	Vector3 ccdik_joint_get_ccdik_axis_vector(int p_joint_idx) const;
+	void ccdik_joint_set_ccdik_axis_vector(int p_joint_idx, Vector3 p_axis);
+	bool ccdik_joint_get_enable_constraint(int p_joint_idx) const;
+	void ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_enable);
+	float ccdik_joint_get_constraint_angle_min(int p_joint_idx) const;
+	void ccdik_joint_set_constraint_angle_min(int p_joint_idx, float p_angle_min);
+	void ccdik_joint_set_constraint_angle_degrees_min(int p_joint_idx, float p_angle_min);
+	float ccdik_joint_get_constraint_angle_max(int p_joint_idx) const;
+	void ccdik_joint_set_constraint_angle_max(int p_joint_idx, float p_angle_max);
+	void ccdik_joint_set_constraint_angle_degrees_max(int p_joint_idx, float p_angle_max);
+	bool ccdik_joint_get_constraint_invert(int p_joint_idx) const;
+	void ccdik_joint_set_constraint_invert(int p_joint_idx, bool p_invert);
+
+	int get_ccdik_data_chain_length();
+	void set_ccdik_data_chain_length(int p_new_length);
+
+	void set_instantly_apply_modification(bool p_apply);
+	bool get_instantly_apply_modification() const;
+
+	SkeletonModification3D_CCDIK();
+	~SkeletonModification3D_CCDIK();
+};
+
+///////////////////////////////////////
+
 #endif // SKELETONMODIFICATION3D_H
