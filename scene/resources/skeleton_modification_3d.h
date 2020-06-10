@@ -125,6 +125,8 @@ private:
 	bool lock_rotation_y;
 	bool lock_rotation_z;
 
+	bool instantly_apply_modification;
+
 	void update_cache();
 
 protected:
@@ -152,6 +154,9 @@ public:
 	bool get_lock_rotation_x() const;
 	bool get_lock_rotation_y() const;
 	bool get_lock_rotation_z() const;
+
+	void set_instantly_apply_modification(bool p_apply);
+	bool get_instantly_apply_modification() const;
 
 	SkeletonModification3D_LookAt();
 	~SkeletonModification3D_LookAt();

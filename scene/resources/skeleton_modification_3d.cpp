@@ -294,36 +294,44 @@ void SkeletonModification3D_LookAt::execute() {
 			new_bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(bone_idx), -M_PI / 2.0);
 		}
 
+		// Lock rotation if needed
+		if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
+			Transform rest_transform = skeleton->get_bone_rest(bone_idx);
+			rest_transform = skeleton->local_bone_transform_to_bone_transform(bone_idx, rest_transform);
+
+			Quat new_rotation_quat = new_bone_trans.basis.get_rotation_quat();
+			Quat old_rotation_quat = rest_transform.basis.get_rotation_euler();
+			if (lock_rotation_x) {
+				Vector3 axis = Vector3(1, 0, 0);
+				new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
+				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+			}
+			if (lock_rotation_y) {
+				Vector3 axis = Vector3(0, 1, 0);
+				new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
+				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+			}
+			if (lock_rotation_z) {
+				Vector3 axis = Vector3(0, 0, 1);
+				new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
+				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+			}
+			new_bone_trans.basis = Basis(new_rotation_quat).scaled(new_bone_trans.basis.get_scale());
+
+		}
+
 		// Apply additional rotation
 		new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
 		new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
 		new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
 
-		// Look rotation if needed
-		if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
-			Transform rest_transform = skeleton->get_bone_rest(bone_idx);
-			rest_transform = skeleton->local_bone_transform_to_bone_transform(bone_idx, rest_transform);
-
-			Vector3 new_rotation = new_bone_trans.basis.get_rotation();
-			Vector3 old_rotation = rest_transform.basis.get_rotation();
-			if (lock_rotation_x) {
-				new_rotation.x = old_rotation.x;
-			}
-			if (lock_rotation_y) {
-				new_rotation.y = old_rotation.y;
-			}
-			if (lock_rotation_z) {
-				new_rotation.z = old_rotation.z;
-			}
-			new_bone_trans.basis.set_euler(new_rotation);
-		}
-
 		// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
 		new_bone_trans = skeleton->bone_transform_to_local_bone_transform(bone_idx, new_bone_trans);
 		skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
 
-		// TODO: make this configurable.
-		skeleton->force_update_bone_children_transforms(bone_idx);
+		if (instantly_apply_modification) {
+			skeleton->force_update_bone_children_transforms(bone_idx);
+		}
 	}
 }
 
@@ -409,6 +417,13 @@ void SkeletonModification3D_LookAt::set_lock_rotation_z(bool p_lock) {
 	lock_rotation_z = p_lock;
 }
 
+void SkeletonModification3D_LookAt::set_instantly_apply_modification(bool p_apply) {
+	instantly_apply_modification = p_apply;
+}
+bool SkeletonModification3D_LookAt::get_instantly_apply_modification() const {
+	return instantly_apply_modification;
+}
+
 void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3D_LookAt::set_bone_name);
 	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3D_LookAt::get_bone_name);
@@ -429,14 +444,18 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_lock_rotation_z", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_z);
 	ClassDB::bind_method(D_METHOD("get_lock_rotation_z"), &SkeletonModification3D_LookAt::get_lock_rotation_z);
 
+	ClassDB::bind_method(D_METHOD("set_instantly_apply_modification", "apply_modification"), &SkeletonModification3D_LookAt::set_instantly_apply_modification);
+	ClassDB::bind_method(D_METHOD("get_instantly_apply_modification"), &SkeletonModification3D_LookAt::get_instantly_apply_modification);
+
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "lookat_axis", PROPERTY_HINT_ENUM, "axis x, axis y, axis z"), "set_lookat_axis", "get_lookat_axis");
 	ADD_GROUP("Additional Settings", "");
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "rotation_offset"), "set_rotation_offset", "get_rotation_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_x"), "set_lock_rotation_x", "get_lock_rotation_x");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_y"), "set_lock_rotation_y", "get_lock_rotation_y");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_z"), "set_lock_rotation_z", "get_lock_rotation_z");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "rotation_offset"), "set_rotation_offset", "get_rotation_offset");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "instantly_apply_modification"), "set_instantly_apply_modification", "get_instantly_apply_modification");
 }
 
 SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
@@ -449,6 +468,7 @@ SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
 	lock_rotation_x = false;
 	lock_rotation_y = false;
 	lock_rotation_z = false;
+	instantly_apply_modification = true;
 }
 
 SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {

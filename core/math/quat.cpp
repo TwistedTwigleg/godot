@@ -248,3 +248,52 @@ void Quat::set_axis_angle(const Vector3 &axis, const real_t &angle) {
 				cos_angle);
 	}
 }
+
+// Decomposes a Quaterian into a swing and twist, where twist is the rotation around the
+// passed-in axis, p_axis, and swing is the rotation on the two remaining axes.
+// Adopted from: https://stackoverflow.com/questions/3684269/component-of-a-quaternion-rotation-around-an-axis
+// And split into two functions, each returning a single part of the decomposed Quat.
+Quat Quat::get_twist_quat(const Vector3 p_axis) const {
+	Vector3 rotation_axis = Vector3(x, y, z);
+	Vector3 projection_vector = rotation_axis.project(p_axis);
+	return Quat(projection_vector.x, projection_vector.y, projection_vector.z, w).normalized();
+}
+Quat Quat::get_swing_quat(const Vector3 p_axis) const {
+	Quat twist = get_twist_quat(p_axis);
+	return Quat(x, y, z, w) * twist.inverse();
+}
+
+// Takes two vectors and creates a Quat that starts with the rotation of p_from
+// and rotates to p_to. Similar to the look_at function, but you can define/override
+// the starting rotation.
+// Adopted from: https://bitbucket.org/sinbad/ogre/src/9db75e3ba05c/OgreMain/include/OgreVector3.h#cl-651
+void Quat::rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to) {
+	Vector3 v0 = p_from.normalized();
+	Vector3 v1 = p_to.normalized();
+	real_t dot = v0.dot(v1);
+
+	if (dot >= 1.0 || dot <= 0) {
+		// cannot do anything! Print an error and return
+		ERR_FAIL_MSG("Cannot rotate quaternion! Given Vector3s are at the same position!");
+		return;
+	} else if (dot < (1e-6 - 1.0)) {
+		Vector3 axis = Vector3(1, 0, 0).cross(v0);
+		if (axis.length_squared() == 0) {
+			axis = Vector3(0, 1, 0).cross(v0);
+		}
+		axis = axis.normalized();
+		set_axis_angle(axis, M_PI);
+		return;
+	} else {
+		float square = sqrt((1+dot) * 2.0);
+		float inverse = 1.0 / square;
+		Vector3 cross = v0.cross(v1);
+
+		x = cross.x * inverse;
+		y = cross.y * inverse;
+		z = cross.z * inverse;
+		normalized();
+
+		return;
+	}
+}

@@ -72,6 +72,10 @@ public:
 		r_axis.z = z * r;
 	}
 
+	Quat get_twist_quat(const Vector3 p_axis) const;
+	Quat get_swing_quat(const Vector3 p_axis) const;
+	void rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to);
+
 	void operator*=(const Quat &q);
 	Quat operator*(const Quat &q) const;
 
