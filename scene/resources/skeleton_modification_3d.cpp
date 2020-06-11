@@ -610,11 +610,10 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx)
 	);
 	ccdik_rotation.rotate_from_vector_to_vector(
-		stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin,
+		bone_trans.origin,
 		stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin
 	);
-	ccdik_rotation = ccdik_rotation * stack->skeleton->local_pose_to_global_pose(ccdik_data.bone_idx, bone_trans).basis.get_rotation_quat();
-
+	
 	// Enforce rotation only on the select joint axix
 	Quat ccdik_twist = ccdik_rotation.get_twist_quat(ccdik_data.ccdik_axis_vector);
 

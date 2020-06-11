@@ -1604,13 +1604,13 @@ void Skeleton3DGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
 		// You have children but no parent, then you must be a root/parentless bone.
 		if (child_bones_size >= 0 && skel->get_bone_parent(current_bone_idx) <= 0) {
-			grests.write[current_bone_idx] = skel->bone_transform_to_local_bone_transform(current_bone_idx, skel->get_bone_global_pose(current_bone_idx));
+			grests.write[current_bone_idx] = skel->global_pose_to_local_pose(current_bone_idx, skel->get_bone_global_pose(current_bone_idx));
 		}
 
 		for (int i = 0; i < child_bones_size; i++) {
 			int child_bone_idx = child_bones_vector[i];
 
-			grests.write[child_bone_idx] = skel->bone_transform_to_local_bone_transform(child_bone_idx, skel->get_bone_global_pose(child_bone_idx));
+			grests.write[child_bone_idx] = skel->global_pose_to_local_pose(child_bone_idx, skel->get_bone_global_pose(child_bone_idx));
 			Vector3 v0 = grests[current_bone_idx].origin;
 			Vector3 v1 = grests[child_bone_idx].origin;
 			Vector3 d = skel->get_bone_rest(child_bone_idx).origin.normalized();

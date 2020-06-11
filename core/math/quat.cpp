@@ -273,8 +273,7 @@ void Quat::rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to
 	real_t dot = v0.dot(v1);
 
 	if (dot >= 1.0 || dot <= 0) {
-		// cannot do anything! Print an error and return
-		ERR_FAIL_MSG("Cannot rotate quaternion! Given Vector3s are at the same position!");
+		// cannot do anything! Simply return
 		return;
 	} else if (dot < (1e-6 - 1.0)) {
 		Vector3 axis = Vector3(1, 0, 0).cross(v0);
