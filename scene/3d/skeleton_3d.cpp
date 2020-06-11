@@ -998,43 +998,32 @@ void Skeleton3D::force_update_bone_children_transforms(int p_bone_idx) {
 }
 
 // helper functions
-Transform Skeleton3D::bone_transform_to_world_transform(Transform p_bone_transform) {
-	return get_global_transform() * p_bone_transform;
+Transform Skeleton3D::global_pose_to_world_transform(Transform p_global_pose) {
+	return get_global_transform() * p_global_pose;
 }
-
-Transform Skeleton3D::world_transform_to_bone_transform(Transform p_world_transform) {
+Transform Skeleton3D::world_transform_to_global_pose(Transform p_world_transform) {
 	return get_global_transform().affine_inverse() * p_world_transform;
 }
-Transform Skeleton3D::bone_transform_to_local_bone_transform(int p_bone_idx, Transform p_world_transform) {
+Transform Skeleton3D::global_pose_to_local_pose(int p_bone_idx, Transform p_global_pose) {
 	if (bones[p_bone_idx].parent >= 0) {
-		Transform return_val = Transform();
 		int parent_bone_idx = bones[p_bone_idx].parent;
 		Transform conversion_transform = (bones[parent_bone_idx].pose_global * bones[p_bone_idx].rest);
-
-		return_val.origin = conversion_transform.affine_inverse().xform(p_world_transform.origin);
-		return_val.basis = conversion_transform.affine_inverse().basis * p_world_transform.basis;
-
-		return return_val;
+		return conversion_transform.affine_inverse() * p_global_pose;
 	} else {
 		// Cannot really turn a bone transform to a local bone transform without a parent...
 		// TODO: need to test this!
-		return p_world_transform;
+		return p_global_pose;
 	}
 }
-Transform Skeleton3D::local_bone_transform_to_bone_transform(int p_bone_idx, Transform p_world_transform) {
+Transform Skeleton3D::local_pose_to_global_pose(int p_bone_idx, Transform p_local_pose) {
 	if (bones[p_bone_idx].parent >= 0) {
-		Transform return_val = Transform();
 		int parent_bone_idx = bones[p_bone_idx].parent;
 		Transform conversion_transform = (bones[parent_bone_idx].pose_global * bones[p_bone_idx].rest);
-
-		return_val.origin = conversion_transform.xform(p_world_transform.origin);
-		return_val.basis = conversion_transform.basis * p_world_transform.basis;
-
-		return return_val;
+		return conversion_transform * p_local_pose;
 	} else {
 		// Cannot really turn a local bone transform to a bone transform without a parent...
 		// TODO: need to test this!
-		return p_world_transform;
+		return p_local_pose;
 	}
 }
 
@@ -1120,10 +1109,10 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("force_update_bone_child_transform", "bone_idx"), &Skeleton3D::force_update_bone_children_transforms);
 
 	// Helper functions
-	ClassDB::bind_method(D_METHOD("bone_transform_to_world_transform", "bone_transform"), &Skeleton3D::bone_transform_to_world_transform);
-	ClassDB::bind_method(D_METHOD("world_transform_to_bone_transform", "world_transform"), &Skeleton3D::world_transform_to_bone_transform);
-	ClassDB::bind_method(D_METHOD("bone_transform_to_local_bone_transform", "bone_transform"), &Skeleton3D::bone_transform_to_local_bone_transform);
-	ClassDB::bind_method(D_METHOD("local_bone_transform_to_bone_transform", "world_transform"), &Skeleton3D::local_bone_transform_to_bone_transform);
+	ClassDB::bind_method(D_METHOD("global_pose_to_world_transform", "global_pose"), &Skeleton3D::global_pose_to_world_transform);
+	ClassDB::bind_method(D_METHOD("world_transform_to_global_pose", "world_transform"), &Skeleton3D::world_transform_to_global_pose);
+	ClassDB::bind_method(D_METHOD("global_pose_to_local_pose", "global_pose"), &Skeleton3D::global_pose_to_local_pose);
+	ClassDB::bind_method(D_METHOD("local_pose_to_global_pose", "local_pose"), &Skeleton3D::local_pose_to_global_pose);
 
 #ifndef _3D_DISABLED
 

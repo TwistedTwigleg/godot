@@ -288,11 +288,11 @@ void SkeletonModification3D_LookAt::execute() {
 		Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
 
 		// Convert to a global bone transform
-		new_bone_trans = skeleton->local_bone_transform_to_bone_transform(bone_idx, new_bone_trans);
+		new_bone_trans = skeleton->local_pose_to_global_pose(bone_idx, new_bone_trans);
 
 		new_bone_trans = new_bone_trans.looking_at(
-				skeleton->world_transform_to_bone_transform(n->get_global_transform()).origin,
-				skeleton->world_transform_to_bone_transform(skeleton->get_global_transform()).basis[lookat_axis].normalized());
+				skeleton->world_transform_to_global_pose(n->get_global_transform()).origin,
+				skeleton->world_transform_to_global_pose(skeleton->get_global_transform()).basis[lookat_axis].normalized());
 
 		// NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
 		// Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
@@ -303,7 +303,7 @@ void SkeletonModification3D_LookAt::execute() {
 		// Lock rotation if needed
 		if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
 			Transform rest_transform = skeleton->get_bone_rest(bone_idx);
-			rest_transform = skeleton->local_bone_transform_to_bone_transform(bone_idx, rest_transform);
+			rest_transform = skeleton->local_pose_to_global_pose(bone_idx, rest_transform);
 
 			Quat new_rotation_quat = new_bone_trans.basis.get_rotation_quat();
 			Quat old_rotation_quat = rest_transform.basis.get_rotation_euler();
@@ -332,7 +332,7 @@ void SkeletonModification3D_LookAt::execute() {
 		new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
 
 		// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
-		new_bone_trans = skeleton->bone_transform_to_local_bone_transform(bone_idx, new_bone_trans);
+		new_bone_trans = skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
 		skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
 
 		if (instantly_apply_modification) {
@@ -605,15 +605,15 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// Adopted from: https://github.com/zalo/MathUtilities/blob/master/Assets/IK/CCDIK/CCDIKJoint.cs
 	// With modifications by TwistedTwigleg.
 	Quat ccdik_rotation = Quat();
-	Transform bone_trans = stack->skeleton->local_bone_transform_to_bone_transform(
+	Transform bone_trans = stack->skeleton->local_pose_to_global_pose(
 		ccdik_data.bone_idx,
 		stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx)
 	);
 	ccdik_rotation.rotate_from_vector_to_vector(
-		stack->skeleton->world_transform_to_bone_transform(tip->get_global_transform()).origin,
-		stack->skeleton->world_transform_to_bone_transform(target->get_global_transform()).origin
+		stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin,
+		stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin
 	);
-	ccdik_rotation = ccdik_rotation * stack->skeleton->local_bone_transform_to_bone_transform(ccdik_data.bone_idx, bone_trans).basis.get_rotation_quat();
+	ccdik_rotation = ccdik_rotation * stack->skeleton->local_pose_to_global_pose(ccdik_data.bone_idx, bone_trans).basis.get_rotation_quat();
 
 	// Enforce rotation only on the select joint axix
 	Quat ccdik_twist = ccdik_rotation.get_twist_quat(ccdik_data.ccdik_axis_vector);
@@ -621,7 +621,7 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// Apply to the bone!
 	// TODO: This may need to be adjusted to account for bone scaling...
 	bone_trans.basis = Basis(ccdik_twist);
-	bone_trans = stack->skeleton->bone_transform_to_local_bone_transform(ccdik_data.bone_idx, bone_trans);
+	bone_trans = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, bone_trans);
 	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
 
 	// TODO: apply constraints!

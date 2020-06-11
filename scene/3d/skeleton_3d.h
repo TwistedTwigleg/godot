@@ -235,10 +235,10 @@ public:
 	Vector3 get_bone_axis_perpendicular(int p_bone);
 
 	// Helper functions
-	Transform bone_transform_to_world_transform(Transform p_transform);
-	Transform world_transform_to_bone_transform(Transform p_transform);
-	Transform bone_transform_to_local_bone_transform(int p_bone_idx, Transform p_transform);
-	Transform local_bone_transform_to_bone_transform(int p_bone_idx, Transform p_transform);
+	Transform global_pose_to_world_transform(Transform p_global_pose);
+	Transform world_transform_to_global_pose(Transform p_transform);
+	Transform global_pose_to_local_pose(int p_bone_idx, Transform p_global_pose);
+	Transform local_pose_to_global_pose(int p_bone_idx, Transform p_local_pose);
 
 	// Modifications
 #ifndef _3D_DISABLED
