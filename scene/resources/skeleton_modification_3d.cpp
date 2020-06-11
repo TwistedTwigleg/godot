@@ -609,9 +609,13 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		ccdik_data.bone_idx,
 		stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx)
 	);
+	// I'm not sure if this condition is still needed. Need to test later.
+	if (stack->skeleton->get_bone_parent(ccdik_data.bone_idx) < 0) {
+		bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
+	}
 	ccdik_rotation.rotate_from_vector_to_vector(
-		bone_trans.origin,
-		stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin
+		stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin - bone_trans.origin,
+		stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin - bone_trans.origin
 	);
 	
 	// Enforce rotation only on the select joint axix
