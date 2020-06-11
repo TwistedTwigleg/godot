@@ -160,6 +160,10 @@ bool SkeletonModificationStack3D::get_is_setup() const {
 
 void SkeletonModificationStack3D::set_enabled(bool p_enabled) {
 	enabled = p_enabled;
+
+	if (!enabled && is_setup || skeleton != nullptr) {
+		skeleton->clear_bones_local_pose_override();
+	}
 }
 bool SkeletonModificationStack3D::get_enabled() const {
 	return enabled;
@@ -323,7 +327,6 @@ void SkeletonModification3D_LookAt::execute() {
 				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
 			}
 			new_bone_trans.basis = Basis(new_rotation_quat).scaled(new_bone_trans.basis.get_scale());
-
 		}
 
 		// Apply additional rotation
@@ -549,19 +552,18 @@ bool SkeletonModification3D_CCDIK::_get(const StringName &p_path, Variant &r_ret
 }
 
 void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list) const {
-
 	for (int i = 0; i < ccdik_data_chain.size(); i++) {
 		String base_string = "ccdik_joint/" + itos(i) + "/";
 
 		p_list->push_back(PropertyInfo(Variant::STRING, base_string + "bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::INT, base_string + "bone_index", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-		
+
 		p_list->push_back(PropertyInfo(Variant::INT, base_string + "ccdik_axis",
-			PROPERTY_HINT_ENUM, "X Axis, Y Axis, Z Axis, Custom Axis", PROPERTY_USAGE_DEFAULT));
+				PROPERTY_HINT_ENUM, "X Axis, Y Axis, Z Axis, Custom Axis", PROPERTY_USAGE_DEFAULT));
 		if (ccdik_data_chain[i].ccdik_axis >= AXIS_CUSTOM) {
 			p_list->push_back(PropertyInfo(Variant::VECTOR3, base_string + "ccdik_axis_custom", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		}
-		
+
 		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "enable_joint_constraint", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "joint_constraint_angle_min", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "joint_constraint_angle_max", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
@@ -606,28 +608,52 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// With modifications by TwistedTwigleg.
 	Quat ccdik_rotation = Quat();
 	Transform bone_trans = stack->skeleton->local_pose_to_global_pose(
-		ccdik_data.bone_idx,
-		stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx)
-	);
+			ccdik_data.bone_idx,
+			stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx));
 	// I'm not sure if this condition is still needed. Need to test later.
 	if (stack->skeleton->get_bone_parent(ccdik_data.bone_idx) < 0) {
 		bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
 	}
 	ccdik_rotation.rotate_from_vector_to_vector(
-		stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin - bone_trans.origin,
-		stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin - bone_trans.origin
-	);
-	
-	// Enforce rotation only on the select joint axix
+			stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin - bone_trans.origin,
+			stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin - bone_trans.origin);
+
+	// Enforce rotation only on the select joint axis.
 	Quat ccdik_twist = ccdik_rotation.get_twist_quat(ccdik_data.ccdik_axis_vector);
 
-	// Apply to the bone!
+	// Apply constraints (currently not working)
+	if (ccdik_data.enable_constraint) {
+		float angle = 2 * Math::acos(ccdik_twist.w);
+
+		print_line("Angle is: " + itos(Math::rad2deg(angle)));
+
+		if (ccdik_data.constraint_angles_invert == false) {
+			if (angle < ccdik_data.constraint_angle_min) {
+				angle = ccdik_data.constraint_angle_min;
+			} else if (angle > ccdik_data.constraint_angle_max) {
+				angle = ccdik_data.constraint_angle_max;
+			}
+		} else {
+			if (angle > ccdik_data.constraint_angle_min && angle < ccdik_data.constraint_angle_max) {
+				if (angle - ccdik_data.constraint_angle_min < ccdik_data.constraint_angle_max - angle) {
+					angle = ccdik_data.constraint_angle_min;
+				} else {
+					angle = ccdik_data.constraint_angle_max;
+				}
+			}
+		}
+
+		print_line("Clamped angle is: " + itos(Math::rad2deg(angle)));
+		print_line("");
+
+		ccdik_twist.w = Math::cos(angle * 0.5);
+	}
+
+	// Apply the rotation to the bone.
 	// TODO: This may need to be adjusted to account for bone scaling...
 	bone_trans.basis = Basis(ccdik_twist);
 	bone_trans = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, bone_trans);
 	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
-
-	// TODO: apply constraints!
 
 	if (instantly_apply_modification) {
 		stack->skeleton->force_update_bone_children_transforms(ccdik_data.bone_idx);

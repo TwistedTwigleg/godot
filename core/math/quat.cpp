@@ -284,7 +284,7 @@ void Quat::rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to
 		set_axis_angle(axis, M_PI);
 		return;
 	} else {
-		float square = sqrt((1+dot) * 2.0);
+		float square = sqrt((1 + dot) * 2.0);
 		float inverse = 1.0 / square;
 		Vector3 cross = v0.cross(v1);
 

@@ -170,7 +170,6 @@ class SkeletonModification3D_CCDIK : public SkeletonModification3D {
 	GDCLASS(SkeletonModification3D_CCDIK, SkeletonModification3D);
 
 private:
-
 	enum CCDIK_Axes {
 		AXIS_X,
 		AXIS_Y,
@@ -178,19 +177,18 @@ private:
 		AXIS_CUSTOM
 	};
 
-	struct CCDIK_Joint_Data
-	{
+	struct CCDIK_Joint_Data {
 		String bone_name = "";
 		int bone_idx = -1;
 		int ccdik_axis = 0;
-		Vector3 ccdik_axis_vector = Vector3(1,0,0);
+		Vector3 ccdik_axis_vector = Vector3(1, 0, 0);
 
 		bool enable_constraint = false;
 		float constraint_angle_min = 0;
 		float constraint_angle_max = (2.0 * M_PI);
 		bool constraint_angles_invert = false;
 	};
-	
+
 	Vector<CCDIK_Joint_Data> ccdik_data_chain;
 	NodePath target_node;
 	ObjectID target_node_cache;
