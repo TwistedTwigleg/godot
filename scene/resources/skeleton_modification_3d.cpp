@@ -161,7 +161,7 @@ bool SkeletonModificationStack3D::get_is_setup() const {
 void SkeletonModificationStack3D::set_enabled(bool p_enabled) {
 	enabled = p_enabled;
 
-	if (!enabled && is_setup || skeleton != nullptr) {
+	if (!enabled && is_setup && skeleton != nullptr) {
 		skeleton->clear_bones_local_pose_override();
 	}
 }
@@ -490,7 +490,7 @@ SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {
 bool SkeletonModification3D_CCDIK::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
-	if (path.begins_with("ccdik_joint/")) {
+	if (path.begins_with("joint_data/")) {
 		int which = path.get_slicec('/', 1).to_int();
 		String what = path.get_slicec('/', 2);
 		ERR_FAIL_INDEX_V(which, ccdik_data_chain.size(), false);
@@ -522,7 +522,7 @@ bool SkeletonModification3D_CCDIK::_set(const StringName &p_path, const Variant 
 bool SkeletonModification3D_CCDIK::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
-	if (path.begins_with("ccdik_joint/")) {
+	if (path.begins_with("joint_data/")) {
 		int which = path.get_slicec('/', 1).to_int();
 		String what = path.get_slicec('/', 2);
 		ERR_FAIL_INDEX_V(which, ccdik_data_chain.size(), false);
@@ -553,7 +553,7 @@ bool SkeletonModification3D_CCDIK::_get(const StringName &p_path, Variant &r_ret
 
 void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (int i = 0; i < ccdik_data_chain.size(); i++) {
-		String base_string = "ccdik_joint/" + itos(i) + "/";
+		String base_string = "joint_data/" + itos(i) + "/";
 
 		p_list->push_back(PropertyInfo(Variant::STRING, base_string + "bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::INT, base_string + "bone_index", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
@@ -565,9 +565,11 @@ void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list
 		}
 
 		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "enable_joint_constraint", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-		p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "joint_constraint_angle_min", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-		p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "joint_constraint_angle_max", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "joint_constraint_angles_invert", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+		if (ccdik_data_chain[i].enable_constraint == true) {
+			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "joint_constraint_angle_min", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "joint_constraint_angle_max", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+			p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "joint_constraint_angles_invert", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+		}
 	}
 }
 
@@ -607,19 +609,14 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// Adopted from: https://github.com/zalo/MathUtilities/blob/master/Assets/IK/CCDIK/CCDIKJoint.cs
 	// With modifications by TwistedTwigleg.
 	Quat ccdik_rotation = Quat();
-	Transform bone_trans = stack->skeleton->local_pose_to_global_pose(
-			ccdik_data.bone_idx,
-			stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx));
-	// I'm not sure if this condition is still needed. Need to test later.
-	if (stack->skeleton->get_bone_parent(ccdik_data.bone_idx) < 0) {
-		bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
-	}
+	Transform bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
 	ccdik_rotation.rotate_from_vector_to_vector(
-			stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin - bone_trans.origin,
-			stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin - bone_trans.origin);
-
+		stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin,
+		stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin
+	);
+	
 	// Enforce rotation only on the select joint axis.
-	Quat ccdik_twist = ccdik_rotation.get_twist_quat(ccdik_data.ccdik_axis_vector);
+	Quat ccdik_twist = ccdik_rotation.get_twist_quat(bone_trans.xform(ccdik_data.ccdik_axis_vector).normalized());
 
 	// Apply constraints (currently not working)
 	if (ccdik_data.enable_constraint) {
@@ -652,7 +649,6 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// Apply the rotation to the bone.
 	// TODO: This may need to be adjusted to account for bone scaling...
 	bone_trans.basis = Basis(ccdik_twist);
-	bone_trans = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, bone_trans);
 	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
 
 	if (instantly_apply_modification) {
@@ -806,6 +802,7 @@ bool SkeletonModification3D_CCDIK::ccdik_joint_get_enable_constraint(int p_joint
 void SkeletonModification3D_CCDIK::ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_enable) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].enable_constraint = p_enable;
+	_change_notify();
 }
 
 float SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_min(int p_joint_idx) const {

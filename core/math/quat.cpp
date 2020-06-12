@@ -291,7 +291,7 @@ void Quat::rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to
 		x = cross.x * inverse;
 		y = cross.y * inverse;
 		z = cross.z * inverse;
-		normalized();
+		normalize();
 
 		return;
 	}
