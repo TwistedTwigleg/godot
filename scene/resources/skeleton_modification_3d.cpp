@@ -644,12 +644,10 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// Enforce rotation only on the select joint axis.
 	Quat ccdik_twist = ccdik_rotation.get_twist_quat(bone_trans.xform(ccdik_data.ccdik_axis_vector).normalized());
 
-	// Apply constraints (currently not working)
+	// Apply constraints
 	if (ccdik_data.enable_constraint) {
 		float angle = 2 * Math::acos(ccdik_twist.w);
-
-		print_line("Angle is: " + itos(Math::rad2deg(angle)));
-
+		
 		if (ccdik_data.constraint_angles_invert == false) {
 			if (angle < ccdik_data.constraint_angle_min) {
 				angle = ccdik_data.constraint_angle_min;
@@ -665,11 +663,8 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 				}
 			}
 		}
-
-		print_line("Clamped angle is: " + itos(Math::rad2deg(angle)));
-		print_line("");
-
-		ccdik_twist.w = Math::cos(angle * 0.5);
+		
+		ccdik_twist.set_axis_angle(bone_trans.xform(ccdik_data.ccdik_axis_vector).normalized(), angle);
 	}
 
 	// Apply the rotation to the bone.
