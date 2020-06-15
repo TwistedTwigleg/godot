@@ -148,6 +148,7 @@ void SkeletonModificationStack3D::set_modification_count(int p_count) {
 	modifications.resize(p_count);
 	_change_notify();
 }
+
 int SkeletonModificationStack3D::get_modification_count() const {
 	return modifications.size();
 }
@@ -155,6 +156,7 @@ int SkeletonModificationStack3D::get_modification_count() const {
 void SkeletonModificationStack3D::set_skeleton(Skeleton3D *p_skeleton) {
 	skeleton = p_skeleton;
 }
+
 Skeleton3D *SkeletonModificationStack3D::get_skeleton() const {
 	return skeleton;
 }
@@ -170,6 +172,7 @@ void SkeletonModificationStack3D::set_enabled(bool p_enabled) {
 		skeleton->clear_bones_local_pose_override();
 	}
 }
+
 bool SkeletonModificationStack3D::get_enabled() const {
 	return enabled;
 }
@@ -179,6 +182,7 @@ void SkeletonModificationStack3D::set_strength(float p_strength) {
 	ERR_FAIL_COND_MSG(p_strength > 1, "Strength cannot be more than one!");
 	strength = p_strength;
 }
+
 float SkeletonModificationStack3D::get_strength() const {
 	return strength;
 }
@@ -308,21 +312,18 @@ void SkeletonModification3D_LookAt::execute() {
 		Transform rest_transform = skeleton->get_bone_rest(bone_idx);
 		rest_transform = skeleton->local_pose_to_global_pose(bone_idx, rest_transform);
 
+		// TODO: still needs work.
 		Quat new_rotation_quat = new_bone_trans.basis.get_rotation_quat();
-		Quat old_rotation_quat = rest_transform.basis.get_rotation_euler();
 		if (lock_rotation_x) {
 			Vector3 axis = Vector3(1, 0, 0);
-			new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
 			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
 		}
 		if (lock_rotation_y) {
 			Vector3 axis = Vector3(0, 1, 0);
-			new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
 			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
 		}
 		if (lock_rotation_z) {
 			Vector3 axis = Vector3(0, 0, 1);
-			new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
 			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
 		}
 		new_bone_trans.basis = Basis(new_rotation_quat).scaled(new_bone_trans.basis.get_scale());
@@ -367,6 +368,7 @@ String SkeletonModification3D_LookAt::get_bone_name() const {
 int SkeletonModification3D_LookAt::get_bone_index() const {
 	return bone_idx;
 }
+
 void SkeletonModification3D_LookAt::set_bone_index(int p_bone_idx) {
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
 	bone_idx = p_bone_idx;
@@ -407,6 +409,7 @@ void SkeletonModification3D_LookAt::set_target_node(const NodePath &p_target_nod
 	target_node = p_target_node;
 	update_cache();
 }
+
 NodePath SkeletonModification3D_LookAt::get_target_node() const {
 	return target_node;
 }
@@ -416,6 +419,7 @@ void SkeletonModification3D_LookAt::set_lookat_axis(int p_axis) {
 	ERR_FAIL_COND_MSG(p_axis < 0, "Unkown axis! lookat_axis cannot have be negative!");
 	lookat_axis = p_axis;
 }
+
 int SkeletonModification3D_LookAt::get_lookat_axis() {
 	return lookat_axis;
 }
@@ -423,6 +427,7 @@ int SkeletonModification3D_LookAt::get_lookat_axis() {
 Vector3 SkeletonModification3D_LookAt::get_rotation_offset() const {
 	return additional_rotation;
 }
+
 void SkeletonModification3D_LookAt::set_rotation_offset(Vector3 p_offset) {
 	additional_rotation = p_offset;
 }
@@ -430,18 +435,23 @@ void SkeletonModification3D_LookAt::set_rotation_offset(Vector3 p_offset) {
 bool SkeletonModification3D_LookAt::get_lock_rotation_x() const {
 	return lock_rotation_x;
 }
+
 bool SkeletonModification3D_LookAt::get_lock_rotation_y() const {
 	return lock_rotation_y;
 }
+
 bool SkeletonModification3D_LookAt::get_lock_rotation_z() const {
 	return lock_rotation_z;
 }
+
 void SkeletonModification3D_LookAt::set_lock_rotation_x(bool p_lock) {
 	lock_rotation_x = p_lock;
 }
+
 void SkeletonModification3D_LookAt::set_lock_rotation_y(bool p_lock) {
 	lock_rotation_y = p_lock;
 }
+
 void SkeletonModification3D_LookAt::set_lock_rotation_z(bool p_lock) {
 	lock_rotation_z = p_lock;
 }
@@ -449,6 +459,7 @@ void SkeletonModification3D_LookAt::set_lock_rotation_z(bool p_lock) {
 void SkeletonModification3D_LookAt::set_instantly_apply_modification(bool p_apply) {
 	instantly_apply_modification = p_apply;
 }
+
 bool SkeletonModification3D_LookAt::get_instantly_apply_modification() const {
 	return instantly_apply_modification;
 }
@@ -488,6 +499,7 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_y"), "set_lock_rotation_y", "get_lock_rotation_y");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_z"), "set_lock_rotation_z", "get_lock_rotation_z");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "rotation_offset"), "set_rotation_offset", "get_rotation_offset");
+	ADD_GROUP("", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "instantly_apply_modification"), "set_instantly_apply_modification", "get_instantly_apply_modification");
 }
 
@@ -536,10 +548,8 @@ bool SkeletonModification3D_CCDIK::_set(const StringName &p_path, const Variant 
 		} else if (what == "joint_constraint_angles_invert") {
 			ccdik_joint_set_constraint_invert(which, p_value);
 		}
-
 		return true;
 	}
-
 	return true;
 }
 
@@ -568,10 +578,8 @@ bool SkeletonModification3D_CCDIK::_get(const StringName &p_path, Variant &r_ret
 		} else if (what == "joint_constraint_angles_invert") {
 			r_ret = ccdik_joint_get_constraint_invert(which);
 		}
-
 		return true;
 	}
-
 	return true;
 }
 
@@ -647,15 +655,15 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	// Apply constraints
 	if (ccdik_data.enable_constraint) {
 		float angle = 2 * Math::acos(ccdik_twist.w);
-		
-		if (ccdik_data.constraint_angles_invert == false) {
+		if (ccdik_data.constraint_angles_invert == false) { // Normal clamping:
 			if (angle < ccdik_data.constraint_angle_min) {
 				angle = ccdik_data.constraint_angle_min;
 			} else if (angle > ccdik_data.constraint_angle_max) {
 				angle = ccdik_data.constraint_angle_max;
 			}
-		} else {
+		} else { // Inverse clamping:
 			if (angle > ccdik_data.constraint_angle_min && angle < ccdik_data.constraint_angle_max) {
+				// Figure out which angle is closer by comparing their differences.
 				if (angle - ccdik_data.constraint_angle_min < ccdik_data.constraint_angle_max - angle) {
 					angle = ccdik_data.constraint_angle_min;
 				} else {
@@ -663,12 +671,10 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 				}
 			}
 		}
-		
 		ccdik_twist.set_axis_angle(bone_trans.xform(ccdik_data.ccdik_axis_vector).normalized(), angle);
 	}
 
 	// Apply the rotation to the bone.
-	// TODO: This may need to be adjusted to account for bone scaling...
 	bone_trans.basis = Basis(ccdik_twist);
 	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
 
@@ -728,6 +734,7 @@ void SkeletonModification3D_CCDIK::set_target_node(const NodePath &p_target_node
 	target_node = p_target_node;
 	update_target_cache();
 }
+
 NodePath SkeletonModification3D_CCDIK::get_target_node() const {
 	return target_node;
 }
@@ -736,6 +743,7 @@ void SkeletonModification3D_CCDIK::set_tip_node(const NodePath &p_tip_node) {
 	tip_node = p_tip_node;
 	update_tip_cache();
 }
+
 NodePath SkeletonModification3D_CCDIK::get_tip_node() const {
 	return tip_node;
 }
@@ -743,6 +751,7 @@ NodePath SkeletonModification3D_CCDIK::get_tip_node() const {
 void SkeletonModification3D_CCDIK::set_instantly_apply_modification(bool p_apply) {
 	instantly_apply_modification = p_apply;
 }
+
 bool SkeletonModification3D_CCDIK::get_instantly_apply_modification() const {
 	return instantly_apply_modification;
 }
@@ -752,6 +761,7 @@ String SkeletonModification3D_CCDIK::ccdik_joint_get_bone_name(int p_joint_idx) 
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), String());
 	return ccdik_data_chain[p_joint_idx].bone_name;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].bone_name = p_bone_name;
@@ -769,6 +779,7 @@ int SkeletonModification3D_CCDIK::ccdik_joint_get_bone_index(int p_joint_idx) co
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), -1);
 	return ccdik_data_chain[p_joint_idx].bone_idx;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_index(int p_joint_idx, int p_bone_idx) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
@@ -791,6 +802,7 @@ int SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis(int p_joint_idx) co
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), -1);
 	return ccdik_data_chain[p_joint_idx].ccdik_axis;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis(int p_joint_idx, int p_axis) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_axis < 0, "CCDIK axis is out of range: The axis mode is too low!");
@@ -811,6 +823,7 @@ Vector3 SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis_vector(int p_jo
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), Vector3());
 	return ccdik_data_chain[p_joint_idx].ccdik_axis_vector;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis_vector(int p_joint_idx, Vector3 p_axis) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].ccdik_axis_vector = p_axis;
@@ -820,6 +833,7 @@ bool SkeletonModification3D_CCDIK::ccdik_joint_get_enable_constraint(int p_joint
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].enable_constraint;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_enable) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].enable_constraint = p_enable;
@@ -830,10 +844,12 @@ float SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_min(int p_j
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].constraint_angle_min;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_min(int p_joint_idx, float p_angle_min) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].constraint_angle_min = p_angle_min;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_degrees_min(int p_joint_idx, float p_angle_min) {
 	ccdik_joint_set_constraint_angle_min(p_joint_idx, Math::deg2rad(p_angle_min));
 }
@@ -842,10 +858,12 @@ float SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_max(int p_j
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].constraint_angle_max;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_max(int p_joint_idx, float p_angle_max) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].constraint_angle_max = p_angle_max;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_degrees_max(int p_joint_idx, float p_angle_max) {
 	ccdik_joint_set_constraint_angle_max(p_joint_idx, Math::deg2rad(p_angle_max));
 }
@@ -854,6 +872,7 @@ bool SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_invert(int p_joint
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].constraint_angles_invert;
 }
+
 void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_invert(int p_joint_idx, bool p_invert) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].constraint_angles_invert = p_invert;
@@ -902,9 +921,7 @@ void SkeletonModification3D_CCDIK::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "tip_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_tip_node", "get_tip_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ccdik_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_ccdik_data_chain_length", "get_ccdik_data_chain_length");
-	ADD_GROUP("Additional Settings", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "instantly_apply_modification"), "set_instantly_apply_modification", "get_instantly_apply_modification");
-	ADD_GROUP("", "");
 }
 
 SkeletonModification3D_CCDIK::SkeletonModification3D_CCDIK() {
