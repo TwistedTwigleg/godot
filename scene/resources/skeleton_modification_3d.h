@@ -51,12 +51,12 @@ protected:
 
 public:
 	Skeleton3D *skeleton;
-	bool is_setup;
-	bool enabled;
-	float strength;
+	bool is_setup = false;
+	bool enabled = false;
+	float strength = 0.0;
 
 	Vector<Ref<SkeletonModification3D>> modifications;
-	int modifications_count;
+	int modifications_count = 0;
 
 	void setup();
 	void execute();
@@ -95,8 +95,8 @@ protected:
 
 	SkeletonModificationStack3D *stack;
 
-	bool enabled;
-	bool is_setup;
+	bool enabled = false;
+	bool is_setup = false;
 
 public:
 	virtual void execute();
@@ -114,18 +114,18 @@ class SkeletonModification3D_LookAt : public SkeletonModification3D {
 	GDCLASS(SkeletonModification3D_LookAt, SkeletonModification3D);
 
 private:
-	String bone_name;
-	int bone_idx;
+	String bone_name = "";
+	int bone_idx = -1;
 	NodePath target_node;
 	ObjectID target_node_cache;
-	int lookat_axis;
+	int lookat_axis = 0;
 
-	Vector3 additional_rotation;
-	bool lock_rotation_x;
-	bool lock_rotation_y;
-	bool lock_rotation_z;
+	Vector3 additional_rotation = Vector3(1, 0, 0);
+	bool lock_rotation_x = false;
+	bool lock_rotation_y = false;
+	bool lock_rotation_z = false;
 
-	bool instantly_apply_modification;
+	bool instantly_apply_modification = true;
 
 	void update_cache();
 
@@ -199,7 +199,7 @@ private:
 	NodePath tip_node;
 	ObjectID tip_node_cache;
 
-	bool instantly_apply_modification;
+	bool instantly_apply_modification = true;
 
 	void update_target_cache();
 	void update_tip_cache();

@@ -249,7 +249,7 @@ void Quat::set_axis_angle(const Vector3 &axis, const real_t &angle) {
 	}
 }
 
-// Decomposes a Quaterian into a swing and twist, where twist is the rotation around the
+// Decomposes a Quaternion into a swing and twist, where twist is the rotation around the
 // passed-in axis, p_axis, and swing is the rotation on the two remaining axes.
 // Adopted from: https://stackoverflow.com/questions/3684269/component-of-a-quaternion-rotation-around-an-axis
 // And split into two functions, each returning a single part of the decomposed Quat.
