@@ -283,72 +283,62 @@ void SkeletonModification3D_LookAt::execute() {
 	}
 
 	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
-	if (!n) {
-		return;
+	ERR_FAIL_COND_MSG(!n, "Target node is not a Node3D-based node. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
+
+	Skeleton3D *skeleton = stack->skeleton;
+	Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
+
+	// Convert to a global bone transform
+	new_bone_trans = skeleton->local_pose_to_global_pose(bone_idx, new_bone_trans);
+
+	new_bone_trans = new_bone_trans.looking_at(
+			skeleton->world_transform_to_global_pose(n->get_global_transform()).origin,
+			skeleton->world_transform_to_global_pose(skeleton->get_global_transform()).basis[lookat_axis].normalized());
+
+	// NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
+	// Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
+	if (skeleton->get_bone_axis_forward(bone_idx) != Vector3(0, 0, 1)) {
+		new_bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(bone_idx), -M_PI / 2.0);
 	}
 
-	if (!n->is_inside_tree()) {
-		return;
+	// Lock rotation if needed
+	if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
+		Transform rest_transform = skeleton->get_bone_rest(bone_idx);
+		rest_transform = skeleton->local_pose_to_global_pose(bone_idx, rest_transform);
+
+		Quat new_rotation_quat = new_bone_trans.basis.get_rotation_quat();
+		Quat old_rotation_quat = rest_transform.basis.get_rotation_euler();
+		if (lock_rotation_x) {
+			Vector3 axis = Vector3(1, 0, 0);
+			new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
+			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+		}
+		if (lock_rotation_y) {
+			Vector3 axis = Vector3(0, 1, 0);
+			new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
+			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+		}
+		if (lock_rotation_z) {
+			Vector3 axis = Vector3(0, 0, 1);
+			new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
+			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+		}
+		new_bone_trans.basis = Basis(new_rotation_quat).scaled(new_bone_trans.basis.get_scale());
 	}
 
-	if (bone_name != "") {
-		if (bone_idx <= -1) {
-			return;
-		}
+	// Apply additional rotation
+	new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
+	new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
+	new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
 
-		Skeleton3D *skeleton = stack->skeleton;
-		Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
+	// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
+	new_bone_trans = skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
+	skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
 
-		// Convert to a global bone transform
-		new_bone_trans = skeleton->local_pose_to_global_pose(bone_idx, new_bone_trans);
-
-		new_bone_trans = new_bone_trans.looking_at(
-				skeleton->world_transform_to_global_pose(n->get_global_transform()).origin,
-				skeleton->world_transform_to_global_pose(skeleton->get_global_transform()).basis[lookat_axis].normalized());
-
-		// NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
-		// Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
-		if (skeleton->get_bone_axis_forward(bone_idx) != Vector3(0, 0, 1)) {
-			new_bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(bone_idx), -M_PI / 2.0);
-		}
-
-		// Lock rotation if needed
-		if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
-			Transform rest_transform = skeleton->get_bone_rest(bone_idx);
-			rest_transform = skeleton->local_pose_to_global_pose(bone_idx, rest_transform);
-
-			Quat new_rotation_quat = new_bone_trans.basis.get_rotation_quat();
-			Quat old_rotation_quat = rest_transform.basis.get_rotation_euler();
-			if (lock_rotation_x) {
-				Vector3 axis = Vector3(1, 0, 0);
-				new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
-				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
-			}
-			if (lock_rotation_y) {
-				Vector3 axis = Vector3(0, 1, 0);
-				new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
-				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
-			}
-			if (lock_rotation_z) {
-				Vector3 axis = Vector3(0, 0, 1);
-				new_rotation_quat = (new_rotation_quat.get_swing_quat(axis)) * (old_rotation_quat.get_twist_quat(axis));
-				new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
-			}
-			new_bone_trans.basis = Basis(new_rotation_quat).scaled(new_bone_trans.basis.get_scale());
-		}
-
-		// Apply additional rotation
-		new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
-		new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
-		new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
-
-		// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
-		new_bone_trans = skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
-		skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
-
-		if (instantly_apply_modification) {
-			skeleton->force_update_bone_children_transforms(bone_idx);
-		}
+	if (instantly_apply_modification) {
+		skeleton->force_update_bone_children_transforms(bone_idx);
 	}
 }
 
@@ -363,6 +353,7 @@ void SkeletonModification3D_LookAt::setup_modification(SkeletonModificationStack
 
 void SkeletonModification3D_LookAt::set_bone_name(String p_name) {
 	bone_name = p_name;
+	bone_idx = -1;
 	if (stack && stack->skeleton) {
 		bone_idx = stack->skeleton->find_bone(bone_name);
 	}
@@ -395,6 +386,7 @@ void SkeletonModification3D_LookAt::set_bone_index(int p_bone_idx) {
 
 void SkeletonModification3D_LookAt::update_cache() {
 	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
 	}
 
@@ -403,7 +395,6 @@ void SkeletonModification3D_LookAt::update_cache() {
 		if (stack->skeleton->is_inside_tree()) {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
-
 				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
 						"Cannot update cache: Target node is this modification's skeleton or cannot be found!");
 				target_node_cache = node->get_instance_id();
@@ -702,6 +693,7 @@ void SkeletonModification3D_CCDIK::setup_modification(SkeletonModificationStack3
 
 void SkeletonModification3D_CCDIK::update_target_cache() {
 	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
 	}
 
@@ -710,9 +702,8 @@ void SkeletonModification3D_CCDIK::update_target_cache() {
 		if (stack->skeleton->is_inside_tree()) {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
-				if (!node || stack->skeleton == node) {
-					return;
-				}
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update cache: Target node is this modification's skeleton or cannot be found!");
 				target_node_cache = node->get_instance_id();
 			}
 		}
@@ -721,6 +712,7 @@ void SkeletonModification3D_CCDIK::update_target_cache() {
 
 void SkeletonModification3D_CCDIK::update_tip_cache() {
 	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
 	}
 
@@ -729,9 +721,8 @@ void SkeletonModification3D_CCDIK::update_tip_cache() {
 		if (stack->skeleton->is_inside_tree()) {
 			if (stack->skeleton->has_node(tip_node)) {
 				Node *node = stack->skeleton->get_node(tip_node);
-				if (!node || stack->skeleton == node) {
-					return;
-				}
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update cache: Tip node is this modification's skeleton or cannot be found!");
 				tip_node_cache = node->get_instance_id();
 			}
 		}
