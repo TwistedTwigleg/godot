@@ -272,7 +272,7 @@ void Quat::rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to
 	Vector3 v1 = p_to.normalized();
 	real_t dot = v0.dot(v1);
 
-	if (dot >= 1.0 || dot <= 0) {
+	if (dot >= 1.0) {
 		// cannot do anything! Simply return
 		return;
 	} else if (dot < (1e-6 - 1.0)) {
