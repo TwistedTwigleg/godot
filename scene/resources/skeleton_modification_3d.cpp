@@ -366,10 +366,31 @@ void SkeletonModification3D_LookAt::set_bone_name(String p_name) {
 	if (stack && stack->skeleton) {
 		bone_idx = stack->skeleton->find_bone(bone_name);
 	}
+	_change_notify();
 }
 
 String SkeletonModification3D_LookAt::get_bone_name() const {
 	return bone_name;
+}
+
+int SkeletonModification3D_LookAt::get_bone_index() const {
+	return bone_idx;
+}
+void SkeletonModification3D_LookAt::set_bone_index(int p_bone_idx) {
+	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
+	bone_idx = p_bone_idx;
+
+	if (stack) {
+		if (stack->skeleton) {
+			if (p_bone_idx > stack->skeleton->get_bone_count()) {
+				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
+				bone_idx = -1;
+				return;
+			}
+			bone_name = stack->skeleton->get_bone_name(p_bone_idx);
+		}
+	}
+	_change_notify();
 }
 
 void SkeletonModification3D_LookAt::update_cache() {
@@ -445,6 +466,9 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3D_LookAt::set_bone_name);
 	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3D_LookAt::get_bone_name);
 
+	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification3D_LookAt::set_bone_index);
+	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification3D_LookAt::get_bone_index);
+
 	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_LookAt::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_LookAt::get_target_node);
 
@@ -465,6 +489,7 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_instantly_apply_modification"), &SkeletonModification3D_LookAt::get_instantly_apply_modification);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "lookat_axis", PROPERTY_HINT_ENUM, "axis x, axis y, axis z"), "set_lookat_axis", "get_lookat_axis");
 	ADD_GROUP("Additional Settings", "");
@@ -900,6 +925,7 @@ SkeletonModification3D_CCDIK::SkeletonModification3D_CCDIK() {
 	stack = nullptr;
 	is_setup = false;
 	instantly_apply_modification = true;
+	enabled = true;
 }
 
 SkeletonModification3D_CCDIK::~SkeletonModification3D_CCDIK() {

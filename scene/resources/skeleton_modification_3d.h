@@ -139,6 +139,9 @@ public:
 	void set_bone_name(String p_name);
 	String get_bone_name() const;
 
+	void set_bone_index(int p_idx);
+	int get_bone_index() const;
+
 	void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;
 
