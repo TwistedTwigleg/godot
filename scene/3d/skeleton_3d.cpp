@@ -74,7 +74,7 @@ bool Skeleton3D::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
 #ifndef _3D_DISABLED
-	if (path.begins_with("Modification_Stack")) {
+	if (path.begins_with("modification_stack")) {
 		set_modification_stack(p_value);
 		return true;
 	}
@@ -127,7 +127,7 @@ bool Skeleton3D::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
 #ifndef _3D_DISABLED
-	if (path.begins_with("Modification_Stack")) {
+	if (path.begins_with("modification_stack")) {
 		r_ret = modification_stack;
 		return true;
 	}
@@ -185,7 +185,7 @@ void Skeleton3D::_get_property_list(List<PropertyInfo> *p_list) const {
 
 #ifndef _3D_DISABLED
 	p_list->push_back(
-			PropertyInfo(Variant::OBJECT, "Modification_Stack",
+			PropertyInfo(Variant::OBJECT, "modification_stack",
 					PROPERTY_HINT_RESOURCE_TYPE,
 					"SkeletonModificationStack3D",
 					PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));

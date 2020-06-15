@@ -38,7 +38,7 @@
 void SkeletonModificationStack3D::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (int i = 0; i < modifications.size(); i++) {
 		p_list->push_back(
-				PropertyInfo(Variant::OBJECT, "Modifications/" + itos(i),
+				PropertyInfo(Variant::OBJECT, "modifications/" + itos(i),
 						PROPERTY_HINT_RESOURCE_TYPE,
 						"SkeletonModification3D",
 						PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
@@ -48,7 +48,7 @@ void SkeletonModificationStack3D::_get_property_list(List<PropertyInfo> *p_list)
 bool SkeletonModificationStack3D::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
-	if (path.begins_with("Modifications/")) {
+	if (path.begins_with("modifications/")) {
 		int mod_idx = path.get_slicec('/', 1).to_int();
 		set_modification(mod_idx, p_value);
 		return true;
@@ -59,7 +59,7 @@ bool SkeletonModificationStack3D::_set(const StringName &p_path, const Variant &
 bool SkeletonModificationStack3D::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
-	if (path.begins_with("Modifications/")) {
+	if (path.begins_with("modifications/")) {
 		int mod_idx = path.get_slicec('/', 1).to_int();
 		r_ret = get_modification(mod_idx);
 		return true;
@@ -86,10 +86,15 @@ void SkeletonModificationStack3D::setup() {
 }
 
 void SkeletonModificationStack3D::execute() {
-	if (!is_setup || skeleton == nullptr || !enabled || is_queued_for_deletion()) {
+	ERR_FAIL_COND_MSG(!is_setup || skeleton == nullptr || is_queued_for_deletion(),
+			"Modification stack is not properly setup and therefore cannot execute!");
+	// TODO: for now, fail silently because otherwise, the log is spammed with this error when saving the resource.
+	// however, in the future, see if there is a way to work around this.
+	if (!skeleton->is_inside_tree()) {
 		return;
 	}
-	if (!skeleton->is_inside_tree() || !skeleton->is_inside_world()) {
+
+	if (!enabled) {
 		return;
 	}
 
@@ -261,12 +266,15 @@ SkeletonModification3D::SkeletonModification3D() {
 ///////////////////////////////////////
 
 void SkeletonModification3D_LookAt::execute() {
-	if (!enabled || !stack || !is_setup || stack->skeleton == nullptr) {
+	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
+			"Modification is not setup and therefore cannot execute!");
+	if (!enabled) {
 		return;
 	}
 
 	if (target_node_cache.is_null()) {
 		update_cache();
+		WARN_PRINT("Target cache is out of date. Updating...");
 		return;
 	}
 
@@ -374,9 +382,9 @@ void SkeletonModification3D_LookAt::update_cache() {
 		if (stack->skeleton->is_inside_tree()) {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
-				if (!node || stack->skeleton == node) {
-					return;
-				}
+
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update cache: Target node is this modification's skeleton or cannot be found!");
 				target_node_cache = node->get_instance_id();
 			}
 		}
@@ -574,27 +582,30 @@ void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list
 }
 
 void SkeletonModification3D_CCDIK::execute() {
-	if (!enabled || !stack || !is_setup || stack->skeleton == nullptr) {
+	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
+			"Modification is not setup and therefore cannot execute!");
+	if (!enabled) {
 		return;
 	}
 
 	if (target_node_cache.is_null()) {
 		update_target_cache();
+		WARN_PRINT("Target cache is out of date. Updating...");
 		return;
 	}
 	if (tip_node_cache.is_null()) {
 		update_tip_cache();
+		WARN_PRINT("Tip cache is out of date. Updating...");
 		return;
 	}
 
 	Node3D *node_target = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
 	Node3D *node_tip = Object::cast_to<Node3D>(ObjectDB::get_instance(tip_node_cache));
-	if (!node_target || !node_tip) {
-		return;
-	}
-	if (!node_target->is_inside_tree() || !node_tip->is_inside_tree()) {
-		return;
-	}
+
+	ERR_FAIL_COND_MSG(!node_target || !node_tip,
+			"Either the target or tip node is not found. Cannot execute without both nodes!");
+	ERR_FAIL_COND_MSG(!node_target->is_inside_tree() || !node_tip->is_inside_tree(),
+			"Either the target or tip node is not in the scene. Cannot execute without both nodes in the scene!");
 
 	for (int i = 0; i < ccdik_data_chain.size(); i++) {
 		_execute_ccdik_joint(i, node_target, node_tip);
@@ -611,10 +622,9 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	Quat ccdik_rotation = Quat();
 	Transform bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
 	ccdik_rotation.rotate_from_vector_to_vector(
-		stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin,
-		stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin
-	);
-	
+			stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin,
+			stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin);
+
 	// Enforce rotation only on the select joint axis.
 	Quat ccdik_twist = ccdik_rotation.get_twist_quat(bone_trans.xform(ccdik_data.ccdik_axis_vector).normalized());
 
@@ -726,7 +736,7 @@ bool SkeletonModification3D_CCDIK::get_instantly_apply_modification() const {
 	return instantly_apply_modification;
 }
 
-// CCDIJ joint data functions
+// CCDIK joint data functions
 String SkeletonModification3D_CCDIK::ccdik_joint_get_bone_name(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), String());
 	return ccdik_data_chain[p_joint_idx].bone_name;
