@@ -1053,7 +1053,7 @@ void SkeletonModification3D_FABRIK::execute() {
 	}
 
 	// TODO: support a single dummy bone? This will allow for setting the magnet position on a two bone FABRIK chain.
-	// This can be extremely useful for arms and legs. I need to investigate this.
+	// This can be extremely useful for arms and legs, or at least it was in my IK plugin.
 
 	if (target_node_cache.is_null()) {
 		update_target_cache();
@@ -1105,7 +1105,7 @@ void SkeletonModification3D_FABRIK::execute() {
 void SkeletonModification3D_FABRIK::chain_backwards() {
 	int final_bone_idx = fabrik_data_chain[final_joint_idx].bone_idx;
 	Transform final_joint_trans = stack->skeleton->local_pose_to_global_pose(final_bone_idx, stack->skeleton->get_bone_local_pose_override(final_bone_idx));
-	Vector3 direction = stack->skeleton->get_bone_axis_forward(final_bone_idx).normalized();
+	Vector3 direction = final_joint_trans.xform(stack->skeleton->get_bone_axis_forward(final_bone_idx)).normalized();
 
 	// set the position of the final joint to the target position
 	final_joint_trans.origin = target_global_pose.origin + (direction * fabrik_data_chain[final_bone_idx].length);
@@ -1158,22 +1158,14 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		// If this is the last bone in the chain...
 		if (i == fabrik_data_chain.size() - 1) {
 			Quat new_rot = current_trans.basis.get_rotation_quat();
-			Vector3 current_bone_direction = stack->skeleton->get_bone_axis_forward(current_bone_idx).normalized();
-			Vector3 target_direction = current_trans.origin.direction_to(target_global_pose.origin);
-			new_rot.rotate_from_vector_to_vector(current_bone_direction, target_direction);
+			new_rot.rotate_from_vector_to_vector(current_trans.origin, target_global_pose.origin);
+			current_trans.basis = Basis(new_rot);
 
 		} else { // every other bone in the chain
-			Vector3 target_one = current_trans.origin;
-			Vector3 current_bone_direction = stack->skeleton->get_bone_axis_forward(current_bone_idx).normalized();
-
-			int previous_bone_idx = fabrik_data_chain[i + 1].bone_idx;
-			Transform previous_trans = stack->skeleton->local_pose_to_global_pose(previous_bone_idx, stack->skeleton->get_bone_local_pose_override(previous_bone_idx));
-			Vector3 target_two = previous_trans.origin;
-
-			Vector3 target_direction = target_one.direction_to(target_two);
+			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
+			Transform next_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));
 			Quat new_rot = current_trans.basis.get_rotation_quat();
-			new_rot.rotate_from_vector_to_vector(current_bone_direction, target_direction);
-
+			new_rot.rotate_from_vector_to_vector(current_trans.origin, next_trans.origin);
 			current_trans.basis = Basis(new_rot);
 		}
 
