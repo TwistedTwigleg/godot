@@ -1103,10 +1103,9 @@ void SkeletonModification3D_FABRIK::execute() {
 }
 
 void SkeletonModification3D_FABRIK::chain_backwards() {
-	// get the direction of the final bone (may not work)
 	int final_bone_idx = fabrik_data_chain[final_joint_idx].bone_idx;
 	Transform final_joint_trans = stack->skeleton->local_pose_to_global_pose(final_bone_idx, stack->skeleton->get_bone_local_pose_override(final_bone_idx));
-	Vector3 direction = final_joint_trans.xform(stack->skeleton->get_bone_axis_forward(final_bone_idx));
+	Vector3 direction = stack->skeleton->get_bone_axis_forward(final_bone_idx).normalized();
 
 	// set the position of the final joint to the target position
 	final_joint_trans.origin = target_global_pose.origin + (direction * fabrik_data_chain[final_bone_idx].length);
@@ -1122,7 +1121,7 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 
 		Vector3 diff = prev_trans.origin - current_trans.origin;
 		float length = fabrik_data_chain[i].length / diff.length();
-		current_trans.origin = current_trans.origin + (diff * length);
+		current_trans.origin = prev_trans.origin.lerp(current_trans.origin, length);
 
 		// Apply it back to the skeleton
 		stack->skeleton->set_bone_local_pose_override_simple(current_bone_idx, stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans));
@@ -1136,15 +1135,15 @@ void SkeletonModification3D_FABRIK::chain_forwards() {
 	root_transform.origin = origin_global_pose.origin;
 	stack->skeleton->set_bone_local_pose_override_simple(fabrik_data_chain[0].bone_idx, stack->skeleton->global_pose_to_local_pose(origin_bone_idx, root_transform));
 
-	for (int i = 0; i < fabrik_data_chain.size()-1; i++) {
+	for (int i = 0; i < fabrik_data_chain.size() - 1; i++) {
 		int current_bone_idx = fabrik_data_chain[i].bone_idx;
 		Transform current_trans = stack->skeleton->local_pose_to_global_pose(current_bone_idx, stack->skeleton->get_bone_local_pose_override(current_bone_idx));
-		int next_bone_idx = fabrik_data_chain[i+1].bone_idx;
+		int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 		Transform next_bone_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));
 
-		Vector3 diff = next_bone_trans.origin - current_trans.origin;
+		Vector3 diff = current_trans.origin - next_bone_trans.origin;
 		float length = fabrik_data_chain[i].length / diff.length();
-		next_bone_trans.origin = next_bone_trans.origin + (diff * length);
+		next_bone_trans.origin = current_trans.origin.lerp(next_bone_trans.origin, length);
 
 		// Apply it back to the skeleton
 		stack->skeleton->set_bone_local_pose_override_simple(next_bone_idx, stack->skeleton->global_pose_to_local_pose(next_bone_idx, next_bone_trans));
@@ -1157,17 +1156,17 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		Transform current_trans = stack->skeleton->local_pose_to_global_pose(current_bone_idx, stack->skeleton->get_bone_local_pose_override(current_bone_idx));
 
 		// If this is the last bone in the chain...
-		if (i == fabrik_data_chain.size()-1) {
+		if (i == fabrik_data_chain.size() - 1) {
 			Quat new_rot = current_trans.basis.get_rotation_quat();
-			Vector3 current_bone_direction = current_trans.xform(stack->skeleton->get_bone_axis_forward(current_bone_idx)).normalized();
+			Vector3 current_bone_direction = stack->skeleton->get_bone_axis_forward(current_bone_idx).normalized();
 			Vector3 target_direction = current_trans.origin.direction_to(target_global_pose.origin);
 			new_rot.rotate_from_vector_to_vector(current_bone_direction, target_direction);
-		
+
 		} else { // every other bone in the chain
 			Vector3 target_one = current_trans.origin;
-			Vector3 current_bone_direction = current_trans.xform(stack->skeleton->get_bone_axis_forward(current_bone_idx)).normalized();
+			Vector3 current_bone_direction = stack->skeleton->get_bone_axis_forward(current_bone_idx).normalized();
 
-			int previous_bone_idx = fabrik_data_chain[i+1].bone_idx;
+			int previous_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 			Transform previous_trans = stack->skeleton->local_pose_to_global_pose(previous_bone_idx, stack->skeleton->get_bone_local_pose_override(previous_bone_idx));
 			Vector3 target_two = previous_trans.origin;
 
