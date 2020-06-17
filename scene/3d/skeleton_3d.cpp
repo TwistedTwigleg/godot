@@ -379,6 +379,12 @@ void Skeleton3D::set_bone_local_pose_override(int p_bone, const Transform &p_pos
 	_make_dirty();
 }
 
+void Skeleton3D::set_bone_local_pose_override_simple(int p_bone, const Transform &p_pose) {
+	ERR_FAIL_INDEX(p_bone, bones.size());
+	bones.write[p_bone].local_pose_override = p_pose;
+	_make_dirty();
+}
+
 Transform Skeleton3D::get_bone_local_pose_override(int p_bone) const {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Transform());
 	return bones[p_bone].local_pose_override;
