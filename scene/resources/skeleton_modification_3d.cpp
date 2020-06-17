@@ -1141,8 +1141,8 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		}
 
 		stack->skeleton->set_bone_local_pose_override(current_bone_idx, current_trans, stack->strength, true);
-		stack->skeleton->force_update_bone_children_transforms(current_bone_idx);
 	}
+	stack->skeleton->force_update_all_bone_transforms();
 }
 
 void SkeletonModification3D_FABRIK::setup_modification(SkeletonModificationStack3D *p_stack) {
