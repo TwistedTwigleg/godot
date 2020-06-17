@@ -1123,23 +1123,23 @@ void SkeletonModification3D_FABRIK::chain_forwards() {
 void SkeletonModification3D_FABRIK::chain_apply() {
 	for (int i = 0; i < fabrik_data_chain.size(); i++) {
 		int current_bone_idx = fabrik_data_chain[i].bone_idx;
-		Transform current_trans = stack->skeleton->local_pose_to_global_pose(current_bone_idx, stack->skeleton->get_bone_local_pose_override(current_bone_idx));
+		Transform current_trans = stack->skeleton->get_bone_local_pose_override(current_bone_idx);
 
 		// If this is the last bone in the chain...
 		if (i == fabrik_data_chain.size() - 1) {
 			Quat new_rot = current_trans.basis.get_rotation_quat();
-			new_rot.rotate_from_vector_to_vector(current_trans.origin, target_global_pose.origin);
+			new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx), stack->skeleton->global_pose_to_local_pose(current_bone_idx, target_global_pose).origin);
 			current_trans.basis = Basis(new_rot);
 
 		} else { // every other bone in the chain
 			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 			Transform next_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));
+			next_trans = stack->skeleton->global_pose_to_local_pose(current_bone_idx, next_trans);
 			Quat new_rot = current_trans.basis.get_rotation_quat();
-			new_rot.rotate_from_vector_to_vector(current_trans.origin, next_trans.origin);
+			new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx), next_trans.origin);
 			current_trans.basis = Basis(new_rot);
 		}
 
-		current_trans = stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans);
 		stack->skeleton->set_bone_local_pose_override(current_bone_idx, current_trans, stack->strength, true);
 		stack->skeleton->force_update_bone_children_transforms(current_bone_idx);
 	}
@@ -1336,7 +1336,7 @@ void SkeletonModification3D_FABRIK::fabrik_joint_auto_calculate_length(int p_joi
 		Transform node_trans = n->get_global_transform();
 		node_trans = stack->skeleton->world_transform_to_global_pose(node_trans);
 		node_trans = stack->skeleton->global_pose_to_local_pose(fabrik_data_chain[p_joint_idx].bone_idx, node_trans);
-		fabrik_data_chain.write[p_joint_idx].length = node_trans.origin.length(); // TODO: make sure this is correct!
+		fabrik_data_chain.write[p_joint_idx].length = node_trans.origin.length();
 	} else { // Use child bone(s) to update joint length, if possible
 		Vector<int> bone_children = stack->skeleton->get_bone_children(fabrik_data_chain[p_joint_idx].bone_idx);
 		if (bone_children.size() <= 0) {
@@ -1350,7 +1350,7 @@ void SkeletonModification3D_FABRIK::fabrik_joint_auto_calculate_length(int p_joi
 			Transform child_transform = stack->skeleton->get_bone_global_pose(bone_children[i]);
 			final_length += stack->skeleton->global_pose_to_local_pose(fabrik_data_chain[p_joint_idx].bone_idx, child_transform).origin.length();
 		}
-		fabrik_data_chain.write[p_joint_idx].length = final_length / bone_children.size(); // TODO: make sure this is correct!
+		fabrik_data_chain.write[p_joint_idx].length = final_length / bone_children.size();
 	}
 	_change_notify();
 }
