@@ -529,7 +529,7 @@ void Skeleton3DEditor::update_joint_tree() {
 	Map<int, TreeItem *> items;
 
 	items.insert(-1, root);
-	
+
 	Ref<Texture> bone_icon = get_theme_icon("BoneAttachment3D", "EditorIcons");
 
 	Vector<int> bones_to_process = skeleton->get_parentless_bones();
