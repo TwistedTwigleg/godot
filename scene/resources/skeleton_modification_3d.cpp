@@ -338,9 +338,7 @@ void SkeletonModification3D_LookAt::execute() {
 	new_bone_trans = skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
 	skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
 
-	if (instantly_apply_modification) {
-		skeleton->force_update_bone_children_transforms(bone_idx);
-	}
+	skeleton->force_update_bone_children_transforms(bone_idx);
 }
 
 void SkeletonModification3D_LookAt::setup_modification(SkeletonModificationStack3D *p_stack) {
@@ -456,14 +454,6 @@ void SkeletonModification3D_LookAt::set_lock_rotation_z(bool p_lock) {
 	lock_rotation_z = p_lock;
 }
 
-void SkeletonModification3D_LookAt::set_instantly_apply_modification(bool p_apply) {
-	instantly_apply_modification = p_apply;
-}
-
-bool SkeletonModification3D_LookAt::get_instantly_apply_modification() const {
-	return instantly_apply_modification;
-}
-
 void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3D_LookAt::set_bone_name);
 	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3D_LookAt::get_bone_name);
@@ -487,9 +477,6 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_lock_rotation_z", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_z);
 	ClassDB::bind_method(D_METHOD("get_lock_rotation_z"), &SkeletonModification3D_LookAt::get_lock_rotation_z);
 
-	ClassDB::bind_method(D_METHOD("set_instantly_apply_modification", "apply_modification"), &SkeletonModification3D_LookAt::set_instantly_apply_modification);
-	ClassDB::bind_method(D_METHOD("get_instantly_apply_modification"), &SkeletonModification3D_LookAt::get_instantly_apply_modification);
-
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
@@ -500,7 +487,6 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_z"), "set_lock_rotation_z", "get_lock_rotation_z");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "rotation_offset"), "set_rotation_offset", "get_rotation_offset");
 	ADD_GROUP("", "");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "instantly_apply_modification"), "set_instantly_apply_modification", "get_instantly_apply_modification");
 }
 
 SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
@@ -513,7 +499,6 @@ SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
 	lock_rotation_x = false;
 	lock_rotation_y = false;
 	lock_rotation_z = false;
-	instantly_apply_modification = true;
 }
 
 SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {
@@ -699,9 +684,7 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	bone_trans.basis = Basis(ccdik_rotation);
 	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
 
-	if (instantly_apply_modification) {
-		stack->skeleton->force_update_bone_children_transforms(ccdik_data.bone_idx);
-	}
+	stack->skeleton->force_update_bone_children_transforms(ccdik_data.bone_idx);
 }
 
 void SkeletonModification3D_CCDIK::setup_modification(SkeletonModificationStack3D *p_stack) {
@@ -767,14 +750,6 @@ void SkeletonModification3D_CCDIK::set_tip_node(const NodePath &p_tip_node) {
 
 NodePath SkeletonModification3D_CCDIK::get_tip_node() const {
 	return tip_node;
-}
-
-void SkeletonModification3D_CCDIK::set_instantly_apply_modification(bool p_apply) {
-	instantly_apply_modification = p_apply;
-}
-
-bool SkeletonModification3D_CCDIK::get_instantly_apply_modification() const {
-	return instantly_apply_modification;
 }
 
 // CCDIK joint data functions
@@ -927,9 +902,6 @@ void SkeletonModification3D_CCDIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_tip_node", "tip_nodepath"), &SkeletonModification3D_CCDIK::set_tip_node);
 	ClassDB::bind_method(D_METHOD("get_tip_node"), &SkeletonModification3D_CCDIK::get_tip_node);
 
-	ClassDB::bind_method(D_METHOD("set_instantly_apply_modification", "apply_modification"), &SkeletonModification3D_CCDIK::set_instantly_apply_modification);
-	ClassDB::bind_method(D_METHOD("get_instantly_apply_modification"), &SkeletonModification3D_CCDIK::get_instantly_apply_modification);
-
 	// CCDIK joint data functions
 	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_name", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_bone_name);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_name", "joint_idx", "bone_name"), &SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name);
@@ -954,13 +926,11 @@ void SkeletonModification3D_CCDIK::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "tip_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_tip_node", "get_tip_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ccdik_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_ccdik_data_chain_length", "get_ccdik_data_chain_length");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "instantly_apply_modification"), "set_instantly_apply_modification", "get_instantly_apply_modification");
 }
 
 SkeletonModification3D_CCDIK::SkeletonModification3D_CCDIK() {
 	stack = nullptr;
 	is_setup = false;
-	instantly_apply_modification = true;
 	enabled = true;
 }
 

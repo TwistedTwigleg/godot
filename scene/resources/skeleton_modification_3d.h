@@ -125,8 +125,6 @@ private:
 	bool lock_rotation_y = false;
 	bool lock_rotation_z = false;
 
-	bool instantly_apply_modification = true;
-
 	void update_cache();
 
 protected:
@@ -157,9 +155,6 @@ public:
 	bool get_lock_rotation_x() const;
 	bool get_lock_rotation_y() const;
 	bool get_lock_rotation_z() const;
-
-	void set_instantly_apply_modification(bool p_apply);
-	bool get_instantly_apply_modification() const;
 
 	SkeletonModification3D_LookAt();
 	~SkeletonModification3D_LookAt();
@@ -207,8 +202,6 @@ private:
 	NodePath tip_node;
 	ObjectID tip_node_cache;
 
-	bool instantly_apply_modification = true;
-
 	void update_target_cache();
 	void update_tip_cache();
 
@@ -253,9 +246,6 @@ public:
 
 	int get_ccdik_data_chain_length();
 	void set_ccdik_data_chain_length(int p_new_length);
-
-	void set_instantly_apply_modification(bool p_apply);
-	bool get_instantly_apply_modification() const;
 
 	SkeletonModification3D_CCDIK();
 	~SkeletonModification3D_CCDIK();
