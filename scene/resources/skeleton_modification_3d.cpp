@@ -1078,7 +1078,7 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 	Vector3 direction = final_joint_trans.xform(stack->skeleton->get_bone_axis_forward(final_bone_idx)).normalized();
 
 	// set the position of the final joint to the target position
-	final_joint_trans.origin = target_global_pose.origin + (direction * fabrik_data_chain[final_bone_idx].length);
+	final_joint_trans.origin = target_global_pose.origin - (direction * fabrik_data_chain[final_bone_idx].length);
 	stack->skeleton->set_bone_local_pose_override(final_bone_idx, stack->skeleton->global_pose_to_local_pose(final_bone_idx, final_joint_trans), stack->strength, true);
 
 	// for all other joints, move them towards the target
@@ -1127,7 +1127,8 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		// If this is the last bone in the chain...
 		if (i == fabrik_data_chain.size() - 1) {
 			Quat new_rot = current_trans.basis.get_rotation_quat();
-			new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx), stack->skeleton->global_pose_to_local_pose(current_bone_idx, target_global_pose).origin);
+			new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx),
+					stack->skeleton->global_pose_to_local_pose(current_bone_idx, target_global_pose).origin);
 			current_trans.basis = Basis(new_rot);
 		} else { // every other bone in the chain - not quite working. Seems to get the rotation for the NEXT bone rather than the current.
 			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
@@ -1138,7 +1139,7 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 			current_trans.basis = Basis(new_rot);
 		}
 
-		current_trans.origin = Vector3(0,0,0);
+		current_trans.origin = Vector3(0, 0, 0);
 		stack->skeleton->set_bone_local_pose_override(current_bone_idx, current_trans, stack->strength, true);
 	}
 }
