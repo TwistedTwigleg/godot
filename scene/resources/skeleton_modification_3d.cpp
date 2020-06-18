@@ -294,18 +294,9 @@ void SkeletonModification3D_LookAt::execute() {
 	Skeleton3D *skeleton = stack->skeleton;
 	Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
 
-	// Convert to a global bone transform
-	new_bone_trans = skeleton->local_pose_to_global_pose(bone_idx, new_bone_trans);
-
-	new_bone_trans = new_bone_trans.looking_at(
-			skeleton->world_transform_to_global_pose(n->get_global_transform()).origin,
-			skeleton->world_transform_to_global_pose(skeleton->get_global_transform()).basis[lookat_axis].normalized());
-
-	// NOTE: The looking_at function is Z+ forward, but the bones in the skeleton may not.
-	// Because of this, we need to rotate the transform accordingly if the bone mode is not Z+.
-	if (skeleton->get_bone_axis_forward(bone_idx) != Vector3(0, 0, 1)) {
-		new_bone_trans.basis.rotate_local(skeleton->get_bone_axis_perpendicular(bone_idx), -M_PI / 2.0);
-	}
+	Quat new_rot = new_bone_trans.basis.get_rotation_quat();
+	new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(bone_idx),
+			skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
 
 	// Lock rotation if needed
 	if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
@@ -313,31 +304,28 @@ void SkeletonModification3D_LookAt::execute() {
 		rest_transform = skeleton->local_pose_to_global_pose(bone_idx, rest_transform);
 
 		// TODO: still needs work.
-		Quat new_rotation_quat = new_bone_trans.basis.get_rotation_quat();
 		if (lock_rotation_x) {
 			Vector3 axis = Vector3(1, 0, 0);
-			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+			new_rot = new_rot.get_swing_quat(axis);
 		}
 		if (lock_rotation_y) {
 			Vector3 axis = Vector3(0, 1, 0);
-			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+			new_rot = new_rot.get_swing_quat(axis);
 		}
 		if (lock_rotation_z) {
 			Vector3 axis = Vector3(0, 0, 1);
-			new_rotation_quat = new_rotation_quat.get_swing_quat(axis);
+			new_rot = new_rot.get_swing_quat(axis);
 		}
-		new_bone_trans.basis = Basis(new_rotation_quat).scaled(new_bone_trans.basis.get_scale());
 	}
+	new_bone_trans.basis = Basis(new_rot);
 
 	// Apply additional rotation
 	new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
 	new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
 	new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
 
-	// Convert to a local bone transform, so it retains rotation from parent bones, etc. Then apply to the bone.
-	new_bone_trans = skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
+	// Apply the local bone transform (retaining its rotation from parent bones, etc) to the bone.
 	skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
-
 	skeleton->force_update_bone_children_transforms(bone_idx);
 }
 
