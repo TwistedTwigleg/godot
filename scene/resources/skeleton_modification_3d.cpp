@@ -1044,9 +1044,14 @@ void SkeletonModification3D_FABRIK::execute() {
 	// Also, while we are here, apply magnet positions.
 	for (int i = 0; i < fabrik_data_chain.size(); i++) {
 		ERR_FAIL_COND_MSG(fabrik_data_chain[i].bone_idx < 0, "Joint " + itos(i) + " has an invalid bone ID! Cannot execute!");
+
+		if (fabrik_data_chain[i].length < 0 && fabrik_data_chain[i].auto_calculate_length) {
+			fabrik_joint_auto_calculate_length(i);
+		}
 		ERR_FAIL_COND_MSG(fabrik_data_chain[i].length < 0, "Joint " + itos(i) + " has an invalid joint length! Cannot execute!");
 
 		// Apply magnet positions:
+		// (TODO: Needs further testing)
 		Transform local_pose_override = stack->skeleton->get_bone_local_pose_override(fabrik_data_chain[i].bone_idx);
 		local_pose_override.origin += fabrik_data_chain[i].magnet_position;
 		stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, local_pose_override, stack->strength, true);
@@ -1082,7 +1087,7 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 	Vector3 direction = final_joint_trans.xform(stack->skeleton->get_bone_axis_forward(final_bone_idx)).normalized();
 
 	// set the position of the final joint to the target position
-	final_joint_trans.origin = target_global_pose.origin - (direction * fabrik_data_chain[final_bone_idx].length);
+	final_joint_trans.origin = target_global_pose.origin - (direction * fabrik_data_chain[final_joint_idx].length);
 	stack->skeleton->set_bone_local_pose_override(final_bone_idx, stack->skeleton->global_pose_to_local_pose(final_bone_idx, final_joint_trans), stack->strength, true);
 
 	// for all other joints, move them towards the target
@@ -1146,6 +1151,9 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		current_trans.origin = Vector3(0, 0, 0);
 		stack->skeleton->set_bone_local_pose_override(current_bone_idx, current_trans, stack->strength, true);
 	}
+
+	// Update all the bones so the next modification has up-to-date data.
+	stack->skeleton->force_update_all_bone_transforms();
 }
 
 void SkeletonModification3D_FABRIK::setup_modification(SkeletonModificationStack3D *p_stack) {
@@ -1167,7 +1175,7 @@ void SkeletonModification3D_FABRIK::update_target_cache() {
 	}
 	target_node_cache = ObjectID();
 	if (stack->skeleton) {
-		if (stack->skeleton->is_inside_tree()) {
+		if (stack->skeleton->is_inside_tree() && stack->skeleton->is_inside_world()) {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
 				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
@@ -1333,6 +1341,9 @@ void SkeletonModification3D_FABRIK::fabrik_joint_auto_calculate_length(int p_joi
 			"Bone for joint " + itos(p_joint_idx) + " is not set or points to an unknown bone!");
 
 	if (fabrik_data_chain[p_joint_idx].use_tip_node) { // Use the tip node to update joint length.
+
+		update_joint_tip_cache(p_joint_idx);
+
 		Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(fabrik_data_chain[p_joint_idx].tip_node_cache));
 		ERR_FAIL_COND_MSG(!n, "Tip node for joint " + itos(p_joint_idx) + "is not a Node3D-based node. Cannot calculate length...");
 		ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Tip node for joint " + itos(p_joint_idx) + "is not in the scene tree. Cannot calculate length...");
