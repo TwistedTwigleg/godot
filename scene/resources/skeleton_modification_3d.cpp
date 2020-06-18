@@ -1048,7 +1048,7 @@ void SkeletonModification3D_FABRIK::execute() {
 		} else {
 			Transform local_pose_override = stack->skeleton->get_bone_local_pose_override(fabrik_data_chain[i].bone_idx);
 			local_pose_override.origin += fabrik_data_chain[i].magnet_position;
-			stack->skeleton->set_bone_local_pose_override_simple(fabrik_data_chain[i].bone_idx, local_pose_override);
+			stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, local_pose_override, stack->strength, true);
 		}
 	}
 
@@ -1079,7 +1079,7 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 
 	// set the position of the final joint to the target position
 	final_joint_trans.origin = target_global_pose.origin + (direction * fabrik_data_chain[final_bone_idx].length);
-	stack->skeleton->set_bone_local_pose_override_simple(final_bone_idx, stack->skeleton->global_pose_to_local_pose(final_bone_idx, final_joint_trans));
+	stack->skeleton->set_bone_local_pose_override(final_bone_idx, stack->skeleton->global_pose_to_local_pose(final_bone_idx, final_joint_trans), stack->strength, true);
 
 	// for all other joints, move them towards the target
 	int i = final_joint_idx;
@@ -1094,7 +1094,7 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 		current_trans.origin = next_bone_trans.origin.lerp(current_trans.origin, length);
 
 		// Apply it back to the skeleton
-		stack->skeleton->set_bone_local_pose_override_simple(current_bone_idx, stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans));
+		stack->skeleton->set_bone_local_pose_override(current_bone_idx, stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans), stack->strength, true);
 	}
 }
 
@@ -1103,7 +1103,7 @@ void SkeletonModification3D_FABRIK::chain_forwards() {
 	int origin_bone_idx = fabrik_data_chain[0].bone_idx;
 	Transform root_transform = stack->skeleton->local_pose_to_global_pose(origin_bone_idx, stack->skeleton->get_bone_local_pose_override(origin_bone_idx));
 	root_transform.origin = origin_global_pose.origin;
-	stack->skeleton->set_bone_local_pose_override_simple(fabrik_data_chain[0].bone_idx, stack->skeleton->global_pose_to_local_pose(origin_bone_idx, root_transform));
+	stack->skeleton->set_bone_local_pose_override(origin_bone_idx, stack->skeleton->global_pose_to_local_pose(origin_bone_idx, root_transform), stack->strength, true);
 
 	for (int i = 0; i < fabrik_data_chain.size() - 1; i++) {
 		int current_bone_idx = fabrik_data_chain[i].bone_idx;
@@ -1115,7 +1115,7 @@ void SkeletonModification3D_FABRIK::chain_forwards() {
 		next_bone_trans.origin = current_trans.origin.lerp(next_bone_trans.origin, length);
 
 		// Apply it back to the skeleton
-		stack->skeleton->set_bone_local_pose_override_simple(next_bone_idx, stack->skeleton->global_pose_to_local_pose(next_bone_idx, next_bone_trans));
+		stack->skeleton->set_bone_local_pose_override(next_bone_idx, stack->skeleton->global_pose_to_local_pose(next_bone_idx, next_bone_trans), stack->strength, true);
 	}
 }
 
@@ -1129,7 +1129,6 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 			Quat new_rot = current_trans.basis.get_rotation_quat();
 			new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx), stack->skeleton->global_pose_to_local_pose(current_bone_idx, target_global_pose).origin);
 			current_trans.basis = Basis(new_rot);
-
 		} else { // every other bone in the chain - not quite working. Seems to get the rotation for the NEXT bone rather than the current.
 			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 			Transform next_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));

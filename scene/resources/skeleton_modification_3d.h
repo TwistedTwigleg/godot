@@ -259,7 +259,6 @@ class SkeletonModification3D_FABRIK : public SkeletonModification3D {
 	GDCLASS(SkeletonModification3D_FABRIK, SkeletonModification3D);
 
 private:
-
 	struct FABRIK_Joint_Data {
 		String bone_name = "";
 		int bone_idx = -1;
