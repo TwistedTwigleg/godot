@@ -294,32 +294,43 @@ void SkeletonModification3D_LookAt::execute() {
 	Skeleton3D *skeleton = stack->skeleton;
 	Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
 
+	// Undo any additional rotation so it is taken into account when rotating
+	new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), -Math::deg2rad(additional_rotation.x));
+	new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), -Math::deg2rad(additional_rotation.y));
+	new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), -Math::deg2rad(additional_rotation.z));
+
+	// Rotate to look at the target.
 	Quat new_rot = new_bone_trans.basis.get_rotation_quat();
 	new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(bone_idx),
 			skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
-
-	// Lock rotation if needed
-	if (lock_rotation_x || lock_rotation_y || lock_rotation_z) {
-		Transform rest_transform = skeleton->get_bone_rest(bone_idx);
-		rest_transform = skeleton->local_pose_to_global_pose(bone_idx, rest_transform);
-
-		// TODO: still needs work.
-		if (lock_rotation_x) {
-			Vector3 axis = Vector3(1, 0, 0);
-			new_rot = new_rot.get_swing_quat(axis);
-		}
-		if (lock_rotation_y) {
-			Vector3 axis = Vector3(0, 1, 0);
-			new_rot = new_rot.get_swing_quat(axis);
-		}
-		if (lock_rotation_z) {
-			Vector3 axis = Vector3(0, 0, 1);
-			new_rot = new_rot.get_swing_quat(axis);
-		}
+	
+	// Lock rotation (if needed)
+	if (lock_rotation_x) {
+		Vector3 axis; float angle;
+		new_rot.get_axis_angle(axis, angle);
+		axis.x = 0;
+		axis.normalize();
+		new_rot.set_axis_angle(axis, angle);
 	}
+	if (lock_rotation_y) {
+		Vector3 axis; float angle;
+		new_rot.get_axis_angle(axis, angle);
+		axis.y = 0;
+		axis.normalize();
+		new_rot.set_axis_angle(axis, angle);
+	}
+	if (lock_rotation_z) {
+		Vector3 axis; float angle;
+		new_rot.get_axis_angle(axis, angle);
+		axis.z = 0;
+		axis.normalize();
+		new_rot.set_axis_angle(axis, angle);
+	}
+	
+	// Convert to a basis
 	new_bone_trans.basis = Basis(new_rot);
 
-	// Apply additional rotation
+	// (Re)Apply additional rotation
 	new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));
 	new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), Math::deg2rad(additional_rotation.y));
 	new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), Math::deg2rad(additional_rotation.z));
