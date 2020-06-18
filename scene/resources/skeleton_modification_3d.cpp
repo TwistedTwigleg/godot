@@ -1138,6 +1138,7 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 			current_trans.basis = Basis(new_rot);
 		}
 
+		current_trans.origin = Vector3(0,0,0);
 		stack->skeleton->set_bone_local_pose_override(current_bone_idx, current_trans, stack->strength, true);
 	}
 }
