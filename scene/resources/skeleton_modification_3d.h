@@ -59,7 +59,7 @@ public:
 	int modifications_count = 0;
 
 	void setup();
-	void execute();
+	void execute(float delta);
 
 	void enable_all_modifications(bool p_enable);
 	Ref<SkeletonModification3D> get_modification(int p_mod_idx) const;
@@ -99,7 +99,7 @@ protected:
 	bool is_setup = false;
 
 public:
-	virtual void execute();
+	virtual void execute(float delta);
 	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_enabled(bool p_enabled);
@@ -130,7 +130,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	virtual void execute();
+	virtual void execute(float delta);
 	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_bone_name(String p_name);
@@ -210,7 +210,7 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
-	virtual void execute();
+	virtual void execute(float delta);
 	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_target_node(const NodePath &p_target_node);
@@ -293,7 +293,7 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
-	virtual void execute();
+	virtual void execute(float delta);
 	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
 
 	void set_target_node(const NodePath &p_target_node);
@@ -326,6 +326,66 @@ public:
 
 	SkeletonModification3D_FABRIK();
 	~SkeletonModification3D_FABRIK();
+};
+
+///////////////////////////////////////
+
+///////////////////////////////////////
+
+class SkeletonModification3D_Jiggle : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3D_Jiggle, SkeletonModification3D);
+
+private:
+	String bone_name = "";
+	int bone_idx = -1;
+	NodePath target_node;
+	ObjectID target_node_cache;
+
+	float stiffness = 3;
+	float mass = 0.75;
+	float damping = 0.75;
+	bool use_gravity = false;
+	Vector3 gravity = Vector3(0, -6.0, 0);
+
+	Vector3 cached_rotation = Vector3(0, 0, 0);
+	Vector3 force = Vector3(0, 0, 0);
+	Vector3 acceleration = Vector3(0, 0, 0);
+	Vector3 velocity = Vector3(0, 0, 0);
+	Vector3 last_position = Vector3(0, 0, 0);
+	Vector3 dynamic_position = Vector3(0, 0, 0);
+
+	void update_cache();
+
+protected:
+	static void _bind_methods();
+
+public:
+	virtual void execute(float delta);
+	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
+
+	void set_bone_name(String p_name);
+	String get_bone_name() const;
+
+	void set_bone_index(int p_idx);
+	int get_bone_index() const;
+
+	void set_target_node(const NodePath &p_target_node);
+	NodePath get_target_node() const;
+
+	void set_stiffness(float p_stiffness);
+	float get_stiffness() const;
+	void set_mass(float p_mass);
+	float get_mass() const;
+	void set_damping(float p_damping);
+	float get_damping() const;
+
+	void set_use_gravity(bool p_use_gravity);
+	bool get_use_gravity() const;
+	void set_gravity(Vector3 p_gravity);
+	Vector3 get_gravity() const;
+
+	SkeletonModification3D_Jiggle();
+	~SkeletonModification3D_Jiggle();
 };
 
 ///////////////////////////////////////

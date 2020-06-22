@@ -85,7 +85,7 @@ void SkeletonModificationStack3D::setup() {
 	}
 }
 
-void SkeletonModificationStack3D::execute() {
+void SkeletonModificationStack3D::execute(float delta) {
 	ERR_FAIL_COND_MSG(!is_setup || skeleton == nullptr || is_queued_for_deletion(),
 			"Modification stack is not properly setup and therefore cannot execute!");
 	// TODO: for now, fail silently because otherwise, the log is spammed with this error when saving the resource.
@@ -105,7 +105,7 @@ void SkeletonModificationStack3D::execute() {
 		if (!modifications[i].is_valid()) {
 			continue;
 		}
-		modifications.get(i)->execute();
+		modifications.get(i)->execute(delta);
 	}
 }
 
@@ -189,7 +189,7 @@ float SkeletonModificationStack3D::get_strength() const {
 
 void SkeletonModificationStack3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("setup"), &SkeletonModificationStack3D::setup);
-	ClassDB::bind_method(D_METHOD("execute"), &SkeletonModificationStack3D::execute);
+	ClassDB::bind_method(D_METHOD("execute", "delta"), &SkeletonModificationStack3D::execute);
 
 	ClassDB::bind_method(D_METHOD("enable_all_modifications", "enabled"), &SkeletonModificationStack3D::enable_all_modifications);
 	ClassDB::bind_method(D_METHOD("get_modification", "mod_idx"), &SkeletonModificationStack3D::get_modification);
@@ -229,7 +229,7 @@ SkeletonModificationStack3D::SkeletonModificationStack3D() {
 // Modification3D
 ///////////////////////////////////////
 
-void SkeletonModification3D::execute() {
+void SkeletonModification3D::execute(float delta) {
 	if (!enabled)
 		return;
 }
@@ -269,7 +269,7 @@ SkeletonModification3D::SkeletonModification3D() {
 // LookAt
 ///////////////////////////////////////
 
-void SkeletonModification3D_LookAt::execute() {
+void SkeletonModification3D_LookAt::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -302,8 +302,8 @@ void SkeletonModification3D_LookAt::execute() {
 	// Rotate to look at the target.
 	Quat new_rot = new_bone_trans.basis.get_rotation_euler();
 	new_rot.rotate_from_vector_to_vector(
-		stack->skeleton->get_bone_axis_forward(bone_idx),
-		skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
+			stack->skeleton->get_bone_axis_forward(bone_idx),
+			skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
 
 	// Lock rotation (if needed)
 	if (lock_rotation_x) {
@@ -585,7 +585,7 @@ void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list
 	}
 }
 
-void SkeletonModification3D_CCDIK::execute() {
+void SkeletonModification3D_CCDIK::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -1009,7 +1009,7 @@ void SkeletonModification3D_FABRIK::_get_property_list(List<PropertyInfo> *p_lis
 	}
 }
 
-void SkeletonModification3D_FABRIK::execute() {
+void SkeletonModification3D_FABRIK::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -1422,3 +1422,225 @@ SkeletonModification3D_FABRIK::~SkeletonModification3D_FABRIK() {
 }
 
 ///////////////////////////////////////
+// Jiggle
+///////////////////////////////////////
+
+void SkeletonModification3D_Jiggle::execute(float delta) {
+	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
+			"Modification is not setup and therefore cannot execute!");
+	if (!enabled) {
+		return;
+	}
+
+	if (target_node_cache.is_null()) {
+		update_cache();
+		WARN_PRINT("Target cache is out of date. Updating...");
+		return;
+	}
+
+	if (bone_idx <= -2) {
+		bone_idx = stack->skeleton->find_bone(bone_name);
+	}
+
+	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
+	ERR_FAIL_COND_MSG(!n, "Target node is not a Node3D-based node. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
+
+	// Adopted from: https://wiki.unity3d.com/index.php/JiggleBone
+	// With modifications by TwistedTwigleg.
+	Transform new_bone_trans = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx));
+	Vector3 up_vector = new_bone_trans.xform(stack->skeleton->get_bone_axis_perpendicular(bone_idx)).normalized();
+
+	Vector3 target_position = stack->skeleton->world_transform_to_global_pose(n->get_global_transform()).origin;
+
+	// Calculate force, accleration, and velocity
+	force = (target_position - dynamic_position) * stiffness * delta;
+	acceleration = force / mass;
+	velocity += acceleration * (1 - damping);
+
+	// gravity
+	if (use_gravity) {
+		force += gravity * delta;
+	}
+
+	dynamic_position = velocity + force;
+	dynamic_position += new_bone_trans.origin - last_position;
+	last_position = new_bone_trans.origin;
+
+	new_bone_trans = new_bone_trans.looking_at(dynamic_position, up_vector);
+
+	// Apply the local bone transform (retaining its rotation from parent bones, etc) to the bone.
+	new_bone_trans = stack->skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
+	stack->skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
+	stack->skeleton->force_update_bone_children_transforms(bone_idx);
+}
+
+void SkeletonModification3D_Jiggle::setup_modification(SkeletonModificationStack3D *p_stack) {
+	stack = p_stack;
+
+	if (stack != nullptr) {
+		is_setup = true;
+		update_cache();
+	}
+}
+
+void SkeletonModification3D_Jiggle::set_bone_name(String p_name) {
+	bone_name = p_name;
+	bone_idx = -1;
+	if (stack && stack->skeleton) {
+		bone_idx = stack->skeleton->find_bone(bone_name);
+	}
+	_change_notify();
+}
+
+String SkeletonModification3D_Jiggle::get_bone_name() const {
+	return bone_name;
+}
+
+int SkeletonModification3D_Jiggle::get_bone_index() const {
+	return bone_idx;
+}
+
+void SkeletonModification3D_Jiggle::set_bone_index(int p_bone_idx) {
+	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
+	bone_idx = p_bone_idx;
+
+	if (stack) {
+		if (stack->skeleton) {
+			if (p_bone_idx > stack->skeleton->get_bone_count()) {
+				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
+				bone_idx = -1;
+				return;
+			}
+			bone_name = stack->skeleton->get_bone_name(p_bone_idx);
+		}
+	}
+	_change_notify();
+}
+
+void SkeletonModification3D_Jiggle::update_cache() {
+	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update cache: modification is not properly setup!");
+		return;
+	}
+
+	target_node_cache = ObjectID();
+	if (stack->skeleton) {
+		if (stack->skeleton->is_inside_tree()) {
+			if (stack->skeleton->has_node(target_node)) {
+				Node *node = stack->skeleton->get_node(target_node);
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update cache: Target node is this modification's skeleton or cannot be found!");
+				target_node_cache = node->get_instance_id();
+			}
+		}
+	}
+}
+
+void SkeletonModification3D_Jiggle::set_target_node(const NodePath &p_target_node) {
+	target_node = p_target_node;
+	update_cache();
+}
+
+NodePath SkeletonModification3D_Jiggle::get_target_node() const {
+	return target_node;
+}
+
+void SkeletonModification3D_Jiggle::set_stiffness(float p_stiffness) {
+	ERR_FAIL_COND_MSG(p_stiffness < 0, "Stiffness cannot be set to a negative value!");
+	stiffness = p_stiffness;
+}
+
+float SkeletonModification3D_Jiggle::get_stiffness() const {
+	return stiffness;
+}
+
+void SkeletonModification3D_Jiggle::set_mass(float p_mass) {
+	ERR_FAIL_COND_MSG(p_mass < 0, "Mass cannot be set to a negative value!");
+	mass = p_mass;
+}
+
+float SkeletonModification3D_Jiggle::get_mass() const {
+	return mass;
+}
+
+void SkeletonModification3D_Jiggle::set_damping(float p_damping) {
+	ERR_FAIL_COND_MSG(p_damping < 0, "Damping cannot be set to a negative value!");
+	ERR_FAIL_COND_MSG(p_damping > 1, "Damping cannot be more than one!");
+	damping = p_damping;
+}
+
+float SkeletonModification3D_Jiggle::get_damping() const {
+	return damping;
+}
+
+void SkeletonModification3D_Jiggle::set_use_gravity(bool p_use_gravity) {
+	use_gravity = p_use_gravity;
+}
+
+bool SkeletonModification3D_Jiggle::get_use_gravity() const {
+	return use_gravity;
+}
+
+void SkeletonModification3D_Jiggle::set_gravity(Vector3 p_gravity) {
+	gravity = p_gravity;
+}
+
+Vector3 SkeletonModification3D_Jiggle::get_gravity() const {
+	return gravity;
+}
+
+void SkeletonModification3D_Jiggle::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3D_Jiggle::set_bone_name);
+	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3D_Jiggle::get_bone_name);
+
+	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification3D_Jiggle::set_bone_index);
+	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification3D_Jiggle::get_bone_index);
+
+	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_Jiggle::set_target_node);
+	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_Jiggle::get_target_node);
+
+	ClassDB::bind_method(D_METHOD("set_stiffness", "stiffness"), &SkeletonModification3D_Jiggle::set_stiffness);
+	ClassDB::bind_method(D_METHOD("get_stiffness"), &SkeletonModification3D_Jiggle::get_stiffness);
+	ClassDB::bind_method(D_METHOD("set_mass", "mass"), &SkeletonModification3D_Jiggle::set_mass);
+	ClassDB::bind_method(D_METHOD("get_mass"), &SkeletonModification3D_Jiggle::get_mass);
+	ClassDB::bind_method(D_METHOD("set_damping", "damping"), &SkeletonModification3D_Jiggle::set_damping);
+	ClassDB::bind_method(D_METHOD("get_damping"), &SkeletonModification3D_Jiggle::get_damping);
+	ClassDB::bind_method(D_METHOD("set_use_gravity", "use_gravity"), &SkeletonModification3D_Jiggle::set_use_gravity);
+	ClassDB::bind_method(D_METHOD("get_use_gravity"), &SkeletonModification3D_Jiggle::get_use_gravity);
+	ClassDB::bind_method(D_METHOD("set_gravity", "gravity"), &SkeletonModification3D_Jiggle::set_gravity);
+	ClassDB::bind_method(D_METHOD("get_gravity"), &SkeletonModification3D_Jiggle::get_gravity);
+
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
+	ADD_GROUP("Additional Settings", "");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "stiffness"), "set_stiffness", "get_stiffness");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mass"), "set_mass", "get_mass");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "damping", PROPERTY_HINT_RANGE, "0, 1, 0.01"), "set_damping", "get_damping");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "use_gravity"), "set_use_gravity", "get_use_gravity");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "gravity"), "set_gravity", "get_gravity");
+	ADD_GROUP("", "");
+}
+
+SkeletonModification3D_Jiggle::SkeletonModification3D_Jiggle() {
+	stack = nullptr;
+	is_setup = false;
+	bone_name = "";
+	bone_idx = -2;
+	stiffness = 3;
+	mass = 0.75;
+	damping = 0.75;
+	use_gravity = false;
+	gravity = Vector3(0, -6.0, 0);
+	cached_rotation = Vector3(0, 0, 0);
+	force = Vector3(0, 0, 0);
+	acceleration = Vector3(0, 0, 0);
+	velocity = Vector3(0, 0, 0);
+	last_position = Vector3(0, 0, 0);
+	dynamic_position = Vector3(0, 0, 0);
+}
+
+SkeletonModification3D_Jiggle::~SkeletonModification3D_Jiggle() {
+}

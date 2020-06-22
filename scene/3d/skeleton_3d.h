@@ -244,7 +244,7 @@ public:
 #ifndef _3D_DISABLED
 	Ref<SkeletonModificationStack3D> get_modification_stack();
 	void set_modification_stack(Ref<SkeletonModificationStack3D> p_stack);
-	void execute_modifications();
+	void execute_modifications(float delta);
 #endif // _3D_DISABLED
 
 #ifndef _3D_DISABLED

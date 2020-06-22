@@ -330,7 +330,7 @@ void Skeleton3D::_notification(int p_what) {
 
 #ifndef _3D_DISABLED
 		case NOTIFICATION_INTERNAL_PROCESS: {
-			execute_modifications();
+			execute_modifications(get_process_delta_time());
 		} break;
 #endif // _3D_DISABLED
 	}
@@ -1047,11 +1047,11 @@ Ref<SkeletonModificationStack3D> Skeleton3D::get_modification_stack() {
 	return modification_stack;
 }
 
-void Skeleton3D::execute_modifications() {
+void Skeleton3D::execute_modifications(float delta) {
 	if (!modification_stack.is_valid()) {
 		return;
 	}
-	modification_stack->execute();
+	modification_stack->execute(delta);
 }
 
 #endif // _3D_DISABLED
@@ -1128,7 +1128,7 @@ void Skeleton3D::_bind_methods() {
 	// Modifications
 	ClassDB::bind_method(D_METHOD("set_modification_stack", "modification_stack"), &Skeleton3D::set_modification_stack);
 	ClassDB::bind_method(D_METHOD("get_modification_stack"), &Skeleton3D::get_modification_stack);
-	ClassDB::bind_method(D_METHOD("execute_modifications"), &Skeleton3D::execute_modifications);
+	ClassDB::bind_method(D_METHOD("execute_modifications", "delta"), &Skeleton3D::execute_modifications);
 
 #endif // _3D_DISABLED
 
