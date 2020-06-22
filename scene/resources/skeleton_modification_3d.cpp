@@ -295,19 +295,15 @@ void SkeletonModification3D_LookAt::execute() {
 	Transform new_bone_trans = skeleton->get_bone_local_pose_override(bone_idx);
 
 	// Undo any additional rotation so it is taken into account when rotating
-	//new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), -Math::deg2rad(additional_rotation.x));
-	//new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), -Math::deg2rad(additional_rotation.y));
-	//new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), -Math::deg2rad(additional_rotation.z));
+	new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), -Math::deg2rad(additional_rotation.x));
+	new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), -Math::deg2rad(additional_rotation.y));
+	new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), -Math::deg2rad(additional_rotation.z));
 
 	// Rotate to look at the target.
-	Quat new_rot = new_bone_trans.basis.get_rotation_quat();
-	Vector3 forward_direction = new_rot.xform(stack->skeleton->get_bone_axis_forward(bone_idx));
-	Vector3 target_direction = skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin;
-	
-	//new_rot.rotate_from_vector_to_vector(forward_direction, target_direction);
-	Quat apply_quat = new_rot;
-	apply_quat.rotate_from_vector_to_vector(forward_direction, target_direction);
-	new_rot = new_rot * apply_quat;
+	Quat new_rot = new_bone_trans.basis.get_rotation_euler();
+	new_rot.rotate_from_vector_to_vector(
+		stack->skeleton->get_bone_axis_forward(bone_idx),
+		skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
 
 	// Lock rotation (if needed)
 	if (lock_rotation_x) {
