@@ -303,30 +303,33 @@ void SkeletonModification3D_LookAt::execute() {
 	Quat new_rot = new_bone_trans.basis.get_rotation_quat();
 	new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(bone_idx),
 			skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
-	
+
 	// Lock rotation (if needed)
 	if (lock_rotation_x) {
-		Vector3 axis; float angle;
+		Vector3 axis;
+		float angle;
 		new_rot.get_axis_angle(axis, angle);
 		axis.x = 0;
 		axis.normalize();
 		new_rot.set_axis_angle(axis, angle);
 	}
 	if (lock_rotation_y) {
-		Vector3 axis; float angle;
+		Vector3 axis;
+		float angle;
 		new_rot.get_axis_angle(axis, angle);
 		axis.y = 0;
 		axis.normalize();
 		new_rot.set_axis_angle(axis, angle);
 	}
 	if (lock_rotation_z) {
-		Vector3 axis; float angle;
+		Vector3 axis;
+		float angle;
 		new_rot.get_axis_angle(axis, angle);
 		axis.z = 0;
 		axis.normalize();
 		new_rot.set_axis_angle(axis, angle);
 	}
-	
+
 	// Convert to a basis
 	new_bone_trans.basis = Basis(new_rot);
 

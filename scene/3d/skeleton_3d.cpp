@@ -398,6 +398,7 @@ Vector3 Skeleton3D::get_bone_axis_perpendicular(int p_bone) {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
 
 	Vector3 dir = get_bone_axis_forward(p_bone);
+	dir = dir.abs();
 	if (dir.x < dir.y && dir.x < dir.z) {
 		dir = dir.rotated(Vector3(1, 0, 0), -M_PI_2);
 	} else if (dir.y < dir.x && dir.y < dir.z) {
