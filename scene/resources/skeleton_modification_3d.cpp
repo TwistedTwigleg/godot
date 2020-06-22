@@ -415,16 +415,6 @@ NodePath SkeletonModification3D_LookAt::get_target_node() const {
 	return target_node;
 }
 
-void SkeletonModification3D_LookAt::set_lookat_axis(int p_axis) {
-	ERR_FAIL_COND_MSG(p_axis > 2, "Unknown axis! lookat_axis cannot have be more than 2!");
-	ERR_FAIL_COND_MSG(p_axis < 0, "Unkown axis! lookat_axis cannot have be negative!");
-	lookat_axis = p_axis;
-}
-
-int SkeletonModification3D_LookAt::get_lookat_axis() {
-	return lookat_axis;
-}
-
 Vector3 SkeletonModification3D_LookAt::get_rotation_offset() const {
 	return additional_rotation;
 }
@@ -467,9 +457,6 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_LookAt::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_LookAt::get_target_node);
 
-	ClassDB::bind_method(D_METHOD("set_lookat_axis", "lookat_axis"), &SkeletonModification3D_LookAt::set_lookat_axis);
-	ClassDB::bind_method(D_METHOD("get_lookat_axis"), &SkeletonModification3D_LookAt::get_lookat_axis);
-
 	ClassDB::bind_method(D_METHOD("set_rotation_offset", "offset"), &SkeletonModification3D_LookAt::set_rotation_offset);
 	ClassDB::bind_method(D_METHOD("get_rotation_offset"), &SkeletonModification3D_LookAt::get_rotation_offset);
 
@@ -483,7 +470,6 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "lookat_axis", PROPERTY_HINT_ENUM, "axis x, axis y, axis z"), "set_lookat_axis", "get_lookat_axis");
 	ADD_GROUP("Additional Settings", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_x"), "set_lock_rotation_x", "get_lock_rotation_x");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "lock_rotation_y"), "set_lock_rotation_y", "get_lock_rotation_y");
@@ -497,7 +483,6 @@ SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
 	is_setup = false;
 	bone_name = "";
 	bone_idx = -2;
-	lookat_axis = 1;
 	additional_rotation = Vector3();
 	lock_rotation_x = false;
 	lock_rotation_y = false;

@@ -118,7 +118,6 @@ private:
 	int bone_idx = -1;
 	NodePath target_node;
 	ObjectID target_node_cache;
-	int lookat_axis = 0;
 
 	Vector3 additional_rotation = Vector3(1, 0, 0);
 	bool lock_rotation_x = false;
@@ -142,9 +141,6 @@ public:
 
 	void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;
-
-	void set_lookat_axis(int p_axis);
-	int get_lookat_axis();
 
 	void set_rotation_offset(Vector3 p_offset);
 	Vector3 get_rotation_offset() const;
