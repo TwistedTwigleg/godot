@@ -300,7 +300,8 @@ void SkeletonModification3D_LookAt::execute(float delta) {
 	new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), -Math::deg2rad(additional_rotation.z));
 
 	// Rotate to look at the target.
-	Quat new_rot = new_bone_trans.basis.get_rotation_euler();
+	Quat new_rot = Quat();
+
 	new_rot.rotate_from_vector_to_vector(
 			stack->skeleton->get_bone_axis_forward(bone_idx),
 			skeleton->global_pose_to_local_pose(bone_idx, skeleton->world_transform_to_global_pose(n->get_global_transform())).origin);
@@ -633,9 +634,10 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse,
 				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse);
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_JOINT) {
+		Vector3 target_position = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
 		ccdik_rotation.rotate_from_vector_to_vector(
 				stack->skeleton->get_bone_axis_forward(ccdik_data.bone_idx) * ccdik_data.ccdik_axis_vector_inverse,
-				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse);
+				(bone_trans.origin.direction_to(target_position)) * ccdik_data.ccdik_axis_vector_inverse);
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FREE) {
 		// Free mode: allow rotation on any axis.
 		ccdik_rotation.rotate_from_vector_to_vector(
@@ -1550,7 +1552,9 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 	jiggle_data_chain.write[p_joint_idx].last_position = new_bone_trans.origin;
 
 	Quat rotation_quat = Quat();
-	rotation_quat.rotate_from_vector_to_vector(new_bone_trans.basis[1].normalized(), new_bone_trans.origin.direction_to(jiggle_data_chain[p_joint_idx].dynamic_position));
+	rotation_quat.rotate_from_vector_to_vector(
+			stack->skeleton->get_bone_axis_forward(jiggle_data_chain[p_joint_idx].bone_idx),
+			new_bone_trans.origin.direction_to(jiggle_data_chain[p_joint_idx].dynamic_position));
 	new_bone_trans.basis = Basis(rotation_quat);
 
 	new_bone_trans = stack->skeleton->global_pose_to_local_pose(jiggle_data_chain[p_joint_idx].bone_idx, new_bone_trans);

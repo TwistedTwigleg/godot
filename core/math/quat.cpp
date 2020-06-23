@@ -263,9 +263,8 @@ Quat Quat::get_swing_quat(const Vector3 p_axis) const {
 	return Quat(x, y, z, w) * twist.inverse();
 }
 
-// Takes two vectors and creates a Quat that starts with the rotation of p_from
-// and rotates to p_to. Similar to the look_at function, but you can define/override
-// the starting rotation.
+// Takes two vectors and creates a Quat that starts with the rotation of p_from and rotates to p_to.
+// Similar to the look_at function, but you can define/override the starting rotation.
 // Adopted from: https://bitbucket.org/sinbad/ogre/src/9db75e3ba05c/OgreMain/include/OgreVector3.h#cl-651
 void Quat::rotate_from_vector_to_vector(const Vector3 p_from, const Vector3 p_to) {
 	Vector3 v0 = p_from.normalized();
