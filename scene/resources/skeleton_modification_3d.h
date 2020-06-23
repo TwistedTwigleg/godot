@@ -336,11 +336,10 @@ class SkeletonModification3D_Jiggle : public SkeletonModification3D {
 	GDCLASS(SkeletonModification3D_Jiggle, SkeletonModification3D);
 
 private:
-
 	struct Jiggle_Joint_Data {
 		String bone_name = "";
 		int bone_idx = -1;
-		
+
 		bool override_defaults = false;
 		float stiffness = 3;
 		float mass = 0.75;
