@@ -1462,7 +1462,7 @@ void SkeletonModification3D_Jiggle::execute(float delta) {
 		force += gravity * delta;
 	}
 
-	dynamic_position = velocity + force;
+	dynamic_position += velocity + force;
 	dynamic_position += new_bone_trans.origin - last_position;
 	last_position = new_bone_trans.origin;
 
@@ -1481,6 +1481,13 @@ void SkeletonModification3D_Jiggle::setup_modification(SkeletonModificationStack
 
 	if (stack != nullptr) {
 		is_setup = true;
+
+		if (stack->skeleton != nullptr) {
+			if (bone_idx > 0 && bone_idx < stack->skeleton->get_bone_count()) {
+				dynamic_position = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx)).origin;
+			}
+		}
+
 		update_cache();
 	}
 }
