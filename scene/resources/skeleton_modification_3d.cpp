@@ -1549,8 +1549,8 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 	jiggle_data_chain.write[p_joint_idx].dynamic_position += new_bone_trans.origin - jiggle_data_chain[p_joint_idx].last_position;
 	jiggle_data_chain.write[p_joint_idx].last_position = new_bone_trans.origin;
 
-	Quat rotation_quat = new_bone_trans.basis.get_rotation_quat();
-	rotation_quat.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(jiggle_data_chain[p_joint_idx].bone_idx), jiggle_data_chain[p_joint_idx].dynamic_position);
+	Quat rotation_quat = Quat();
+	rotation_quat.rotate_from_vector_to_vector(new_bone_trans.basis[1].normalized(), new_bone_trans.origin.direction_to(jiggle_data_chain[p_joint_idx].dynamic_position));
 	new_bone_trans.basis = Basis(rotation_quat);
 
 	new_bone_trans = stack->skeleton->global_pose_to_local_pose(jiggle_data_chain[p_joint_idx].bone_idx, new_bone_trans);
