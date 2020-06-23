@@ -1425,55 +1425,149 @@ SkeletonModification3D_FABRIK::~SkeletonModification3D_FABRIK() {
 // Jiggle
 ///////////////////////////////////////
 
+bool SkeletonModification3D_Jiggle::_set(const StringName &p_path, const Variant &p_value) {
+	String path = p_path;
+
+	if (path.begins_with("joint_data/")) {
+		int which = path.get_slicec('/', 1).to_int();
+		String what = path.get_slicec('/', 2);
+		ERR_FAIL_INDEX_V(which, jiggle_data_chain.size(), false);
+
+		if (what == "bone_name") {
+			jiggle_joint_set_bone_name(which, p_value);
+		} else if (what == "bone_index") {
+			jiggle_joint_set_bone_index(which, p_value);
+		} else if (what == "override_defaults") {
+			jiggle_joint_set_override(which, p_value);
+		} else if (what == "stiffness") {
+			jiggle_joint_set_stiffness(which, p_value);
+		} else if (what == "mass") {
+			jiggle_joint_set_mass(which, p_value);
+		} else if (what == "damping") {
+			jiggle_joint_set_damping(which, p_value);
+		} else if (what == "use_gravity") {
+			jiggle_joint_set_use_gravity(which, p_value);
+		} else if (what == "gravity") {
+			jiggle_joint_set_gravity(which, p_value);
+		}
+		return true;
+	}
+	return true;
+}
+
+bool SkeletonModification3D_Jiggle::_get(const StringName &p_path, Variant &r_ret) const {
+	String path = p_path;
+
+	if (path.begins_with("joint_data/")) {
+		int which = path.get_slicec('/', 1).to_int();
+		String what = path.get_slicec('/', 2);
+		ERR_FAIL_INDEX_V(which, jiggle_data_chain.size(), false);
+
+		if (what == "bone_name") {
+			r_ret = jiggle_joint_get_bone_name(which);
+		} else if (what == "bone_index") {
+			r_ret = jiggle_joint_get_bone_index(which);
+		} else if (what == "override_defaults") {
+			r_ret = jiggle_joint_get_override(which);
+		} else if (what == "stiffness") {
+			r_ret = jiggle_joint_get_stiffness(which);
+		} else if (what == "mass") {
+			r_ret = jiggle_joint_get_mass(which);
+		} else if (what == "damping") {
+			r_ret = jiggle_joint_get_damping(which);
+		} else if (what == "use_gravity") {
+			r_ret = jiggle_joint_get_use_gravity(which);
+		} else if (what == "gravity") {
+			r_ret = jiggle_joint_get_gravity(which);
+		}
+		return true;
+	}
+	return true;
+}
+
+void SkeletonModification3D_Jiggle::_get_property_list(List<PropertyInfo> *p_list) const {
+	for (int i = 0; i < jiggle_data_chain.size(); i++) {
+		String base_string = "joint_data/" + itos(i) + "/";
+
+		p_list->push_back(PropertyInfo(Variant::STRING, base_string + "bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::INT, base_string + "bone_index", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "override_defaults", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+
+		if (jiggle_data_chain[i].override_defaults == true) {
+			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "stiffness", PROPERTY_HINT_RANGE, "0, 1000, 0.01", PROPERTY_USAGE_DEFAULT));
+			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "mass", PROPERTY_HINT_RANGE, "0, 1000, 0.01", PROPERTY_USAGE_DEFAULT));
+			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "damping", PROPERTY_HINT_RANGE, "0, 1, 0.01", PROPERTY_USAGE_DEFAULT));
+			p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "use_gravity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+			if (jiggle_data_chain[i].use_gravity == true) {
+				p_list->push_back(PropertyInfo(Variant::VECTOR3, base_string + "gravity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+			}
+		}
+	}
+}
+
 void SkeletonModification3D_Jiggle::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
 		return;
 	}
-
 	if (target_node_cache.is_null()) {
 		update_cache();
 		WARN_PRINT("Target cache is out of date. Updating...");
 		return;
 	}
-
-	if (bone_idx <= -2) {
-		bone_idx = stack->skeleton->find_bone(bone_name);
-	}
-
 	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
 	ERR_FAIL_COND_MSG(!n, "Target node is not a Node3D-based node. Cannot execute modification!");
 	ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
-	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
 
+	for (int i = 0; i < jiggle_data_chain.size(); i++) {
+		_execute_jiggle_joint(i, n, delta);
+	}
+}
+
+void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3D *target, float delta) {
 	// Adopted from: https://wiki.unity3d.com/index.php/JiggleBone
 	// With modifications by TwistedTwigleg.
-	Transform new_bone_trans = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx));
-	Vector3 target_position = stack->skeleton->world_transform_to_global_pose(n->get_global_transform()).origin;
 
-	// Calculate force, accleration, and velocity
-	force = (target_position - dynamic_position) * stiffness * delta;
-	acceleration = force / mass;
-	velocity += acceleration * (1 - damping);
+	if (jiggle_data_chain[p_joint_idx].bone_idx <= -2) {
+		jiggle_data_chain.write[p_joint_idx].bone_idx = stack->skeleton->find_bone(jiggle_data_chain[p_joint_idx].bone_name);
+	}
+	ERR_FAIL_COND_MSG(jiggle_data_chain[p_joint_idx].bone_idx <= -1, "Jiggle joint " + itos(p_joint_idx) + " bone index is invalid. Cannot execute modification on joint...");
 
-	// gravity
-	if (use_gravity) {
-		force += gravity * delta;
+	Transform new_bone_trans = stack->skeleton->local_pose_to_global_pose(jiggle_data_chain[p_joint_idx].bone_idx, stack->skeleton->get_bone_local_pose_override(jiggle_data_chain[p_joint_idx].bone_idx));
+	Vector3 target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
+
+	jiggle_data_chain.write[p_joint_idx].force = (target_position - jiggle_data_chain[p_joint_idx].dynamic_position) * jiggle_data_chain[p_joint_idx].stiffness * delta;
+	jiggle_data_chain.write[p_joint_idx].acceleration = jiggle_data_chain[p_joint_idx].force / jiggle_data_chain[p_joint_idx].mass;
+	jiggle_data_chain.write[p_joint_idx].velocity += jiggle_data_chain[p_joint_idx].acceleration * (1 - jiggle_data_chain[p_joint_idx].damping);
+
+	if (jiggle_data_chain[p_joint_idx].use_gravity) {
+		jiggle_data_chain.write[p_joint_idx].force += jiggle_data_chain[p_joint_idx].gravity * delta;
 	}
 
-	dynamic_position += velocity + force;
-	dynamic_position += new_bone_trans.origin - last_position;
-	last_position = new_bone_trans.origin;
+	jiggle_data_chain.write[p_joint_idx].dynamic_position += jiggle_data_chain[p_joint_idx].velocity + jiggle_data_chain[p_joint_idx].force;
+	jiggle_data_chain.write[p_joint_idx].dynamic_position += new_bone_trans.origin - jiggle_data_chain[p_joint_idx].last_position;
+	jiggle_data_chain.write[p_joint_idx].last_position = new_bone_trans.origin;
 
 	Quat rotation_quat = new_bone_trans.basis.get_rotation_quat();
-	rotation_quat.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(bone_idx), dynamic_position);
+	rotation_quat.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(jiggle_data_chain[p_joint_idx].bone_idx), jiggle_data_chain[p_joint_idx].dynamic_position);
 	new_bone_trans.basis = Basis(rotation_quat);
 
-	// Apply the local bone transform (retaining its rotation from parent bones, etc) to the bone.
-	new_bone_trans = stack->skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
-	stack->skeleton->set_bone_local_pose_override(bone_idx, new_bone_trans, stack->strength, true);
-	stack->skeleton->force_update_bone_children_transforms(bone_idx);
+	new_bone_trans = stack->skeleton->global_pose_to_local_pose(jiggle_data_chain[p_joint_idx].bone_idx, new_bone_trans);
+	stack->skeleton->set_bone_local_pose_override(jiggle_data_chain[p_joint_idx].bone_idx, new_bone_trans, stack->strength, true);
+	stack->skeleton->force_update_bone_children_transforms(jiggle_data_chain[p_joint_idx].bone_idx);
+}
+
+void SkeletonModification3D_Jiggle::_update_jiggle_joint_data() {
+	for (int i = 0; i < jiggle_data_chain.size(); i++) {
+		if (jiggle_data_chain[i].override_defaults == false) {
+			jiggle_joint_set_stiffness(i, stiffness);
+			jiggle_joint_set_mass(i, mass);
+			jiggle_joint_set_damping(i, damping);
+			jiggle_joint_set_use_gravity(i, use_gravity);
+			jiggle_joint_set_gravity(i, gravity);
+		}
+	}
 }
 
 void SkeletonModification3D_Jiggle::setup_modification(SkeletonModificationStack3D *p_stack) {
@@ -1483,47 +1577,16 @@ void SkeletonModification3D_Jiggle::setup_modification(SkeletonModificationStack
 		is_setup = true;
 
 		if (stack->skeleton != nullptr) {
-			if (bone_idx > 0 && bone_idx < stack->skeleton->get_bone_count()) {
-				dynamic_position = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx)).origin;
+			for (int i = 0; i < jiggle_data_chain.size(); i++) {
+				int bone_idx = jiggle_data_chain[i].bone_idx;
+				if (bone_idx > 0 && bone_idx < stack->skeleton->get_bone_count()) {
+					jiggle_data_chain.write[i].dynamic_position = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx)).origin;
+				}
 			}
 		}
 
 		update_cache();
 	}
-}
-
-void SkeletonModification3D_Jiggle::set_bone_name(String p_name) {
-	bone_name = p_name;
-	bone_idx = -1;
-	if (stack && stack->skeleton) {
-		bone_idx = stack->skeleton->find_bone(bone_name);
-	}
-	_change_notify();
-}
-
-String SkeletonModification3D_Jiggle::get_bone_name() const {
-	return bone_name;
-}
-
-int SkeletonModification3D_Jiggle::get_bone_index() const {
-	return bone_idx;
-}
-
-void SkeletonModification3D_Jiggle::set_bone_index(int p_bone_idx) {
-	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
-	bone_idx = p_bone_idx;
-
-	if (stack) {
-		if (stack->skeleton) {
-			if (p_bone_idx > stack->skeleton->get_bone_count()) {
-				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
-				bone_idx = -1;
-				return;
-			}
-			bone_name = stack->skeleton->get_bone_name(p_bone_idx);
-		}
-	}
-	_change_notify();
 }
 
 void SkeletonModification3D_Jiggle::update_cache() {
@@ -1557,6 +1620,7 @@ NodePath SkeletonModification3D_Jiggle::get_target_node() const {
 void SkeletonModification3D_Jiggle::set_stiffness(float p_stiffness) {
 	ERR_FAIL_COND_MSG(p_stiffness < 0, "Stiffness cannot be set to a negative value!");
 	stiffness = p_stiffness;
+	_update_jiggle_joint_data();
 }
 
 float SkeletonModification3D_Jiggle::get_stiffness() const {
@@ -1566,6 +1630,7 @@ float SkeletonModification3D_Jiggle::get_stiffness() const {
 void SkeletonModification3D_Jiggle::set_mass(float p_mass) {
 	ERR_FAIL_COND_MSG(p_mass < 0, "Mass cannot be set to a negative value!");
 	mass = p_mass;
+	_update_jiggle_joint_data();
 }
 
 float SkeletonModification3D_Jiggle::get_mass() const {
@@ -1576,6 +1641,7 @@ void SkeletonModification3D_Jiggle::set_damping(float p_damping) {
 	ERR_FAIL_COND_MSG(p_damping < 0, "Damping cannot be set to a negative value!");
 	ERR_FAIL_COND_MSG(p_damping > 1, "Damping cannot be more than one!");
 	damping = p_damping;
+	_update_jiggle_joint_data();
 }
 
 float SkeletonModification3D_Jiggle::get_damping() const {
@@ -1584,6 +1650,7 @@ float SkeletonModification3D_Jiggle::get_damping() const {
 
 void SkeletonModification3D_Jiggle::set_use_gravity(bool p_use_gravity) {
 	use_gravity = p_use_gravity;
+	_update_jiggle_joint_data();
 }
 
 bool SkeletonModification3D_Jiggle::get_use_gravity() const {
@@ -1592,21 +1659,134 @@ bool SkeletonModification3D_Jiggle::get_use_gravity() const {
 
 void SkeletonModification3D_Jiggle::set_gravity(Vector3 p_gravity) {
 	gravity = p_gravity;
+	_update_jiggle_joint_data();
 }
 
 Vector3 SkeletonModification3D_Jiggle::get_gravity() const {
 	return gravity;
 }
 
+int SkeletonModification3D_Jiggle::get_jiggle_data_chain_length() {
+	return jiggle_data_chain.size();
+}
+
+void SkeletonModification3D_Jiggle::set_jiggle_data_chain_length(int p_length) {
+	ERR_FAIL_COND(p_length < 0);
+	jiggle_data_chain.resize(p_length);
+	_change_notify();
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_bone_name(int joint_idx, String p_name) {
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+
+	jiggle_data_chain.write[joint_idx].bone_name = p_name;
+	jiggle_data_chain.write[joint_idx].bone_idx = -1;
+	if (stack && stack->skeleton) {
+		jiggle_data_chain.write[joint_idx].bone_idx = stack->skeleton->find_bone(p_name);
+	}
+	_change_notify();
+}
+
+String SkeletonModification3D_Jiggle::jiggle_joint_get_bone_name(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), "");
+	return jiggle_data_chain[joint_idx].bone_name;
+}
+
+int SkeletonModification3D_Jiggle::jiggle_joint_get_bone_index(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
+	return jiggle_data_chain[joint_idx].bone_idx;
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_bone_index(int joint_idx, int p_bone_idx) {
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
+	jiggle_data_chain.write[joint_idx].bone_idx = p_bone_idx;
+
+	if (stack) {
+		if (stack->skeleton) {
+			if (p_bone_idx > stack->skeleton->get_bone_count()) {
+				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
+				jiggle_data_chain.write[joint_idx].bone_idx = -1;
+				return;
+			}
+			jiggle_data_chain.write[joint_idx].bone_name = stack->skeleton->get_bone_name(p_bone_idx);
+		}
+	}
+	_change_notify();
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_override(int joint_idx, bool p_override) {
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	jiggle_data_chain.write[joint_idx].override_defaults = p_override;
+	_update_jiggle_joint_data();
+	_change_notify();
+}
+
+bool SkeletonModification3D_Jiggle::jiggle_joint_get_override(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), false);
+	return jiggle_data_chain[joint_idx].override_defaults;
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_stiffness(int joint_idx, float p_stiffness) {
+	ERR_FAIL_COND_MSG(p_stiffness < 0, "Stiffness cannot be set to a negative value!");
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	jiggle_data_chain.write[joint_idx].stiffness = p_stiffness;
+}
+
+float SkeletonModification3D_Jiggle::jiggle_joint_get_stiffness(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
+	return jiggle_data_chain[joint_idx].stiffness;
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_mass(int joint_idx, float p_mass) {
+	ERR_FAIL_COND_MSG(p_mass < 0, "Mass cannot be set to a negative value!");
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	jiggle_data_chain.write[joint_idx].mass = p_mass;
+}
+
+float SkeletonModification3D_Jiggle::jiggle_joint_get_mass(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
+	return jiggle_data_chain[joint_idx].mass;
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_damping(int joint_idx, float p_damping) {
+	ERR_FAIL_COND_MSG(p_damping < 0, "Damping cannot be set to a negative value!");
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	jiggle_data_chain.write[joint_idx].damping = p_damping;
+}
+
+float SkeletonModification3D_Jiggle::jiggle_joint_get_damping(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
+	return jiggle_data_chain[joint_idx].damping;
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_use_gravity(int joint_idx, bool p_use_gravity) {
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	jiggle_data_chain.write[joint_idx].use_gravity = p_use_gravity;
+	_change_notify();
+}
+
+bool SkeletonModification3D_Jiggle::jiggle_joint_get_use_gravity(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), false);
+	return jiggle_data_chain[joint_idx].use_gravity;
+}
+
+void SkeletonModification3D_Jiggle::jiggle_joint_set_gravity(int joint_idx, Vector3 p_gravity) {
+	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
+	jiggle_data_chain.write[joint_idx].gravity = p_gravity;
+}
+
+Vector3 SkeletonModification3D_Jiggle::jiggle_joint_get_gravity(int joint_idx) const {
+	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), Vector3(0, 0, 0));
+	return jiggle_data_chain[joint_idx].gravity;
+}
+
 void SkeletonModification3D_Jiggle::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3D_Jiggle::set_bone_name);
-	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3D_Jiggle::get_bone_name);
-
-	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification3D_Jiggle::set_bone_index);
-	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification3D_Jiggle::get_bone_index);
-
 	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_Jiggle::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_Jiggle::get_target_node);
+
+	ClassDB::bind_method(D_METHOD("set_jiggle_data_chain_length", "length"), &SkeletonModification3D_Jiggle::set_jiggle_data_chain_length);
+	ClassDB::bind_method(D_METHOD("get_jiggle_data_chain_length"), &SkeletonModification3D_Jiggle::get_jiggle_data_chain_length);
 
 	ClassDB::bind_method(D_METHOD("set_stiffness", "stiffness"), &SkeletonModification3D_Jiggle::set_stiffness);
 	ClassDB::bind_method(D_METHOD("get_stiffness"), &SkeletonModification3D_Jiggle::get_stiffness);
@@ -1619,14 +1799,31 @@ void SkeletonModification3D_Jiggle::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_gravity", "gravity"), &SkeletonModification3D_Jiggle::set_gravity);
 	ClassDB::bind_method(D_METHOD("get_gravity"), &SkeletonModification3D_Jiggle::get_gravity);
 
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_name", "joint_idx", "name"), &SkeletonModification3D_Jiggle::jiggle_joint_set_bone_name);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_name", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_bone_name);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_index", "joint_idx", "bone_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_set_bone_index);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_index", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_bone_index);
+
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_override", "joint_idx", "override"), &SkeletonModification3D_Jiggle::jiggle_joint_set_override);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_override", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_override);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_stiffness", "joint_idx", "stiffness"), &SkeletonModification3D_Jiggle::jiggle_joint_set_stiffness);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_stiffness", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_stiffness);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_mass", "joint_idx", "mass"), &SkeletonModification3D_Jiggle::jiggle_joint_set_mass);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_mass", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_mass);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_damping", "joint_idx", "damping"), &SkeletonModification3D_Jiggle::jiggle_joint_set_damping);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_damping", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_damping);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_use_gravity", "joint_idx", "use_gravity"), &SkeletonModification3D_Jiggle::jiggle_joint_set_use_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_use_gravity", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_use_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_gravity", "joint_idx", "gravity"), &SkeletonModification3D_Jiggle::jiggle_joint_set_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_gravity", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_gravity);
+
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
-	ADD_GROUP("Additional Settings", "");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "jiggle_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_jiggle_data_chain_length", "get_jiggle_data_chain_length");
+	ADD_GROUP("Default Joint Settings", "");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "stiffness"), "set_stiffness", "get_stiffness");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mass"), "set_mass", "get_mass");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "damping", PROPERTY_HINT_RANGE, "0, 1, 0.01"), "set_damping", "get_damping");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "use_gravity"), "set_use_gravity", "get_use_gravity");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_gravity"), "set_use_gravity", "get_use_gravity");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "gravity"), "set_gravity", "get_gravity");
 	ADD_GROUP("", "");
 }
@@ -1634,19 +1831,12 @@ void SkeletonModification3D_Jiggle::_bind_methods() {
 SkeletonModification3D_Jiggle::SkeletonModification3D_Jiggle() {
 	stack = nullptr;
 	is_setup = false;
-	bone_name = "";
-	bone_idx = -2;
+	jiggle_data_chain = Vector<Jiggle_Joint_Data>();
 	stiffness = 3;
 	mass = 0.75;
 	damping = 0.75;
 	use_gravity = false;
 	gravity = Vector3(0, -6.0, 0);
-	cached_rotation = Vector3(0, 0, 0);
-	force = Vector3(0, 0, 0);
-	acceleration = Vector3(0, 0, 0);
-	velocity = Vector3(0, 0, 0);
-	last_position = Vector3(0, 0, 0);
-	dynamic_position = Vector3(0, 0, 0);
 }
 
 SkeletonModification3D_Jiggle::~SkeletonModification3D_Jiggle() {
