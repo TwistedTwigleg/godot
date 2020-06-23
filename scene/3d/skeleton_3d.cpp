@@ -389,13 +389,42 @@ float Skeleton3D::get_bone_length(int p_bone) {
 	return bones[p_bone].rest.origin.length();
 }
 
-Vector3 Skeleton3D::get_bone_axis_forward(int p_bone) {
+Vector3 Skeleton3D::get_bone_axis_forward(int p_bone, bool force_update) {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
-	return bones[p_bone].rest.origin.normalized();
+
+	if (bones[p_bone].rest_direction_forward.length_squared() > 0 && force_update == false) {
+		return bones[p_bone].rest_direction_forward;
+	}
+
+	// If it is a child/leaf bone...
+	if (get_bone_parent(p_bone) > 0) {
+		bones.write[p_bone].rest_direction_forward = bones[p_bone].rest.origin.normalized();
+	} else {
+		// If it has children...
+		Vector<int> child_bones = get_bone_children(p_bone);
+		if (child_bones.size() > 0) {
+			Vector3 combined_child_dir = Vector3(0, 0, 0);
+			for (int i = 0; i < child_bones.size(); i++) {
+				combined_child_dir += bones[child_bones[i]].rest.origin.normalized();
+			}
+			combined_child_dir = combined_child_dir / child_bones.size();
+			bones.write[p_bone].rest_direction_forward = combined_child_dir.normalized();
+		} else {
+			// TODO: see if there is a better way to calculate bone direction!
+			WARN_PRINT("Cannot calculate forward direction for bone " + itos(p_bone));
+			WARN_PRINT("Assuming direction of (0, 1, 0) for bone");
+			bones.write[p_bone].rest_direction_forward = Vector3(0, 1, 0);
+		}
+	}
+	return bones[p_bone].rest_direction_forward;
 }
 
-Vector3 Skeleton3D::get_bone_axis_perpendicular(int p_bone) {
+Vector3 Skeleton3D::get_bone_axis_perpendicular(int p_bone, bool force_update) {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
+
+	if (bones[p_bone].rest_direction_perpendicular.length_squared() > 0 && force_update == false) {
+		return bones[p_bone].rest_direction_perpendicular;
+	}
 
 	Vector3 dir = get_bone_axis_forward(p_bone);
 	dir = dir.abs();
@@ -406,7 +435,8 @@ Vector3 Skeleton3D::get_bone_axis_perpendicular(int p_bone) {
 	} else {
 		dir = dir.rotated(Vector3(0, 0, 1), -M_PI_2);
 	}
-	return dir.normalized();
+	bones.write[p_bone].rest_direction_perpendicular = dir.normalized();
+	return bones[p_bone].rest_direction_perpendicular;
 }
 
 // skeleton creation api

@@ -105,6 +105,11 @@ private:
 		List<ObjectID> nodes_bound;
 		Vector<int> child_bones;
 
+		// The forward and perpendicular direction vectors are cached because they do not change
+		// 99% of the time, but recalculating them can be expensive on models with many bones.
+		Vector3 rest_direction_forward;
+		Vector3 rest_direction_perpendicular;
+
 		Bone() {
 			parent = -1;
 			enabled = true;
@@ -119,6 +124,9 @@ private:
 			local_pose_override_amount = 0;
 			local_pose_override_reset = false;
 			child_bones = Vector<int>();
+
+			rest_direction_forward = Vector3(0, 0, 0);
+			rest_direction_perpendicular = Vector3(0, 0, 0);
 		}
 	};
 
@@ -231,8 +239,8 @@ public:
 	// relative to the parent bone. I have not fully tested this though, but it works okay in the lookat solver.
 	// May need to be renamed in the future!
 	float get_bone_length(int p_bone);
-	Vector3 get_bone_axis_forward(int p_bone);
-	Vector3 get_bone_axis_perpendicular(int p_bone);
+	Vector3 get_bone_axis_forward(int p_bone, bool force_update = false);
+	Vector3 get_bone_axis_perpendicular(int p_bone, bool force_update = false);
 
 	// Helper functions
 	Transform global_pose_to_world_transform(Transform p_global_pose);
