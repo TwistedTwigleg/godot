@@ -1450,8 +1450,6 @@ void SkeletonModification3D_Jiggle::execute(float delta) {
 	// Adopted from: https://wiki.unity3d.com/index.php/JiggleBone
 	// With modifications by TwistedTwigleg.
 	Transform new_bone_trans = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx));
-	Vector3 up_vector = new_bone_trans.xform(stack->skeleton->get_bone_axis_perpendicular(bone_idx)).normalized();
-
 	Vector3 target_position = stack->skeleton->world_transform_to_global_pose(n->get_global_transform()).origin;
 
 	// Calculate force, accleration, and velocity
@@ -1468,7 +1466,9 @@ void SkeletonModification3D_Jiggle::execute(float delta) {
 	dynamic_position += new_bone_trans.origin - last_position;
 	last_position = new_bone_trans.origin;
 
-	new_bone_trans = new_bone_trans.looking_at(dynamic_position, up_vector);
+	Quat rotation_quat = new_bone_trans.basis.get_rotation_quat();
+	rotation_quat.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(bone_idx), dynamic_position);
+	new_bone_trans.basis = Basis(rotation_quat);
 
 	// Apply the local bone transform (retaining its rotation from parent bones, etc) to the bone.
 	new_bone_trans = stack->skeleton->global_pose_to_local_pose(bone_idx, new_bone_trans);
