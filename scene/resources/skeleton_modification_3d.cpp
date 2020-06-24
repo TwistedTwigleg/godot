@@ -1540,12 +1540,13 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 	Vector3 target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
 
 	jiggle_data_chain.write[p_joint_idx].force = (target_position - jiggle_data_chain[p_joint_idx].dynamic_position) * jiggle_data_chain[p_joint_idx].stiffness * delta;
-	jiggle_data_chain.write[p_joint_idx].acceleration = jiggle_data_chain[p_joint_idx].force / jiggle_data_chain[p_joint_idx].mass;
-	jiggle_data_chain.write[p_joint_idx].velocity += jiggle_data_chain[p_joint_idx].acceleration * (1 - jiggle_data_chain[p_joint_idx].damping);
-
+	
 	if (jiggle_data_chain[p_joint_idx].use_gravity) {
 		jiggle_data_chain.write[p_joint_idx].force += jiggle_data_chain[p_joint_idx].gravity * delta;
 	}
+	
+	jiggle_data_chain.write[p_joint_idx].acceleration = jiggle_data_chain[p_joint_idx].force / jiggle_data_chain[p_joint_idx].mass;
+	jiggle_data_chain.write[p_joint_idx].velocity += jiggle_data_chain[p_joint_idx].acceleration * (1 - jiggle_data_chain[p_joint_idx].damping);
 
 	jiggle_data_chain.write[p_joint_idx].dynamic_position += jiggle_data_chain[p_joint_idx].velocity + jiggle_data_chain[p_joint_idx].force;
 	jiggle_data_chain.write[p_joint_idx].dynamic_position += new_bone_trans.origin - jiggle_data_chain[p_joint_idx].last_position;
