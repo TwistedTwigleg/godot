@@ -308,28 +308,8 @@ void SkeletonModification3D_LookAt::execute(float delta) {
 
 	// Look at the target!
 	new_bone_trans = new_bone_trans.looking_at(target_pos, Vector3(0, 1, 0));
-
-	// Convert the Z-forward axis to the correct-axis forward for the Skeleton being used.
-	Vector3 bone_forward_rest = stack->skeleton->get_bone_axis_forward(bone_idx);
-	Vector3 bone_forward_rest_abs = bone_forward_rest.abs();
-	if (bone_forward_rest_abs.x > bone_forward_rest_abs.y && bone_forward_rest_abs.x > bone_forward_rest_abs.z) {
-		if (bone_forward_rest.x > 0) {
-			new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), M_PI_2);
-		} else {
-			new_bone_trans.basis.rotate_local(Vector3(0, 1, 0), -M_PI_2);
-		}
-	} else if (bone_forward_rest_abs.y > bone_forward_rest_abs.x && bone_forward_rest_abs.y > bone_forward_rest_abs.z) {
-		if (bone_forward_rest.y > 0) {
-			new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), -M_PI_2);
-		} else {
-			new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), M_PI_2);
-		}
-	} else {
-		if (bone_forward_rest.z > 0) {
-			// Make +Z forward!
-			new_bone_trans.basis.rotate_local(Vector3(0, 0, 1), M_PI);
-		}
-	}
+	// Convert from Z-forward to whatever direction the bone faces.
+	new_bone_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(bone_idx, new_bone_trans.basis);
 
 	// Apply additional rotation
 	new_bone_trans.basis.rotate_local(Vector3(1, 0, 0), Math::deg2rad(additional_rotation.x));

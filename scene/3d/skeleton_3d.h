@@ -105,10 +105,10 @@ private:
 		List<ObjectID> nodes_bound;
 		Vector<int> child_bones;
 
-		// The forward and perpendicular direction vectors are cached because they do not change
+		// The forward direction vector and rest bone forward acis are cached because they do not change
 		// 99% of the time, but recalculating them can be expensive on models with many bones.
 		Vector3 rest_direction_forward;
-		Vector3 rest_direction_perpendicular;
+		int rest_bone_forward_axis = -1;
 
 		Bone() {
 			parent = -1;
@@ -126,8 +126,17 @@ private:
 			child_bones = Vector<int>();
 
 			rest_direction_forward = Vector3(0, 0, 0);
-			rest_direction_perpendicular = Vector3(0, 0, 0);
+			rest_bone_forward_axis = -1;
 		}
+	};
+
+	enum Bone_Forward_Axis {
+		X_FORWARD = 0,
+		Y_FORWARD = 1,
+		Z_FORWARD = 2,
+		NEGATIVE_X_FORWARD = 3,
+		NEGATIVE_Y_FORWARD = 4,
+		NEGATIVE_Z_FORWARD = 5,
 	};
 
 	Set<SkinReference *> skin_bindings;
@@ -158,7 +167,6 @@ private:
 	}
 
 	void _update_process_order();
-	void _update_bone_axis_vectors();
 
 protected:
 	bool _get(const StringName &p_path, Variant &r_ret) const;
@@ -235,18 +243,18 @@ public:
 	void force_update_all_bone_transforms();
 	void force_update_bone_children_transforms(int bone_idx);
 
-	// Note: Technically, I think these functions get the length, forward vector, and perpendicular vector
-	// relative to the parent bone. I have not fully tested this though, but it works okay in the lookat solver.
-	// May need to be renamed in the future!
-	float get_bone_length(int p_bone);
+	// Technically this gets the direction of the bone relative to the parent bone, but it works great so far, so...
 	Vector3 get_bone_axis_forward(int p_bone, bool force_update = false);
-	Vector3 get_bone_axis_perpendicular(int p_bone, bool force_update = false);
+	void update_bone_rest_forward_axis(int p_bone, bool force_update = false);
 
 	// Helper functions
 	Transform global_pose_to_world_transform(Transform p_global_pose);
 	Transform world_transform_to_global_pose(Transform p_transform);
 	Transform global_pose_to_local_pose(int p_bone_idx, Transform p_global_pose);
 	Transform local_pose_to_global_pose(int p_bone_idx, Transform p_local_pose);
+
+	Basis global_pose_bone_forward_to_z_forward(int p_bone_idx, Basis p_basis);
+	Basis global_pose_z_forward_to_bone_forward(int p_bone_idx, Basis p_basis);
 
 	// Modifications
 #ifndef _3D_DISABLED

@@ -384,15 +384,11 @@ Transform Skeleton3D::get_bone_local_pose_override(int p_bone) const {
 	return bones[p_bone].local_pose_override;
 }
 
-float Skeleton3D::get_bone_length(int p_bone) {
-	ERR_FAIL_INDEX_V(p_bone, bones.size(), -1.0f);
-	return bones[p_bone].rest.origin.length();
-}
-
 Vector3 Skeleton3D::get_bone_axis_forward(int p_bone, bool force_update) {
 	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
 
 	if (bones[p_bone].rest_direction_forward.length_squared() > 0 && force_update == false) {
+		update_bone_rest_forward_axis(p_bone, force_update);
 		return bones[p_bone].rest_direction_forward;
 	}
 
@@ -416,27 +412,36 @@ Vector3 Skeleton3D::get_bone_axis_forward(int p_bone, bool force_update) {
 			bones.write[p_bone].rest_direction_forward = Vector3(0, 1, 0);
 		}
 	}
+	update_bone_rest_forward_axis(p_bone, force_update);
 	return bones[p_bone].rest_direction_forward;
 }
 
-Vector3 Skeleton3D::get_bone_axis_perpendicular(int p_bone, bool force_update) {
-	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
-
-	if (bones[p_bone].rest_direction_perpendicular.length_squared() > 0 && force_update == false) {
-		return bones[p_bone].rest_direction_perpendicular;
+void Skeleton3D::update_bone_rest_forward_axis(int p_bone, bool force_update) {
+	ERR_FAIL_INDEX(p_bone, bones.size());
+	if (bones[p_bone].rest_bone_forward_axis > -1 || force_update == false) {
+		return;
 	}
 
-	Vector3 dir = get_bone_axis_forward(p_bone);
-	dir = dir.abs();
-	if (dir.x < dir.y && dir.x < dir.z) {
-		dir = dir.rotated(Vector3(1, 0, 0), -M_PI_2);
-	} else if (dir.y < dir.x && dir.y < dir.z) {
-		dir = dir.rotated(Vector3(0, 1, 0), -M_PI_2);
+	Vector3 forward_axis_absolute = bones[p_bone].rest_direction_forward.abs();
+	if (forward_axis_absolute.x > forward_axis_absolute.y && forward_axis_absolute.x > forward_axis_absolute.z) {
+		if (bones[p_bone].rest_direction_forward.x > 0) {
+			bones.write[p_bone].rest_bone_forward_axis = X_FORWARD;
+		} else {
+			bones.write[p_bone].rest_bone_forward_axis = NEGATIVE_X_FORWARD;
+		}
+	} else if (forward_axis_absolute.y > forward_axis_absolute.x && forward_axis_absolute.y > forward_axis_absolute.z) {
+		if (bones[p_bone].rest_direction_forward.y > 0) {
+			bones.write[p_bone].rest_bone_forward_axis = Y_FORWARD;
+		} else {
+			bones.write[p_bone].rest_bone_forward_axis = NEGATIVE_Y_FORWARD;
+		}
 	} else {
-		dir = dir.rotated(Vector3(0, 0, 1), -M_PI_2);
+		if (bones[p_bone].rest_direction_forward.z > 0) {
+			bones.write[p_bone].rest_bone_forward_axis = Z_FORWARD;
+		} else {
+			bones.write[p_bone].rest_bone_forward_axis = NEGATIVE_Z_FORWARD;
+		}
 	}
-	bones.write[p_bone].rest_direction_perpendicular = dir.normalized();
-	return bones[p_bone].rest_direction_perpendicular;
 }
 
 // skeleton creation api
@@ -1029,12 +1034,15 @@ void Skeleton3D::force_update_bone_children_transforms(int p_bone_idx) {
 }
 
 // helper functions
+
 Transform Skeleton3D::global_pose_to_world_transform(Transform p_global_pose) {
 	return get_global_transform() * p_global_pose;
 }
+
 Transform Skeleton3D::world_transform_to_global_pose(Transform p_world_transform) {
 	return get_global_transform().affine_inverse() * p_world_transform;
 }
+
 Transform Skeleton3D::global_pose_to_local_pose(int p_bone_idx, Transform p_global_pose) {
 	if (bones[p_bone_idx].parent >= 0) {
 		int parent_bone_idx = bones[p_bone_idx].parent;
@@ -1046,6 +1054,7 @@ Transform Skeleton3D::global_pose_to_local_pose(int p_bone_idx, Transform p_glob
 		return p_global_pose;
 	}
 }
+
 Transform Skeleton3D::local_pose_to_global_pose(int p_bone_idx, Transform p_local_pose) {
 	if (bones[p_bone_idx].parent >= 0) {
 		int parent_bone_idx = bones[p_bone_idx].parent;
@@ -1058,7 +1067,61 @@ Transform Skeleton3D::local_pose_to_global_pose(int p_bone_idx, Transform p_loca
 	}
 }
 
+// Needs testing!
+Basis Skeleton3D::global_pose_bone_forward_to_z_forward(int p_bone_idx, Basis p_basis) {
+	ERR_FAIL_INDEX_V(p_bone_idx, bones.size(), Basis());
+	Basis return_basis = p_basis;
+
+	// Make sure the data we need is there!
+	if (bones[p_bone_idx].rest_bone_forward_axis < 0 || bones[p_bone_idx].rest_direction_forward.length_squared() == 0) {
+		get_bone_axis_forward(p_bone_idx, true);
+	}
+
+	if (bones[p_bone_idx].rest_bone_forward_axis == X_FORWARD) {
+		return_basis.rotate_local(Vector3(0, 1, 0), -M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == NEGATIVE_X_FORWARD) { // Needs testing!
+		return_basis.rotate_local(Vector3(0, 1, 0), M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == Y_FORWARD) {
+		return_basis.rotate_local(Vector3(1, 0, 0), M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == NEGATIVE_Y_FORWARD) { // Needs testing!
+		return_basis.rotate_local(Vector3(1, 0, 0), -M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == Z_FORWARD) {
+		// Do nothing!
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == NEGATIVE_Z_FORWARD) { // Needs testing!
+		return_basis.rotate_local(Vector3(0, 0, 1), -M_PI);
+	}
+
+	return return_basis;
+}
+
+Basis Skeleton3D::global_pose_z_forward_to_bone_forward(int p_bone_idx, Basis p_basis) {
+	ERR_FAIL_INDEX_V(p_bone_idx, bones.size(), Basis());
+	Basis return_basis = p_basis;
+
+	// Make sure the data we need is there!
+	if (bones[p_bone_idx].rest_bone_forward_axis < 0 || bones[p_bone_idx].rest_direction_forward.length_squared() == 0) {
+		get_bone_axis_forward(p_bone_idx, true);
+	}
+
+	if (bones[p_bone_idx].rest_bone_forward_axis == X_FORWARD) {
+		return_basis.rotate_local(Vector3(0, 1, 0), M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == NEGATIVE_X_FORWARD) { // Needs testing!
+		return_basis.rotate_local(Vector3(0, 1, 0), -M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == Y_FORWARD) {
+		return_basis.rotate_local(Vector3(1, 0, 0), -M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == NEGATIVE_Y_FORWARD) { // Needs testing!
+		return_basis.rotate_local(Vector3(1, 0, 0), M_PI_2);
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == Z_FORWARD) {
+		// Do nothing!
+	} else if (bones[p_bone_idx].rest_bone_forward_axis == NEGATIVE_Z_FORWARD) { // Needs testing!
+		return_basis.rotate_local(Vector3(0, 0, 1), M_PI);
+	}
+
+	return return_basis;
+}
+
 // Modifications
+
 #ifndef _3D_DISABLED
 
 void Skeleton3D::set_modification_stack(Ref<SkeletonModificationStack3D> p_stack) {
@@ -1144,6 +1207,8 @@ void Skeleton3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("world_transform_to_global_pose", "world_transform"), &Skeleton3D::world_transform_to_global_pose);
 	ClassDB::bind_method(D_METHOD("global_pose_to_local_pose", "global_pose"), &Skeleton3D::global_pose_to_local_pose);
 	ClassDB::bind_method(D_METHOD("local_pose_to_global_pose", "local_pose"), &Skeleton3D::local_pose_to_global_pose);
+	ClassDB::bind_method(D_METHOD("global_pose_bone_forward_to_z_forward", "bone_idx", "basis"), &Skeleton3D::global_pose_bone_forward_to_z_forward);
+	ClassDB::bind_method(D_METHOD("global_pose_z_forward_to_bone_forward", "bone_idx", "basis"), &Skeleton3D::global_pose_z_forward_to_bone_forward);
 
 #ifndef _3D_DISABLED
 
