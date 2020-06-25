@@ -265,6 +265,8 @@ private:
 		bool use_tip_node = false;
 		NodePath tip_node = NodePath();
 		ObjectID tip_node_cache;
+
+		bool use_target_basis = false;
 	};
 
 	Vector<FABRIK_Joint_Data> fabrik_data_chain;
@@ -323,6 +325,8 @@ public:
 	void fabrik_joint_set_use_tip_node(int p_joint_idx, bool p_use_tip_node);
 	NodePath fabrik_joint_get_tip_node(int p_joint_idx) const;
 	void fabrik_joint_set_tip_node(int p_joint_idx, NodePath p_tip_node);
+	bool fabrik_joint_get_use_target_basis(int p_joint_idx) const;
+	void fabrik_joint_set_use_target_basis(int p_joint_idx, bool use_basis);
 
 	SkeletonModification3D_FABRIK();
 	~SkeletonModification3D_FABRIK();
