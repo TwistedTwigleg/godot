@@ -52,7 +52,7 @@ protected:
 public:
 	Skeleton3D *skeleton;
 	bool is_setup = false;
-	bool enabled = false;
+	bool enabled = true;
 	float strength = 0.0;
 
 	Vector<Ref<SkeletonModification3D>> modifications;
@@ -198,6 +198,8 @@ private:
 	NodePath tip_node;
 	ObjectID tip_node_cache;
 
+	bool perform_in_local_pose = true;
+
 	void update_target_cache();
 	void update_tip_cache();
 
@@ -218,6 +220,9 @@ public:
 
 	void set_tip_node(const NodePath &p_tip_node);
 	NodePath get_tip_node() const;
+
+	void set_perform_in_local_pose(bool p_perform);
+	bool get_perform_in_local_pose() const;
 
 	String ccdik_joint_get_bone_name(int p_joint_idx) const;
 	void ccdik_joint_set_bone_name(int p_joint_idx, String p_bone_name);

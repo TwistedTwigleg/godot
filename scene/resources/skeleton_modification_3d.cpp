@@ -464,6 +464,7 @@ SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
 	lock_rotation_x = false;
 	lock_rotation_y = false;
 	lock_rotation_z = false;
+	enabled = true;
 }
 
 SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {
@@ -598,14 +599,27 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	ERR_FAIL_INDEX_MSG(ccdik_data.bone_idx, stack->skeleton->get_bone_count(), "CCDIK joint: bone index not found");
 	ERR_FAIL_COND_MSG(ccdik_data.ccdik_axis_vector.length_squared() == 0, "CCDIK joint: axis vector not set!");
 
-	//Transform bone_trans = stack->skeleton->local_pose_to_global_pose(ccdik_data.bone_idx, stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx));
-	Transform bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
+	Transform bone_trans;
+	if (perform_in_local_pose) {
+		bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
+	} else {
+		bone_trans = stack->skeleton->local_pose_to_global_pose(ccdik_data.bone_idx, stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx));
+	}
 
 	// Rotate the ccdik joint
 	if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_TIP) {
+		Vector3 u1;
+		Vector3 u2;
+
 		// Get the two positions needed.
-		Vector3 u1 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin;
-		Vector3 u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse;
+		if (perform_in_local_pose) {
+			u1 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin;
+			u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+		} else {
+			u1 = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin);
+			u2 = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin);
+		}
+
 		// Restrict them to the axis and normalize them.
 		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
 		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
@@ -641,8 +655,15 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		} else {
 			u1 = stack->skeleton->get_bone_axis_forward(ccdik_data.bone_idx);
 		}
+
 		// The target's position
-		Vector3 u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+		Vector3 u2;
+		if (perform_in_local_pose) {
+			u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+		} else {
+			u2 = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin);
+		}
+
 		// Restrict them to the axis and normalize them.
 		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
 		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
@@ -660,6 +681,12 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FREE) { // Free mode: allow rotation on any axis. Needs testing!
 		Vector3 target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
+		if (perform_in_local_pose) {
+			target_position = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+		} else {
+			target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
+		}
+
 		bone_trans = bone_trans.looking_at(target_position, Vector3(0, 1, 0));
 		bone_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(ccdik_data.bone_idx, bone_trans.basis);
 	}
@@ -690,8 +717,12 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		bone_trans.basis.set_axis_angle(ccdik_rotation_axis, ccdik_rotation_angle);
 	}
 
-	//bone_trans = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, bone_trans);
-	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
+	if (perform_in_local_pose) {
+		stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
+	} else {
+		bone_trans = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, bone_trans);
+		stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
+	}
 	stack->skeleton->force_update_bone_children_transforms(ccdik_data.bone_idx);
 }
 
@@ -758,6 +789,14 @@ void SkeletonModification3D_CCDIK::set_tip_node(const NodePath &p_tip_node) {
 
 NodePath SkeletonModification3D_CCDIK::get_tip_node() const {
 	return tip_node;
+}
+
+void SkeletonModification3D_CCDIK::set_perform_in_local_pose(bool p_perform) {
+	perform_in_local_pose = p_perform;
+}
+
+bool SkeletonModification3D_CCDIK::get_perform_in_local_pose() const {
+	return perform_in_local_pose;
 }
 
 // CCDIK joint data functions
@@ -910,6 +949,9 @@ void SkeletonModification3D_CCDIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_tip_node", "tip_nodepath"), &SkeletonModification3D_CCDIK::set_tip_node);
 	ClassDB::bind_method(D_METHOD("get_tip_node"), &SkeletonModification3D_CCDIK::get_tip_node);
 
+	ClassDB::bind_method(D_METHOD("set_perform_in_local_pose", "perform_in_local_pose"), &SkeletonModification3D_CCDIK::set_perform_in_local_pose);
+	ClassDB::bind_method(D_METHOD("get_perform_in_local_pose"), &SkeletonModification3D_CCDIK::get_perform_in_local_pose);
+
 	// CCDIK joint data functions
 	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_name", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_bone_name);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_name", "joint_idx", "bone_name"), &SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name);
@@ -933,6 +975,7 @@ void SkeletonModification3D_CCDIK::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "tip_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_tip_node", "get_tip_node");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "perform_in_local_pose", PROPERTY_HINT_NONE, ""), "set_perform_in_local_pose", "get_perform_in_local_pose");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ccdik_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_ccdik_data_chain_length", "get_ccdik_data_chain_length");
 }
 
@@ -940,6 +983,7 @@ SkeletonModification3D_CCDIK::SkeletonModification3D_CCDIK() {
 	stack = nullptr;
 	is_setup = false;
 	enabled = true;
+	perform_in_local_pose = true;
 }
 
 SkeletonModification3D_CCDIK::~SkeletonModification3D_CCDIK() {
@@ -1897,6 +1941,7 @@ SkeletonModification3D_Jiggle::SkeletonModification3D_Jiggle() {
 	damping = 0.75;
 	use_gravity = false;
 	gravity = Vector3(0, -6.0, 0);
+	enabled = true;
 }
 
 SkeletonModification3D_Jiggle::~SkeletonModification3D_Jiggle() {
