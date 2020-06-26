@@ -598,34 +598,78 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	ERR_FAIL_INDEX_MSG(ccdik_data.bone_idx, stack->skeleton->get_bone_count(), "CCDIK joint: bone index not found");
 	ERR_FAIL_COND_MSG(ccdik_data.ccdik_axis_vector.length_squared() == 0, "CCDIK joint: axis vector not set!");
 
-	// Adopted from: https://github.com/zalo/MathUtilities/blob/master/Assets/IK/CCDIK/CCDIKJoint.cs
-	// With modifications by TwistedTwigleg.
-	Quat ccdik_rotation = Quat();
+	//Transform bone_trans = stack->skeleton->local_pose_to_global_pose(ccdik_data.bone_idx, stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx));
 	Transform bone_trans = stack->skeleton->get_bone_local_pose_override(ccdik_data.bone_idx);
 
 	// Rotate the ccdik joint
-	// Note: By multiplying by the inverse axis, we can limit rotation to only the given axis.
 	if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_TIP) {
-		ccdik_rotation.rotate_from_vector_to_vector(
-				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse,
-				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse);
+		// Get the two positions needed.
+		Vector3 u1 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin;
+		Vector3 u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin * ccdik_data.ccdik_axis_vector_inverse;
+		// Restrict them to the axis and normalize them.
+		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
+		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
+
+		// Rotate the Basis from the first vector, to the second vector
+		// Adopted from: https://gist.github.com/kevinmoran/b45980723e53edeb8a5a43c49f134724
+		// TODO: probably should be turned into a (optimized) function in Basis, and the rotate_from_vector_to_vector in Quat should be removed!
+		Vector3 axis = u1.cross(u2).normalized();
+		if (axis.length_squared() != 0) {
+			float dot = u1.dot(u2);
+			dot = CLAMP(dot, -1.0, 1.0);
+			float angle_rads = Math::acos(dot);
+			bone_trans.basis.set_axis_angle(axis, angle_rads);
+		}
+
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_JOINT) {
-		Vector3 target_position = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
-		ccdik_rotation.rotate_from_vector_to_vector(
-				stack->skeleton->get_bone_axis_forward(ccdik_data.bone_idx) * ccdik_data.ccdik_axis_vector_inverse,
-				(bone_trans.origin.direction_to(target_position)) * ccdik_data.ccdik_axis_vector_inverse);
-	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FREE) {
-		// Free mode: allow rotation on any axis.
-		ccdik_rotation.rotate_from_vector_to_vector(
-				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin,
-				stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin);
+		// Get the forward direction that the basis is facing in right now, with a fallback of using
+		// the rest forward axis.
+		Vector3 u1 = Vector3(0, 0, 0);
+		int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(ccdik_data.bone_idx);
+		if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
+			u1 = bone_trans.basis[0].normalized();
+		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
+			u1 = -bone_trans.basis[0].normalized();
+		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Y_FORWARD) {
+			u1 = bone_trans.basis[1].normalized();
+		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
+			u1 = -bone_trans.basis[1].normalized();
+		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Z_FORWARD) {
+			u1 = bone_trans.basis[2].normalized();
+		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
+			u1 = -bone_trans.basis[2].normalized();
+		} else {
+			u1 = stack->skeleton->get_bone_axis_forward(ccdik_data.bone_idx);
+		}
+		// The target's position
+		Vector3 u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+		// Restrict them to the axis and normalize them.
+		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
+		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
+
+		// Rotate the Basis from the first vector, to the second vector
+		// Adopted from: https://gist.github.com/kevinmoran/b45980723e53edeb8a5a43c49f134724
+		// TODO: probably should be turned into a (optimized) function in Basis, and the rotate_from_vector_to_vector in Quat should be removed!
+		Vector3 axis = u1.cross(u2).normalized();
+		if (axis.length_squared() != 0) {
+			float dot = u1.dot(u2);
+			dot = CLAMP(dot, -1.0, 1.0);
+			float angle_rads = Math::acos(dot);
+			bone_trans.basis.set_axis_angle(axis, angle_rads);
+		}
+
+	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FREE) { // Free mode: allow rotation on any axis. Needs testing!
+		Vector3 target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
+		bone_trans = bone_trans.looking_at(target_position, Vector3(0, 1, 0));
+		bone_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(ccdik_data.bone_idx, bone_trans.basis);
 	}
 
 	// Apply constraints
+	// (Still needs adjusting)
 	if (ccdik_data.enable_constraint) {
 		float ccdik_rotation_angle;
 		Vector3 ccdik_rotation_axis;
-		ccdik_rotation.get_axis_angle(ccdik_rotation_axis, ccdik_rotation_angle);
+		bone_trans.basis.get_axis_angle(ccdik_rotation_axis, ccdik_rotation_angle);
 
 		if (ccdik_data.constraint_angles_invert == false) { // Normal clamping:
 			if (ccdik_rotation_angle < ccdik_data.constraint_angle_min) {
@@ -643,13 +687,11 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 				}
 			}
 		}
-		ccdik_rotation.set_axis_angle(ccdik_rotation_axis, ccdik_rotation_angle);
+		bone_trans.basis.set_axis_angle(ccdik_rotation_axis, ccdik_rotation_angle);
 	}
 
-	// Apply the rotation to the bone.
-	bone_trans.basis = Basis(ccdik_rotation);
+	//bone_trans = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, bone_trans);
 	stack->skeleton->set_bone_local_pose_override(ccdik_data.bone_idx, bone_trans, stack->strength, true);
-
 	stack->skeleton->force_update_bone_children_transforms(ccdik_data.bone_idx);
 }
 

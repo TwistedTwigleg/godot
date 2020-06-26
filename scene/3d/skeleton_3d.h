@@ -130,15 +130,6 @@ private:
 		}
 	};
 
-	enum Bone_Forward_Axis {
-		X_FORWARD = 0,
-		Y_FORWARD = 1,
-		Z_FORWARD = 2,
-		NEGATIVE_X_FORWARD = 3,
-		NEGATIVE_Y_FORWARD = 4,
-		NEGATIVE_Z_FORWARD = 5,
-	};
-
 	Set<SkinReference *> skin_bindings;
 
 	void _skin_changed();
@@ -180,8 +171,16 @@ protected:
 #endif // _3D_DISABLED
 
 public:
-	enum {
+	enum Bone_Forward_Axis {
+		BONE_AXIS_X_FORWARD = 0,
+		BONE_AXIS_Y_FORWARD = 1,
+		BONE_AXIS_Z_FORWARD = 2,
+		BONE_AXIS_NEGATIVE_X_FORWARD = 3,
+		BONE_AXIS_NEGATIVE_Y_FORWARD = 4,
+		BONE_AXIS_NEGATIVE_Z_FORWARD = 5,
+	};
 
+	enum {
 		NOTIFICATION_UPDATE_SKELETON = 50
 	};
 
@@ -246,6 +245,7 @@ public:
 	// Technically this gets the direction of the bone relative to the parent bone, but it works great so far, so...
 	Vector3 get_bone_axis_forward(int p_bone, bool force_update = false);
 	void update_bone_rest_forward_axis(int p_bone, bool force_update = false);
+	int get_bone_axis_forward_enum(int p_bone);
 
 	// Helper functions
 	Transform global_pose_to_world_transform(Transform p_global_pose);
