@@ -1083,17 +1083,17 @@ Basis Skeleton3D::global_pose_bone_forward_to_z_forward(int p_bone_idx, Basis p_
 	}
 
 	if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_X_FORWARD) {
-		return_basis.rotate_local(Vector3(0, 1, 0), -M_PI_2);
+		return_basis.rotate_local(Vector3(0, 1, 0), -(Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_X_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(0, 1, 0), M_PI_2);
+		return_basis.rotate_local(Vector3(0, 1, 0), (Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_Y_FORWARD) {
-		return_basis.rotate_local(Vector3(1, 0, 0), M_PI_2);
+		return_basis.rotate_local(Vector3(1, 0, 0), (Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_Y_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(1, 0, 0), -M_PI_2);
+		return_basis.rotate_local(Vector3(1, 0, 0), -(Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_Z_FORWARD) {
 		// Do nothing!
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_Z_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(0, 0, 1), -M_PI);
+		return_basis.rotate_local(Vector3(0, 0, 1), -Math_PI);
 	}
 
 	return return_basis;
@@ -1109,17 +1109,17 @@ Basis Skeleton3D::global_pose_z_forward_to_bone_forward(int p_bone_idx, Basis p_
 	}
 
 	if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_X_FORWARD) {
-		return_basis.rotate_local(Vector3(0, 1, 0), M_PI_2);
+		return_basis.rotate_local(Vector3(0, 1, 0), (Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_X_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(0, 1, 0), -M_PI_2);
+		return_basis.rotate_local(Vector3(0, 1, 0), -(Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_Y_FORWARD) {
-		return_basis.rotate_local(Vector3(1, 0, 0), -M_PI_2);
+		return_basis.rotate_local(Vector3(1, 0, 0), -(Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_Y_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(1, 0, 0), M_PI_2);
+		return_basis.rotate_local(Vector3(1, 0, 0), (Math_PI / 2.0));
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_Z_FORWARD) {
 		// Do nothing!
 	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_Z_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(0, 0, 1), M_PI);
+		return_basis.rotate_local(Vector3(0, 0, 1), Math_PI);
 	}
 
 	return return_basis;
