@@ -88,9 +88,9 @@ void SkeletonModificationStack3D::setup() {
 void SkeletonModificationStack3D::execute(float delta) {
 	ERR_FAIL_COND_MSG(!is_setup || skeleton == nullptr || is_queued_for_deletion(),
 			"Modification stack is not properly setup and therefore cannot execute!");
-	// TODO: for now, fail silently because otherwise, the log is spammed with this error when saving the resource.
-	// however, in the future, see if there is a way to work around this.
+
 	if (!skeleton->is_inside_tree()) {
+		ERR_PRINT_ONCE("Skeleton is not inside SceneTree! Cannot execute modification!");
 		return;
 	}
 
@@ -98,7 +98,7 @@ void SkeletonModificationStack3D::execute(float delta) {
 		return;
 	}
 
-	// TODO: not sure if this is needed
+	// NOTE: is needed for CCDIK.
 	skeleton->clear_bones_local_pose_override();
 
 	for (int i = 0; i < modifications.size(); i++) {
@@ -624,16 +624,8 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
 		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
 
-		// Rotate the Basis from the first vector, to the second vector
-		// Adopted from: https://gist.github.com/kevinmoran/b45980723e53edeb8a5a43c49f134724
-		// TODO: probably should be turned into a (optimized) function in Basis, and the rotate_from_vector_to_vector in Quat should be removed!
-		Vector3 axis = u1.cross(u2).normalized();
-		if (axis.length_squared() != 0) {
-			float dot = u1.dot(u2);
-			dot = CLAMP(dot, -1.0, 1.0);
-			float angle_rads = Math::acos(dot);
-			bone_trans.basis.set_axis_angle(axis, angle_rads);
-		}
+		// Rotate the Basis from the first vector, to the second vector.
+		bone_trans.basis.rotate_to_align(u1, u2);
 
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_JOINT) {
 		// Get the forward direction that the basis is facing in right now, with a fallback of using
@@ -669,15 +661,7 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
 
 		// Rotate the Basis from the first vector, to the second vector
-		// Adopted from: https://gist.github.com/kevinmoran/b45980723e53edeb8a5a43c49f134724
-		// TODO: probably should be turned into a (optimized) function in Basis, and the rotate_from_vector_to_vector in Quat should be removed!
-		Vector3 axis = u1.cross(u2).normalized();
-		if (axis.length_squared() != 0) {
-			float dot = u1.dot(u2);
-			dot = CLAMP(dot, -1.0, 1.0);
-			float angle_rads = Math::acos(dot);
-			bone_trans.basis.set_axis_angle(axis, angle_rads);
-		}
+		bone_trans.basis.rotate_to_align(u1, u2);
 
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FREE) { // Free mode: allow rotation on any axis. Needs testing!
 		Vector3 target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
@@ -1152,7 +1136,9 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 	Transform final_joint_trans = stack->skeleton->local_pose_to_global_pose(final_bone_idx, stack->skeleton->get_bone_local_pose_override(final_bone_idx));
 
 	// Get the direction the final bone is facing in.
+	// TODO: find a way to remove get_bone_axis_forward.
 	Vector3 direction = final_joint_trans.xform(stack->skeleton->get_bone_axis_forward(final_bone_idx)).normalized();
+
 	// set the position of the final joint to the target position
 	final_joint_trans.origin = target_global_pose.origin - (direction * fabrik_data_chain[final_joint_idx].length);
 	stack->skeleton->set_bone_local_pose_override(final_bone_idx, stack->skeleton->global_pose_to_local_pose(final_bone_idx, final_joint_trans), stack->strength, true);
@@ -1199,17 +1185,19 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 	for (int i = 0; i < fabrik_data_chain.size(); i++) {
 		int current_bone_idx = fabrik_data_chain[i].bone_idx;
 		Transform current_trans = stack->skeleton->get_bone_local_pose_override(current_bone_idx);
+		current_trans = stack->skeleton->local_pose_to_global_pose(current_bone_idx, current_trans);
+
+		// TODO: investigate using the rotate_to_align function instead of look_at.
 
 		// If this is the last bone in the chain...
 		if (i == fabrik_data_chain.size() - 1) {
-			if (fabrik_data_chain[i].use_target_basis == false) {
-				Quat new_rot = current_trans.basis.get_rotation_quat();
-				new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx),
-						stack->skeleton->global_pose_to_local_pose(current_bone_idx, target_global_pose).origin);
-				current_trans.basis = Basis(new_rot);
-			} else {
+			if (fabrik_data_chain[i].use_target_basis == false) { // Point to target...
+				current_trans.basis = stack->skeleton->global_pose_bone_forward_to_z_forward(current_bone_idx, current_trans.basis);
+				current_trans = current_trans.looking_at(target_global_pose.origin, current_trans.basis[1]);
+				current_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(current_bone_idx, current_trans.basis);
+			} else { // Use the target's Basis...
 				Vector3 tmp_scale = current_trans.basis.get_scale();
-				current_trans.basis = stack->skeleton->global_pose_to_local_pose(current_bone_idx, target_global_pose).basis;
+				current_trans.basis = target_global_pose.basis;
 				current_trans.basis[0].normalize();
 				current_trans.basis[1].normalize();
 				current_trans.basis[2].normalize();
@@ -1218,12 +1206,11 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		} else { // every other bone in the chain...
 			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 			Transform next_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));
-			next_trans = stack->skeleton->global_pose_to_local_pose(current_bone_idx, next_trans);
-			Quat new_rot = current_trans.basis.get_rotation_quat();
-			new_rot.rotate_from_vector_to_vector(stack->skeleton->get_bone_axis_forward(current_bone_idx), next_trans.origin);
-			current_trans.basis = Basis(new_rot);
+			current_trans.basis = stack->skeleton->global_pose_bone_forward_to_z_forward(current_bone_idx, current_trans.basis);
+			current_trans = current_trans.looking_at(next_trans.origin, current_trans.basis[1]);
+			current_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(current_bone_idx, current_trans.basis);
 		}
-
+		current_trans = stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans);
 		current_trans.origin = Vector3(0, 0, 0);
 		stack->skeleton->set_bone_local_pose_override(current_bone_idx, current_trans, stack->strength, true);
 	}
@@ -1651,11 +1638,26 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 	jiggle_data_chain.write[p_joint_idx].dynamic_position += new_bone_trans.origin - jiggle_data_chain[p_joint_idx].last_position;
 	jiggle_data_chain.write[p_joint_idx].last_position = new_bone_trans.origin;
 
-	Quat rotation_quat = Quat();
-	rotation_quat.rotate_from_vector_to_vector(
-			stack->skeleton->get_bone_axis_forward(jiggle_data_chain[p_joint_idx].bone_idx),
-			new_bone_trans.origin.direction_to(jiggle_data_chain[p_joint_idx].dynamic_position));
-	new_bone_trans.basis = Basis(rotation_quat);
+	// Get the forward direction that the basis is facing in right now, with a fallback of using the rest forward axis.
+	Vector3 forward_vector = Vector3(0, 0, 0);
+	int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(jiggle_data_chain[p_joint_idx].bone_idx);
+	if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
+		forward_vector = new_bone_trans.basis[0].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
+		forward_vector = -new_bone_trans.basis[0].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Y_FORWARD) {
+		forward_vector = new_bone_trans.basis[1].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
+		forward_vector = -new_bone_trans.basis[1].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Z_FORWARD) {
+		forward_vector = new_bone_trans.basis[2].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
+		forward_vector = -new_bone_trans.basis[2].normalized();
+	} else {
+		forward_vector = stack->skeleton->get_bone_axis_forward(jiggle_data_chain[p_joint_idx].bone_idx);
+	}
+	// Rotate the bone using the dynamic position!
+	new_bone_trans.basis.rotate_to_align(forward_vector, new_bone_trans.origin.direction_to(jiggle_data_chain[p_joint_idx].dynamic_position));
 
 	new_bone_trans = stack->skeleton->global_pose_to_local_pose(jiggle_data_chain[p_joint_idx].bone_idx, new_bone_trans);
 	stack->skeleton->set_bone_local_pose_override(jiggle_data_chain[p_joint_idx].bone_idx, new_bone_trans, stack->strength, true);
