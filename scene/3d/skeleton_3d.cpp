@@ -384,12 +384,9 @@ Transform Skeleton3D::get_bone_local_pose_override(int p_bone) const {
 	return bones[p_bone].local_pose_override;
 }
 
-Vector3 Skeleton3D::get_bone_axis_forward(int p_bone, bool force_update) {
-	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3());
-
+void Skeleton3D::update_bone_rest_forward_vector(int p_bone, bool force_update) {
 	if (bones[p_bone].rest_direction_forward.length_squared() > 0 && force_update == false) {
 		update_bone_rest_forward_axis(p_bone, force_update);
-		return bones[p_bone].rest_direction_forward;
 	}
 
 	// If it is a child/leaf bone...
@@ -413,12 +410,11 @@ Vector3 Skeleton3D::get_bone_axis_forward(int p_bone, bool force_update) {
 		}
 	}
 	update_bone_rest_forward_axis(p_bone, force_update);
-	return bones[p_bone].rest_direction_forward;
 }
 
 void Skeleton3D::update_bone_rest_forward_axis(int p_bone, bool force_update) {
 	ERR_FAIL_INDEX(p_bone, bones.size());
-	if (bones[p_bone].rest_bone_forward_axis > -1 || force_update == false) {
+	if (bones[p_bone].rest_bone_forward_axis > -1 && force_update == false) {
 		return;
 	}
 
@@ -1078,8 +1074,8 @@ Basis Skeleton3D::global_pose_bone_forward_to_z_forward(int p_bone_idx, Basis p_
 	Basis return_basis = p_basis;
 
 	// Make sure the data we need is there!
-	if (bones[p_bone_idx].rest_bone_forward_axis < 0 || bones[p_bone_idx].rest_direction_forward.length_squared() == 0) {
-		get_bone_axis_forward(p_bone_idx, true);
+	if (bones[p_bone_idx].rest_bone_forward_axis < 0) {
+		update_bone_rest_forward_vector(p_bone_idx, true);
 	}
 
 	if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_X_FORWARD) {
@@ -1104,8 +1100,8 @@ Basis Skeleton3D::global_pose_z_forward_to_bone_forward(int p_bone_idx, Basis p_
 	Basis return_basis = p_basis;
 
 	// Make sure the data we need is there!
-	if (bones[p_bone_idx].rest_bone_forward_axis < 0 || bones[p_bone_idx].rest_direction_forward.length_squared() == 0) {
-		get_bone_axis_forward(p_bone_idx, true);
+	if (bones[p_bone_idx].rest_bone_forward_axis < 0) {
+		update_bone_rest_forward_vector(p_bone_idx, true);
 	}
 
 	if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_X_FORWARD) {

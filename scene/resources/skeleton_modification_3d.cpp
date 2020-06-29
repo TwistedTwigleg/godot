@@ -309,6 +309,7 @@ void SkeletonModification3D_LookAt::execute(float delta) {
 	// Look at the target!
 	new_bone_trans = new_bone_trans.looking_at(target_pos, Vector3(0, 1, 0));
 	// Convert from Z-forward to whatever direction the bone faces.
+	stack->skeleton->update_bone_rest_forward_vector(bone_idx);
 	new_bone_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(bone_idx, new_bone_trans.basis);
 
 	// Apply additional rotation
@@ -631,6 +632,7 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		// Get the forward direction that the basis is facing in right now, with a fallback of using
 		// the rest forward axis.
 		Vector3 u1 = Vector3(0, 0, 0);
+		stack->skeleton->update_bone_rest_forward_vector(ccdik_data.bone_idx);
 		int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(ccdik_data.bone_idx);
 		if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
 			u1 = bone_trans.basis[0].normalized();
@@ -645,7 +647,8 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
 			u1 = -bone_trans.basis[2].normalized();
 		} else {
-			u1 = stack->skeleton->get_bone_axis_forward(ccdik_data.bone_idx);
+			// Assume Y+ when in doubt.
+			u1 = bone_trans.basis[1].normalized();
 		}
 
 		// The target's position
@@ -1136,8 +1139,27 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 	Transform final_joint_trans = stack->skeleton->local_pose_to_global_pose(final_bone_idx, stack->skeleton->get_bone_local_pose_override(final_bone_idx));
 
 	// Get the direction the final bone is facing in.
-	// TODO: find a way to remove get_bone_axis_forward.
-	Vector3 direction = final_joint_trans.xform(stack->skeleton->get_bone_axis_forward(final_bone_idx)).normalized();
+	// NOTE: very broken right now!
+	// TODO: make a function for getting the direction from the bone.
+	Vector3 direction = Vector3(0, 0, 0);
+	stack->skeleton->update_bone_rest_forward_vector(final_bone_idx);
+	int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(final_bone_idx);
+	if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
+		direction = final_joint_trans.basis[0].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
+		direction = -final_joint_trans.basis[0].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Y_FORWARD) {
+		direction = final_joint_trans.basis[1].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
+		direction = -final_joint_trans.basis[1].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Z_FORWARD) {
+		direction = final_joint_trans.basis[2].normalized();
+	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
+		direction = -final_joint_trans.basis[2].normalized();
+	} else {
+		// Assume Y+ when in doubt.
+		direction = final_joint_trans.basis[1].normalized();
+	}
 
 	// set the position of the final joint to the target position
 	final_joint_trans.origin = target_global_pose.origin - (direction * fabrik_data_chain[final_joint_idx].length);
@@ -1192,6 +1214,7 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 			if (fabrik_data_chain[i].use_target_basis == false) { // Point to target...
 				// Get the forward direction that the basis is facing in right now, with a fallback of using the rest forward axis.
 				Vector3 forward_vector = Vector3(0, 0, 0);
+				stack->skeleton->update_bone_rest_forward_vector(current_bone_idx);
 				int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(current_bone_idx);
 				if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
 					forward_vector = current_trans.basis[0].normalized();
@@ -1206,7 +1229,8 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 				} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
 					forward_vector = -current_trans.basis[2].normalized();
 				} else {
-					forward_vector = stack->skeleton->get_bone_axis_forward(current_bone_idx);
+					// Assume Y+ when in doubt.
+					forward_vector = current_trans.basis[1].normalized();
 				}
 				// Rotate the bone towards the target:
 				current_trans.basis.rotate_to_align(forward_vector, current_trans.origin.direction_to(target_global_pose.origin));
@@ -1220,12 +1244,13 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 				current_trans.basis.scale(tmp_scale);
 			}
 		} else { // every other bone in the chain...
-			
+
 			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 			Transform next_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));
-			
+
 			// Get the forward direction that the basis is facing in right now, with a fallback of using the rest forward axis.
 			Vector3 forward_vector = Vector3(0, 0, 0);
+			stack->skeleton->update_bone_rest_forward_vector(current_bone_idx);
 			int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(current_bone_idx);
 			if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
 				forward_vector = current_trans.basis[0].normalized();
@@ -1240,11 +1265,11 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 			} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
 				forward_vector = -current_trans.basis[2].normalized();
 			} else {
-				forward_vector = stack->skeleton->get_bone_axis_forward(current_bone_idx);
+				// Assume Y+ when in doubt.
+				forward_vector = current_trans.basis[1].normalized();
 			}
 			// Rotate the bone towards the next bone in the chain:
 			current_trans.basis.rotate_to_align(forward_vector, current_trans.origin.direction_to(next_trans.origin));
-
 		}
 		current_trans = stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans);
 		current_trans.origin = Vector3(0, 0, 0);
@@ -1676,6 +1701,7 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 
 	// Get the forward direction that the basis is facing in right now, with a fallback of using the rest forward axis.
 	Vector3 forward_vector = Vector3(0, 0, 0);
+	stack->skeleton->update_bone_rest_forward_vector(jiggle_data_chain[p_joint_idx].bone_idx);
 	int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(jiggle_data_chain[p_joint_idx].bone_idx);
 	if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
 		forward_vector = new_bone_trans.basis[0].normalized();
@@ -1690,7 +1716,8 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 	} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
 		forward_vector = -new_bone_trans.basis[2].normalized();
 	} else {
-		forward_vector = stack->skeleton->get_bone_axis_forward(jiggle_data_chain[p_joint_idx].bone_idx);
+		// Assume Y+ when in doubt.
+		forward_vector = new_bone_trans.basis[1].normalized();
 	}
 	// Rotate the bone using the dynamic position!
 	new_bone_trans.basis.rotate_to_align(forward_vector, new_bone_trans.origin.direction_to(jiggle_data_chain[p_joint_idx].dynamic_position));

@@ -242,8 +242,7 @@ public:
 	void force_update_all_bone_transforms();
 	void force_update_bone_children_transforms(int bone_idx);
 
-	// Technically this gets the direction of the bone relative to the parent bone, but it works great so far, so...
-	Vector3 get_bone_axis_forward(int p_bone, bool force_update = false);
+	void update_bone_rest_forward_vector(int p_bone, bool force_update = false);
 	void update_bone_rest_forward_axis(int p_bone, bool force_update = false);
 	int get_bone_axis_forward_enum(int p_bone);
 
