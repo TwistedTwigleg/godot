@@ -187,7 +187,7 @@ private:
 
 		bool enable_constraint = false;
 		float constraint_angle_min = 0;
-		float constraint_angle_max = (2.0 * M_PI);
+		float constraint_angle_max = (2.0 * Math_PI);
 		bool constraint_angles_invert = false;
 	};
 

@@ -1187,14 +1187,30 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 		Transform current_trans = stack->skeleton->get_bone_local_pose_override(current_bone_idx);
 		current_trans = stack->skeleton->local_pose_to_global_pose(current_bone_idx, current_trans);
 
-		// TODO: investigate using the rotate_to_align function instead of look_at.
-
 		// If this is the last bone in the chain...
 		if (i == fabrik_data_chain.size() - 1) {
 			if (fabrik_data_chain[i].use_target_basis == false) { // Point to target...
-				current_trans.basis = stack->skeleton->global_pose_bone_forward_to_z_forward(current_bone_idx, current_trans.basis);
-				current_trans = current_trans.looking_at(target_global_pose.origin, current_trans.basis[1]);
-				current_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(current_bone_idx, current_trans.basis);
+				// Get the forward direction that the basis is facing in right now, with a fallback of using the rest forward axis.
+				Vector3 forward_vector = Vector3(0, 0, 0);
+				int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(current_bone_idx);
+				if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
+					forward_vector = current_trans.basis[0].normalized();
+				} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
+					forward_vector = -current_trans.basis[0].normalized();
+				} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Y_FORWARD) {
+					forward_vector = current_trans.basis[1].normalized();
+				} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
+					forward_vector = -current_trans.basis[1].normalized();
+				} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Z_FORWARD) {
+					forward_vector = current_trans.basis[2].normalized();
+				} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
+					forward_vector = -current_trans.basis[2].normalized();
+				} else {
+					forward_vector = stack->skeleton->get_bone_axis_forward(current_bone_idx);
+				}
+				// Rotate the bone towards the target:
+				current_trans.basis.rotate_to_align(forward_vector, current_trans.origin.direction_to(target_global_pose.origin));
+
 			} else { // Use the target's Basis...
 				Vector3 tmp_scale = current_trans.basis.get_scale();
 				current_trans.basis = target_global_pose.basis;
@@ -1204,11 +1220,31 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 				current_trans.basis.scale(tmp_scale);
 			}
 		} else { // every other bone in the chain...
+			
 			int next_bone_idx = fabrik_data_chain[i + 1].bone_idx;
 			Transform next_trans = stack->skeleton->local_pose_to_global_pose(next_bone_idx, stack->skeleton->get_bone_local_pose_override(next_bone_idx));
-			current_trans.basis = stack->skeleton->global_pose_bone_forward_to_z_forward(current_bone_idx, current_trans.basis);
-			current_trans = current_trans.looking_at(next_trans.origin, current_trans.basis[1]);
-			current_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(current_bone_idx, current_trans.basis);
+			
+			// Get the forward direction that the basis is facing in right now, with a fallback of using the rest forward axis.
+			Vector3 forward_vector = Vector3(0, 0, 0);
+			int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(current_bone_idx);
+			if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
+				forward_vector = current_trans.basis[0].normalized();
+			} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
+				forward_vector = -current_trans.basis[0].normalized();
+			} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Y_FORWARD) {
+				forward_vector = current_trans.basis[1].normalized();
+			} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
+				forward_vector = -current_trans.basis[1].normalized();
+			} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Z_FORWARD) {
+				forward_vector = current_trans.basis[2].normalized();
+			} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
+				forward_vector = -current_trans.basis[2].normalized();
+			} else {
+				forward_vector = stack->skeleton->get_bone_axis_forward(current_bone_idx);
+			}
+			// Rotate the bone towards the next bone in the chain:
+			current_trans.basis.rotate_to_align(forward_vector, current_trans.origin.direction_to(next_trans.origin));
+
 		}
 		current_trans = stack->skeleton->global_pose_to_local_pose(current_bone_idx, current_trans);
 		current_trans.origin = Vector3(0, 0, 0);
