@@ -269,7 +269,7 @@ SkeletonModification3D::SkeletonModification3D() {
 // LookAt
 ///////////////////////////////////////
 
-void SkeletonModification3D_LookAt::execute(float delta) {
+void SkeletonModification3DLookAt::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -322,7 +322,7 @@ void SkeletonModification3D_LookAt::execute(float delta) {
 	stack->skeleton->force_update_bone_children_transforms(bone_idx);
 }
 
-void SkeletonModification3D_LookAt::setup_modification(SkeletonModificationStack3D *p_stack) {
+void SkeletonModification3DLookAt::setup_modification(SkeletonModificationStack3D *p_stack) {
 	stack = p_stack;
 
 	if (stack != nullptr) {
@@ -331,7 +331,7 @@ void SkeletonModification3D_LookAt::setup_modification(SkeletonModificationStack
 	}
 }
 
-void SkeletonModification3D_LookAt::set_bone_name(String p_name) {
+void SkeletonModification3DLookAt::set_bone_name(String p_name) {
 	bone_name = p_name;
 	bone_idx = -1;
 	if (stack && stack->skeleton) {
@@ -340,15 +340,15 @@ void SkeletonModification3D_LookAt::set_bone_name(String p_name) {
 	_change_notify();
 }
 
-String SkeletonModification3D_LookAt::get_bone_name() const {
+String SkeletonModification3DLookAt::get_bone_name() const {
 	return bone_name;
 }
 
-int SkeletonModification3D_LookAt::get_bone_index() const {
+int SkeletonModification3DLookAt::get_bone_index() const {
 	return bone_idx;
 }
 
-void SkeletonModification3D_LookAt::set_bone_index(int p_bone_idx) {
+void SkeletonModification3DLookAt::set_bone_index(int p_bone_idx) {
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
 	bone_idx = p_bone_idx;
 
@@ -365,7 +365,7 @@ void SkeletonModification3D_LookAt::set_bone_index(int p_bone_idx) {
 	_change_notify();
 }
 
-void SkeletonModification3D_LookAt::update_cache() {
+void SkeletonModification3DLookAt::update_cache() {
 	if (!is_setup || !stack) {
 		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
@@ -384,66 +384,66 @@ void SkeletonModification3D_LookAt::update_cache() {
 	}
 }
 
-void SkeletonModification3D_LookAt::set_target_node(const NodePath &p_target_node) {
+void SkeletonModification3DLookAt::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_cache();
 }
 
-NodePath SkeletonModification3D_LookAt::get_target_node() const {
+NodePath SkeletonModification3DLookAt::get_target_node() const {
 	return target_node;
 }
 
-Vector3 SkeletonModification3D_LookAt::get_rotation_offset() const {
+Vector3 SkeletonModification3DLookAt::get_rotation_offset() const {
 	return additional_rotation;
 }
 
-void SkeletonModification3D_LookAt::set_rotation_offset(Vector3 p_offset) {
+void SkeletonModification3DLookAt::set_rotation_offset(Vector3 p_offset) {
 	additional_rotation = p_offset;
 }
 
-bool SkeletonModification3D_LookAt::get_lock_rotation_x() const {
+bool SkeletonModification3DLookAt::get_lock_rotation_x() const {
 	return lock_rotation_x;
 }
 
-bool SkeletonModification3D_LookAt::get_lock_rotation_y() const {
+bool SkeletonModification3DLookAt::get_lock_rotation_y() const {
 	return lock_rotation_y;
 }
 
-bool SkeletonModification3D_LookAt::get_lock_rotation_z() const {
+bool SkeletonModification3DLookAt::get_lock_rotation_z() const {
 	return lock_rotation_z;
 }
 
-void SkeletonModification3D_LookAt::set_lock_rotation_x(bool p_lock) {
+void SkeletonModification3DLookAt::set_lock_rotation_x(bool p_lock) {
 	lock_rotation_x = p_lock;
 }
 
-void SkeletonModification3D_LookAt::set_lock_rotation_y(bool p_lock) {
+void SkeletonModification3DLookAt::set_lock_rotation_y(bool p_lock) {
 	lock_rotation_y = p_lock;
 }
 
-void SkeletonModification3D_LookAt::set_lock_rotation_z(bool p_lock) {
+void SkeletonModification3DLookAt::set_lock_rotation_z(bool p_lock) {
 	lock_rotation_z = p_lock;
 }
 
-void SkeletonModification3D_LookAt::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3D_LookAt::set_bone_name);
-	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3D_LookAt::get_bone_name);
+void SkeletonModification3DLookAt::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_bone_name", "name"), &SkeletonModification3DLookAt::set_bone_name);
+	ClassDB::bind_method(D_METHOD("get_bone_name"), &SkeletonModification3DLookAt::get_bone_name);
 
-	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification3D_LookAt::set_bone_index);
-	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification3D_LookAt::get_bone_index);
+	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification3DLookAt::set_bone_index);
+	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification3DLookAt::get_bone_index);
 
-	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_LookAt::set_target_node);
-	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_LookAt::get_target_node);
+	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3DLookAt::set_target_node);
+	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3DLookAt::get_target_node);
 
-	ClassDB::bind_method(D_METHOD("set_rotation_offset", "offset"), &SkeletonModification3D_LookAt::set_rotation_offset);
-	ClassDB::bind_method(D_METHOD("get_rotation_offset"), &SkeletonModification3D_LookAt::get_rotation_offset);
+	ClassDB::bind_method(D_METHOD("set_rotation_offset", "offset"), &SkeletonModification3DLookAt::set_rotation_offset);
+	ClassDB::bind_method(D_METHOD("get_rotation_offset"), &SkeletonModification3DLookAt::get_rotation_offset);
 
-	ClassDB::bind_method(D_METHOD("set_lock_rotation_x", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_x);
-	ClassDB::bind_method(D_METHOD("get_lock_rotation_x"), &SkeletonModification3D_LookAt::get_lock_rotation_x);
-	ClassDB::bind_method(D_METHOD("set_lock_rotation_y", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_y);
-	ClassDB::bind_method(D_METHOD("get_lock_rotation_y"), &SkeletonModification3D_LookAt::get_lock_rotation_y);
-	ClassDB::bind_method(D_METHOD("set_lock_rotation_z", "lock"), &SkeletonModification3D_LookAt::set_lock_rotation_z);
-	ClassDB::bind_method(D_METHOD("get_lock_rotation_z"), &SkeletonModification3D_LookAt::get_lock_rotation_z);
+	ClassDB::bind_method(D_METHOD("set_lock_rotation_x", "lock"), &SkeletonModification3DLookAt::set_lock_rotation_x);
+	ClassDB::bind_method(D_METHOD("get_lock_rotation_x"), &SkeletonModification3DLookAt::get_lock_rotation_x);
+	ClassDB::bind_method(D_METHOD("set_lock_rotation_y", "lock"), &SkeletonModification3DLookAt::set_lock_rotation_y);
+	ClassDB::bind_method(D_METHOD("get_lock_rotation_y"), &SkeletonModification3DLookAt::get_lock_rotation_y);
+	ClassDB::bind_method(D_METHOD("set_lock_rotation_z", "lock"), &SkeletonModification3DLookAt::set_lock_rotation_z);
+	ClassDB::bind_method(D_METHOD("get_lock_rotation_z"), &SkeletonModification3DLookAt::get_lock_rotation_z);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bone_name"), "set_bone_name", "get_bone_name");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
@@ -456,7 +456,7 @@ void SkeletonModification3D_LookAt::_bind_methods() {
 	ADD_GROUP("", "");
 }
 
-SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
+SkeletonModification3DLookAt::SkeletonModification3DLookAt() {
 	stack = nullptr;
 	is_setup = false;
 	bone_name = "";
@@ -468,14 +468,14 @@ SkeletonModification3D_LookAt::SkeletonModification3D_LookAt() {
 	enabled = true;
 }
 
-SkeletonModification3D_LookAt::~SkeletonModification3D_LookAt() {
+SkeletonModification3DLookAt::~SkeletonModification3DLookAt() {
 }
 
 ///////////////////////////////////////
 // CCDIK
 ///////////////////////////////////////
 
-bool SkeletonModification3D_CCDIK::_set(const StringName &p_path, const Variant &p_value) {
+bool SkeletonModification3DCCDIK::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
 	if (path.begins_with("joint_data/")) {
@@ -507,7 +507,7 @@ bool SkeletonModification3D_CCDIK::_set(const StringName &p_path, const Variant 
 	return true;
 }
 
-bool SkeletonModification3D_CCDIK::_get(const StringName &p_path, Variant &r_ret) const {
+bool SkeletonModification3DCCDIK::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
 	if (path.begins_with("joint_data/")) {
@@ -539,7 +539,7 @@ bool SkeletonModification3D_CCDIK::_get(const StringName &p_path, Variant &r_ret
 	return true;
 }
 
-void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list) const {
+void SkeletonModification3DCCDIK::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (int i = 0; i < ccdik_data_chain.size(); i++) {
 		String base_string = "joint_data/" + itos(i) + "/";
 
@@ -564,7 +564,7 @@ void SkeletonModification3D_CCDIK::_get_property_list(List<PropertyInfo> *p_list
 	}
 }
 
-void SkeletonModification3D_CCDIK::execute(float delta) {
+void SkeletonModification3DCCDIK::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -595,7 +595,7 @@ void SkeletonModification3D_CCDIK::execute(float delta) {
 	}
 }
 
-void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D *target, Node3D *tip) {
+void SkeletonModification3DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D *target, Node3D *tip) {
 	CCDIK_Joint_Data ccdik_data = ccdik_data_chain[p_joint_idx];
 	ERR_FAIL_INDEX_MSG(ccdik_data.bone_idx, stack->skeleton->get_bone_count(), "CCDIK joint: bone index not found");
 	ERR_FAIL_COND_MSG(ccdik_data.ccdik_axis_vector.length_squared() == 0, "CCDIK joint: axis vector not set!");
@@ -713,7 +713,7 @@ void SkeletonModification3D_CCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D 
 	stack->skeleton->force_update_bone_children_transforms(ccdik_data.bone_idx);
 }
 
-void SkeletonModification3D_CCDIK::setup_modification(SkeletonModificationStack3D *p_stack) {
+void SkeletonModification3DCCDIK::setup_modification(SkeletonModificationStack3D *p_stack) {
 	stack = p_stack;
 	if (stack != nullptr) {
 		is_setup = true;
@@ -722,7 +722,7 @@ void SkeletonModification3D_CCDIK::setup_modification(SkeletonModificationStack3
 	}
 }
 
-void SkeletonModification3D_CCDIK::update_target_cache() {
+void SkeletonModification3DCCDIK::update_target_cache() {
 	if (!is_setup || !stack) {
 		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
@@ -741,7 +741,7 @@ void SkeletonModification3D_CCDIK::update_target_cache() {
 	}
 }
 
-void SkeletonModification3D_CCDIK::update_tip_cache() {
+void SkeletonModification3DCCDIK::update_tip_cache() {
 	if (!is_setup || !stack) {
 		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
@@ -760,39 +760,39 @@ void SkeletonModification3D_CCDIK::update_tip_cache() {
 	}
 }
 
-void SkeletonModification3D_CCDIK::set_target_node(const NodePath &p_target_node) {
+void SkeletonModification3DCCDIK::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_target_cache();
 }
 
-NodePath SkeletonModification3D_CCDIK::get_target_node() const {
+NodePath SkeletonModification3DCCDIK::get_target_node() const {
 	return target_node;
 }
 
-void SkeletonModification3D_CCDIK::set_tip_node(const NodePath &p_tip_node) {
+void SkeletonModification3DCCDIK::set_tip_node(const NodePath &p_tip_node) {
 	tip_node = p_tip_node;
 	update_tip_cache();
 }
 
-NodePath SkeletonModification3D_CCDIK::get_tip_node() const {
+NodePath SkeletonModification3DCCDIK::get_tip_node() const {
 	return tip_node;
 }
 
-void SkeletonModification3D_CCDIK::set_perform_in_local_pose(bool p_perform) {
+void SkeletonModification3DCCDIK::set_perform_in_local_pose(bool p_perform) {
 	perform_in_local_pose = p_perform;
 }
 
-bool SkeletonModification3D_CCDIK::get_perform_in_local_pose() const {
+bool SkeletonModification3DCCDIK::get_perform_in_local_pose() const {
 	return perform_in_local_pose;
 }
 
 // CCDIK joint data functions
-String SkeletonModification3D_CCDIK::ccdik_joint_get_bone_name(int p_joint_idx) const {
+String SkeletonModification3DCCDIK::ccdik_joint_get_bone_name(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), String());
 	return ccdik_data_chain[p_joint_idx].bone_name;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].bone_name = p_bone_name;
 	ccdik_data_chain.write[p_joint_idx].bone_idx = -1;
@@ -805,12 +805,12 @@ void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name(int p_joint_idx, St
 	_change_notify();
 }
 
-int SkeletonModification3D_CCDIK::ccdik_joint_get_bone_index(int p_joint_idx) const {
+int SkeletonModification3DCCDIK::ccdik_joint_get_bone_index(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), -1);
 	return ccdik_data_chain[p_joint_idx].bone_idx;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_index(int p_joint_idx, int p_bone_idx) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_bone_index(int p_joint_idx, int p_bone_idx) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
 	ccdik_data_chain.write[p_joint_idx].bone_idx = p_bone_idx;
@@ -828,12 +828,12 @@ void SkeletonModification3D_CCDIK::ccdik_joint_set_bone_index(int p_joint_idx, i
 	_change_notify();
 }
 
-int SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis(int p_joint_idx) const {
+int SkeletonModification3DCCDIK::ccdik_joint_get_ccdik_axis(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), -1);
 	return ccdik_data_chain[p_joint_idx].ccdik_axis;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis(int p_joint_idx, int p_axis) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_ccdik_axis(int p_joint_idx, int p_axis) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_axis < 0, "CCDIK axis is out of range: The axis mode is too low!");
 	ERR_FAIL_COND_MSG(p_axis > AXIS_CUSTOM, "CCDIK axis is out of range: The axis mode is too high!");
@@ -849,116 +849,116 @@ void SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis(int p_joint_idx, i
 	_change_notify();
 }
 
-Vector3 SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis_vector(int p_joint_idx) const {
+Vector3 SkeletonModification3DCCDIK::ccdik_joint_get_ccdik_axis_vector(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), Vector3());
 	return ccdik_data_chain[p_joint_idx].ccdik_axis_vector;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis_vector(int p_joint_idx, Vector3 p_axis) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_ccdik_axis_vector(int p_joint_idx, Vector3 p_axis) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].ccdik_axis_vector = p_axis;
 	ccdik_data_chain.write[p_joint_idx].ccdik_axis_vector_inverse = (Vector3(1, 1, 1) - p_axis).normalized();
 }
 
-int SkeletonModification3D_CCDIK::ccdik_joint_get_rotate_mode(int p_joint_idx) const {
+int SkeletonModification3DCCDIK::ccdik_joint_get_rotate_mode(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), -1);
 	return ccdik_data_chain[p_joint_idx].rotate_mode;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_rotate_mode(int p_joint_idx, int p_mode) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_rotate_mode(int p_joint_idx, int p_mode) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_mode < 0 || p_mode > ROTATE_MODE_FREE, "Cannot assign unknown joint rotate mode!");
 	ccdik_data_chain.write[p_joint_idx].rotate_mode = p_mode;
 }
 
-bool SkeletonModification3D_CCDIK::ccdik_joint_get_enable_constraint(int p_joint_idx) const {
+bool SkeletonModification3DCCDIK::ccdik_joint_get_enable_constraint(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].enable_constraint;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_enable) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_enable) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].enable_constraint = p_enable;
 	_change_notify();
 }
 
-float SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_min(int p_joint_idx) const {
+float SkeletonModification3DCCDIK::ccdik_joint_get_constraint_angle_min(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].constraint_angle_min;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_min(int p_joint_idx, float p_angle_min) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_min(int p_joint_idx, float p_angle_min) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].constraint_angle_min = p_angle_min;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_degrees_min(int p_joint_idx, float p_angle_min) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_degrees_min(int p_joint_idx, float p_angle_min) {
 	ccdik_joint_set_constraint_angle_min(p_joint_idx, Math::deg2rad(p_angle_min));
 }
 
-float SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_max(int p_joint_idx) const {
+float SkeletonModification3DCCDIK::ccdik_joint_get_constraint_angle_max(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].constraint_angle_max;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_max(int p_joint_idx, float p_angle_max) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_max(int p_joint_idx, float p_angle_max) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].constraint_angle_max = p_angle_max;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_degrees_max(int p_joint_idx, float p_angle_max) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_degrees_max(int p_joint_idx, float p_angle_max) {
 	ccdik_joint_set_constraint_angle_max(p_joint_idx, Math::deg2rad(p_angle_max));
 }
 
-bool SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_invert(int p_joint_idx) const {
+bool SkeletonModification3DCCDIK::ccdik_joint_get_constraint_invert(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, ccdik_data_chain.size(), false);
 	return ccdik_data_chain[p_joint_idx].constraint_angles_invert;
 }
 
-void SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_invert(int p_joint_idx, bool p_invert) {
+void SkeletonModification3DCCDIK::ccdik_joint_set_constraint_invert(int p_joint_idx, bool p_invert) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].constraint_angles_invert = p_invert;
 }
 
-int SkeletonModification3D_CCDIK::get_ccdik_data_chain_length() {
+int SkeletonModification3DCCDIK::get_ccdik_data_chain_length() {
 	return ccdik_data_chain.size();
 }
-void SkeletonModification3D_CCDIK::set_ccdik_data_chain_length(int p_length) {
+void SkeletonModification3DCCDIK::set_ccdik_data_chain_length(int p_length) {
 	ERR_FAIL_COND(p_length < 0);
 	ccdik_data_chain.resize(p_length);
 	_change_notify();
 }
 
-void SkeletonModification3D_CCDIK::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_CCDIK::set_target_node);
-	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_CCDIK::get_target_node);
+void SkeletonModification3DCCDIK::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3DCCDIK::set_target_node);
+	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3DCCDIK::get_target_node);
 
-	ClassDB::bind_method(D_METHOD("set_tip_node", "tip_nodepath"), &SkeletonModification3D_CCDIK::set_tip_node);
-	ClassDB::bind_method(D_METHOD("get_tip_node"), &SkeletonModification3D_CCDIK::get_tip_node);
+	ClassDB::bind_method(D_METHOD("set_tip_node", "tip_nodepath"), &SkeletonModification3DCCDIK::set_tip_node);
+	ClassDB::bind_method(D_METHOD("get_tip_node"), &SkeletonModification3DCCDIK::get_tip_node);
 
-	ClassDB::bind_method(D_METHOD("set_perform_in_local_pose", "perform_in_local_pose"), &SkeletonModification3D_CCDIK::set_perform_in_local_pose);
-	ClassDB::bind_method(D_METHOD("get_perform_in_local_pose"), &SkeletonModification3D_CCDIK::get_perform_in_local_pose);
+	ClassDB::bind_method(D_METHOD("set_perform_in_local_pose", "perform_in_local_pose"), &SkeletonModification3DCCDIK::set_perform_in_local_pose);
+	ClassDB::bind_method(D_METHOD("get_perform_in_local_pose"), &SkeletonModification3DCCDIK::get_perform_in_local_pose);
 
 	// CCDIK joint data functions
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_name", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_bone_name);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_name", "joint_idx", "bone_name"), &SkeletonModification3D_CCDIK::ccdik_joint_set_bone_name);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_index", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_bone_index);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_index", "joint_idx", "bone_index"), &SkeletonModification3D_CCDIK::ccdik_joint_set_bone_index);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_ccdik_axis", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_ccdik_axis);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_ccdik_axis", "joint_idx", "axis"), &SkeletonModification3D_CCDIK::ccdik_joint_set_ccdik_axis);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_enable_joint_constraint", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_enable_constraint);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_enable_joint_constraint", "joint_idx", "enable"), &SkeletonModification3D_CCDIK::ccdik_joint_set_enable_constraint);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_joint_constraint_angle_min", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_min);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_min", "joint_idx", "min_angle"), &SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_min);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_degrees_min", "joint_idx", "min_angle"), &SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_degrees_min);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_joint_constraint_angle_max", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_angle_max);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_max", "joint_idx", "max_angle"), &SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_max);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_degrees_max", "joint_idx", "max_angle"), &SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_angle_degrees_max);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_joint_constraint_invert", "joint_idx"), &SkeletonModification3D_CCDIK::ccdik_joint_get_constraint_invert);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_invert", "joint_idx", "invert"), &SkeletonModification3D_CCDIK::ccdik_joint_set_constraint_invert);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_name", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_bone_name);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_name", "joint_idx", "bone_name"), &SkeletonModification3DCCDIK::ccdik_joint_set_bone_name);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_index", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_bone_index);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_index", "joint_idx", "bone_index"), &SkeletonModification3DCCDIK::ccdik_joint_set_bone_index);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_ccdik_axis", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_ccdik_axis);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_ccdik_axis", "joint_idx", "axis"), &SkeletonModification3DCCDIK::ccdik_joint_set_ccdik_axis);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_enable_joint_constraint", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_enable_constraint);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_enable_joint_constraint", "joint_idx", "enable"), &SkeletonModification3DCCDIK::ccdik_joint_set_enable_constraint);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_joint_constraint_angle_min", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_constraint_angle_min);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_min", "joint_idx", "min_angle"), &SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_min);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_degrees_min", "joint_idx", "min_angle"), &SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_degrees_min);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_joint_constraint_angle_max", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_constraint_angle_max);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_max", "joint_idx", "max_angle"), &SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_max);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_angle_degrees_max", "joint_idx", "max_angle"), &SkeletonModification3DCCDIK::ccdik_joint_set_constraint_angle_degrees_max);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_joint_constraint_invert", "joint_idx"), &SkeletonModification3DCCDIK::ccdik_joint_get_constraint_invert);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_joint_constraint_invert", "joint_idx", "invert"), &SkeletonModification3DCCDIK::ccdik_joint_set_constraint_invert);
 
-	ClassDB::bind_method(D_METHOD("set_ccdik_data_chain_length", "length"), &SkeletonModification3D_CCDIK::set_ccdik_data_chain_length);
-	ClassDB::bind_method(D_METHOD("get_ccdik_data_chain_length"), &SkeletonModification3D_CCDIK::get_ccdik_data_chain_length);
+	ClassDB::bind_method(D_METHOD("set_ccdik_data_chain_length", "length"), &SkeletonModification3DCCDIK::set_ccdik_data_chain_length);
+	ClassDB::bind_method(D_METHOD("get_ccdik_data_chain_length"), &SkeletonModification3DCCDIK::get_ccdik_data_chain_length);
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "tip_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_tip_node", "get_tip_node");
@@ -966,21 +966,21 @@ void SkeletonModification3D_CCDIK::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ccdik_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_ccdik_data_chain_length", "get_ccdik_data_chain_length");
 }
 
-SkeletonModification3D_CCDIK::SkeletonModification3D_CCDIK() {
+SkeletonModification3DCCDIK::SkeletonModification3DCCDIK() {
 	stack = nullptr;
 	is_setup = false;
 	enabled = true;
 	perform_in_local_pose = true;
 }
 
-SkeletonModification3D_CCDIK::~SkeletonModification3D_CCDIK() {
+SkeletonModification3DCCDIK::~SkeletonModification3DCCDIK() {
 }
 
 ///////////////////////////////////////
 // FABRIK
 ///////////////////////////////////////
 
-bool SkeletonModification3D_FABRIK::_set(const StringName &p_path, const Variant &p_value) {
+bool SkeletonModification3DFABRIK::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
 	if (path.begins_with("joint_data/")) {
@@ -1010,7 +1010,7 @@ bool SkeletonModification3D_FABRIK::_set(const StringName &p_path, const Variant
 	return true;
 }
 
-bool SkeletonModification3D_FABRIK::_get(const StringName &p_path, Variant &r_ret) const {
+bool SkeletonModification3DFABRIK::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
 	if (path.begins_with("joint_data/")) {
@@ -1040,7 +1040,7 @@ bool SkeletonModification3D_FABRIK::_get(const StringName &p_path, Variant &r_re
 	return true;
 }
 
-void SkeletonModification3D_FABRIK::_get_property_list(List<PropertyInfo> *p_list) const {
+void SkeletonModification3DFABRIK::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (int i = 0; i < fabrik_data_chain.size(); i++) {
 		String base_string = "joint_data/" + itos(i) + "/";
 
@@ -1068,7 +1068,7 @@ void SkeletonModification3D_FABRIK::_get_property_list(List<PropertyInfo> *p_lis
 	}
 }
 
-void SkeletonModification3D_FABRIK::execute(float delta) {
+void SkeletonModification3DFABRIK::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -1134,7 +1134,7 @@ void SkeletonModification3D_FABRIK::execute(float delta) {
 	}
 }
 
-void SkeletonModification3D_FABRIK::chain_backwards() {
+void SkeletonModification3DFABRIK::chain_backwards() {
 	int final_bone_idx = fabrik_data_chain[final_joint_idx].bone_idx;
 	Transform final_joint_trans = stack->skeleton->local_pose_to_global_pose(final_bone_idx, stack->skeleton->get_bone_local_pose_override(final_bone_idx));
 
@@ -1164,7 +1164,7 @@ void SkeletonModification3D_FABRIK::chain_backwards() {
 	}
 }
 
-void SkeletonModification3D_FABRIK::chain_forwards() {
+void SkeletonModification3DFABRIK::chain_forwards() {
 	// Set root at the initial position.
 	int origin_bone_idx = fabrik_data_chain[0].bone_idx;
 	Transform root_transform = stack->skeleton->local_pose_to_global_pose(origin_bone_idx, stack->skeleton->get_bone_local_pose_override(origin_bone_idx));
@@ -1185,7 +1185,7 @@ void SkeletonModification3D_FABRIK::chain_forwards() {
 	}
 }
 
-void SkeletonModification3D_FABRIK::chain_apply() {
+void SkeletonModification3DFABRIK::chain_apply() {
 	for (int i = 0; i < fabrik_data_chain.size(); i++) {
 		int current_bone_idx = fabrik_data_chain[i].bone_idx;
 		Transform current_trans = stack->skeleton->get_bone_local_pose_override(current_bone_idx);
@@ -1228,7 +1228,7 @@ void SkeletonModification3D_FABRIK::chain_apply() {
 	stack->skeleton->force_update_all_bone_transforms();
 }
 
-void SkeletonModification3D_FABRIK::setup_modification(SkeletonModificationStack3D *p_stack) {
+void SkeletonModification3DFABRIK::setup_modification(SkeletonModificationStack3D *p_stack) {
 	stack = p_stack;
 	if (stack != nullptr) {
 		is_setup = true;
@@ -1240,7 +1240,7 @@ void SkeletonModification3D_FABRIK::setup_modification(SkeletonModificationStack
 	}
 }
 
-void SkeletonModification3D_FABRIK::update_target_cache() {
+void SkeletonModification3DFABRIK::update_target_cache() {
 	if (!is_setup || !stack) {
 		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
@@ -1258,7 +1258,7 @@ void SkeletonModification3D_FABRIK::update_target_cache() {
 	}
 }
 
-void SkeletonModification3D_FABRIK::update_joint_tip_cache(int p_joint_idx) {
+void SkeletonModification3DFABRIK::update_joint_tip_cache(int p_joint_idx) {
 	ERR_FAIL_INDEX_MSG(p_joint_idx, fabrik_data_chain.size(), "FABRIK joint not found");
 	if (!is_setup || !stack) {
 		WARN_PRINT("Cannot update cache: modification is not properly setup!");
@@ -1280,49 +1280,49 @@ void SkeletonModification3D_FABRIK::update_joint_tip_cache(int p_joint_idx) {
 	}
 }
 
-void SkeletonModification3D_FABRIK::set_target_node(const NodePath &p_target_node) {
+void SkeletonModification3DFABRIK::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_target_cache();
 }
 
-NodePath SkeletonModification3D_FABRIK::get_target_node() const {
+NodePath SkeletonModification3DFABRIK::get_target_node() const {
 	return target_node;
 }
 
-int SkeletonModification3D_FABRIK::get_fabrik_data_chain_length() {
+int SkeletonModification3DFABRIK::get_fabrik_data_chain_length() {
 	return fabrik_data_chain.size();
 }
 
-void SkeletonModification3D_FABRIK::set_fabrik_data_chain_length(int p_length) {
+void SkeletonModification3DFABRIK::set_fabrik_data_chain_length(int p_length) {
 	ERR_FAIL_COND(p_length < 0);
 	fabrik_data_chain.resize(p_length);
 	_change_notify();
 }
 
-float SkeletonModification3D_FABRIK::get_chain_tolerance() {
+float SkeletonModification3DFABRIK::get_chain_tolerance() {
 	return chain_tolerance;
 }
 
-void SkeletonModification3D_FABRIK::set_chain_tolerance(float p_tolerance) {
+void SkeletonModification3DFABRIK::set_chain_tolerance(float p_tolerance) {
 	ERR_FAIL_COND_MSG(p_tolerance <= 0, "FABRIK chain tolerance must be more than zero!");
 	chain_tolerance = p_tolerance;
 }
 
-int SkeletonModification3D_FABRIK::get_chain_max_iterations() {
+int SkeletonModification3DFABRIK::get_chain_max_iterations() {
 	return chain_max_iterations;
 }
-void SkeletonModification3D_FABRIK::set_chain_max_iterations(int p_iterations) {
+void SkeletonModification3DFABRIK::set_chain_max_iterations(int p_iterations) {
 	ERR_FAIL_COND_MSG(p_iterations <= 0, "FABRIK chain iterations must be at least one. Set enabled to false to disable the FABRIK chain.");
 	chain_max_iterations = p_iterations;
 }
 
 // FABRIK joint data functions
-String SkeletonModification3D_FABRIK::fabrik_joint_get_bone_name(int p_joint_idx) const {
+String SkeletonModification3DFABRIK::fabrik_joint_get_bone_name(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), String());
 	return fabrik_data_chain[p_joint_idx].bone_name;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].bone_name = p_bone_name;
 	fabrik_data_chain.write[p_joint_idx].bone_idx = -1;
@@ -1335,12 +1335,12 @@ void SkeletonModification3D_FABRIK::fabrik_joint_set_bone_name(int p_joint_idx, 
 	_change_notify();
 }
 
-int SkeletonModification3D_FABRIK::fabrik_joint_get_bone_index(int p_joint_idx) const {
+int SkeletonModification3DFABRIK::fabrik_joint_get_bone_index(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), -1);
 	return fabrik_data_chain[p_joint_idx].bone_idx;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_bone_index(int p_joint_idx, int p_bone_idx) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_bone_index(int p_joint_idx, int p_bone_idx) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
 	fabrik_data_chain.write[p_joint_idx].bone_idx = p_bone_idx;
@@ -1358,12 +1358,12 @@ void SkeletonModification3D_FABRIK::fabrik_joint_set_bone_index(int p_joint_idx,
 	_change_notify();
 }
 
-float SkeletonModification3D_FABRIK::fabrik_joint_get_length(int p_joint_idx) const {
+float SkeletonModification3DFABRIK::fabrik_joint_get_length(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), -1);
 	return fabrik_data_chain[p_joint_idx].length;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_length(int p_joint_idx, float p_bone_length) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_length(int p_joint_idx, float p_bone_length) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	ERR_FAIL_COND_MSG(p_bone_length < 0, "FABRIK joint length cannot be less than zero!");
 
@@ -1380,29 +1380,29 @@ void SkeletonModification3D_FABRIK::fabrik_joint_set_length(int p_joint_idx, flo
 	}
 }
 
-Vector3 SkeletonModification3D_FABRIK::fabrik_joint_get_magnet(int p_joint_idx) const {
+Vector3 SkeletonModification3DFABRIK::fabrik_joint_get_magnet(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), Vector3());
 	return fabrik_data_chain[p_joint_idx].magnet_position;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_magnet(int p_joint_idx, Vector3 p_magnet) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_magnet(int p_joint_idx, Vector3 p_magnet) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].magnet_position = p_magnet;
 }
 
-bool SkeletonModification3D_FABRIK::fabrik_joint_get_auto_calculate_length(int p_joint_idx) const {
+bool SkeletonModification3DFABRIK::fabrik_joint_get_auto_calculate_length(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), false);
 	return fabrik_data_chain[p_joint_idx].auto_calculate_length;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_auto_calculate_length(int p_joint_idx, bool p_auto_calculate) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_auto_calculate_length(int p_joint_idx, bool p_auto_calculate) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].auto_calculate_length = p_auto_calculate;
 	fabrik_joint_auto_calculate_length(p_joint_idx);
 	_change_notify();
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_auto_calculate_length(int p_joint_idx) {
+void SkeletonModification3DFABRIK::fabrik_joint_auto_calculate_length(int p_joint_idx) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	if (!fabrik_data_chain[p_joint_idx].auto_calculate_length) {
 		return;
@@ -1442,66 +1442,66 @@ void SkeletonModification3D_FABRIK::fabrik_joint_auto_calculate_length(int p_joi
 	_change_notify();
 }
 
-bool SkeletonModification3D_FABRIK::fabrik_joint_get_use_tip_node(int p_joint_idx) const {
+bool SkeletonModification3DFABRIK::fabrik_joint_get_use_tip_node(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), false);
 	return fabrik_data_chain[p_joint_idx].use_tip_node;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_use_tip_node(int p_joint_idx, bool p_use_tip_node) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_use_tip_node(int p_joint_idx, bool p_use_tip_node) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].use_tip_node = p_use_tip_node;
 	_change_notify();
 }
 
-NodePath SkeletonModification3D_FABRIK::fabrik_joint_get_tip_node(int p_joint_idx) const {
+NodePath SkeletonModification3DFABRIK::fabrik_joint_get_tip_node(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), NodePath());
 	return fabrik_data_chain[p_joint_idx].tip_node;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_tip_node(int p_joint_idx, NodePath p_tip_node) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_tip_node(int p_joint_idx, NodePath p_tip_node) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].tip_node = p_tip_node;
 	update_joint_tip_cache(p_joint_idx);
 }
 
-bool SkeletonModification3D_FABRIK::fabrik_joint_get_use_target_basis(int p_joint_idx) const {
+bool SkeletonModification3DFABRIK::fabrik_joint_get_use_target_basis(int p_joint_idx) const {
 	ERR_FAIL_INDEX_V(p_joint_idx, fabrik_data_chain.size(), false);
 	return fabrik_data_chain[p_joint_idx].use_target_basis;
 }
 
-void SkeletonModification3D_FABRIK::fabrik_joint_set_use_target_basis(int p_joint_idx, bool p_use_target_basis) {
+void SkeletonModification3DFABRIK::fabrik_joint_set_use_target_basis(int p_joint_idx, bool p_use_target_basis) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].use_target_basis = p_use_target_basis;
 }
 
-void SkeletonModification3D_FABRIK::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_FABRIK::set_target_node);
-	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_FABRIK::get_target_node);
-	ClassDB::bind_method(D_METHOD("set_fabrik_data_chain_length", "length"), &SkeletonModification3D_FABRIK::set_fabrik_data_chain_length);
-	ClassDB::bind_method(D_METHOD("get_fabrik_data_chain_length"), &SkeletonModification3D_FABRIK::get_fabrik_data_chain_length);
-	ClassDB::bind_method(D_METHOD("set_chain_tolerance", "tolerance"), &SkeletonModification3D_FABRIK::set_chain_tolerance);
-	ClassDB::bind_method(D_METHOD("get_chain_tolerance"), &SkeletonModification3D_FABRIK::get_chain_tolerance);
-	ClassDB::bind_method(D_METHOD("set_chain_max_iterations", "max_iterations"), &SkeletonModification3D_FABRIK::set_chain_max_iterations);
-	ClassDB::bind_method(D_METHOD("get_chain_max_iterations"), &SkeletonModification3D_FABRIK::get_chain_max_iterations);
+void SkeletonModification3DFABRIK::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3DFABRIK::set_target_node);
+	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3DFABRIK::get_target_node);
+	ClassDB::bind_method(D_METHOD("set_fabrik_data_chain_length", "length"), &SkeletonModification3DFABRIK::set_fabrik_data_chain_length);
+	ClassDB::bind_method(D_METHOD("get_fabrik_data_chain_length"), &SkeletonModification3DFABRIK::get_fabrik_data_chain_length);
+	ClassDB::bind_method(D_METHOD("set_chain_tolerance", "tolerance"), &SkeletonModification3DFABRIK::set_chain_tolerance);
+	ClassDB::bind_method(D_METHOD("get_chain_tolerance"), &SkeletonModification3DFABRIK::get_chain_tolerance);
+	ClassDB::bind_method(D_METHOD("set_chain_max_iterations", "max_iterations"), &SkeletonModification3DFABRIK::set_chain_max_iterations);
+	ClassDB::bind_method(D_METHOD("get_chain_max_iterations"), &SkeletonModification3DFABRIK::get_chain_max_iterations);
 
 	// FABRIK joint data functions
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_name", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_bone_name);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_name", "joint_idx", "bone_name"), &SkeletonModification3D_FABRIK::fabrik_joint_set_bone_name);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_index", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_bone_index);
-	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_index", "joint_idx", "bone_index"), &SkeletonModification3D_FABRIK::fabrik_joint_set_bone_index);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_get_length", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_length);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_set_length", "joint_idx", "length"), &SkeletonModification3D_FABRIK::fabrik_joint_set_length);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_get_magnet", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_magnet);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_set_magnet", "joint_idx", "magnet_position"), &SkeletonModification3D_FABRIK::fabrik_joint_set_magnet);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_get_auto_calculate_length", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_auto_calculate_length);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_set_auto_calculate_length", "joint_idx", "auto_calculate_length"), &SkeletonModification3D_FABRIK::fabrik_joint_set_auto_calculate_length);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_auto_calculate_length", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_auto_calculate_length);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_get_use_tip_node", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_use_tip_node);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_set_use_tip_node", "joint_idx", "use_tip_node"), &SkeletonModification3D_FABRIK::fabrik_joint_set_use_tip_node);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_get_tip_node", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_tip_node);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_set_tip_node", "joint_idx", "tip_node"), &SkeletonModification3D_FABRIK::fabrik_joint_set_tip_node);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_get_use_target_basis", "joint_idx"), &SkeletonModification3D_FABRIK::fabrik_joint_get_use_target_basis);
-	ClassDB::bind_method(D_METHOD("fabrik_joint_set_use_target_basis", "joint_idx", "use_target_basis"), &SkeletonModification3D_FABRIK::fabrik_joint_set_use_target_basis);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_name", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_bone_name);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_name", "joint_idx", "bone_name"), &SkeletonModification3DFABRIK::fabrik_joint_set_bone_name);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_index", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_bone_index);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_index", "joint_idx", "bone_index"), &SkeletonModification3DFABRIK::fabrik_joint_set_bone_index);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_get_length", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_length);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_set_length", "joint_idx", "length"), &SkeletonModification3DFABRIK::fabrik_joint_set_length);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_get_magnet", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_magnet);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_set_magnet", "joint_idx", "magnet_position"), &SkeletonModification3DFABRIK::fabrik_joint_set_magnet);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_get_auto_calculate_length", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_auto_calculate_length);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_set_auto_calculate_length", "joint_idx", "auto_calculate_length"), &SkeletonModification3DFABRIK::fabrik_joint_set_auto_calculate_length);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_auto_calculate_length", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_auto_calculate_length);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_get_use_tip_node", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_use_tip_node);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_set_use_tip_node", "joint_idx", "use_tip_node"), &SkeletonModification3DFABRIK::fabrik_joint_set_use_tip_node);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_get_tip_node", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_tip_node);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_set_tip_node", "joint_idx", "tip_node"), &SkeletonModification3DFABRIK::fabrik_joint_set_tip_node);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_get_use_target_basis", "joint_idx"), &SkeletonModification3DFABRIK::fabrik_joint_get_use_target_basis);
+	ClassDB::bind_method(D_METHOD("fabrik_joint_set_use_target_basis", "joint_idx", "use_target_basis"), &SkeletonModification3DFABRIK::fabrik_joint_set_use_target_basis);
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "fabrik_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_fabrik_data_chain_length", "get_fabrik_data_chain_length");
@@ -1509,20 +1509,20 @@ void SkeletonModification3D_FABRIK::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "chain_max_iterations", PROPERTY_HINT_RANGE, "1,50,1"), "set_chain_max_iterations", "get_chain_max_iterations");
 }
 
-SkeletonModification3D_FABRIK::SkeletonModification3D_FABRIK() {
+SkeletonModification3DFABRIK::SkeletonModification3DFABRIK() {
 	stack = nullptr;
 	is_setup = false;
 	enabled = true;
 }
 
-SkeletonModification3D_FABRIK::~SkeletonModification3D_FABRIK() {
+SkeletonModification3DFABRIK::~SkeletonModification3DFABRIK() {
 }
 
 ///////////////////////////////////////
 // Jiggle
 ///////////////////////////////////////
 
-bool SkeletonModification3D_Jiggle::_set(const StringName &p_path, const Variant &p_value) {
+bool SkeletonModification3DJiggle::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
 	if (path.begins_with("joint_data/")) {
@@ -1552,7 +1552,7 @@ bool SkeletonModification3D_Jiggle::_set(const StringName &p_path, const Variant
 	return true;
 }
 
-bool SkeletonModification3D_Jiggle::_get(const StringName &p_path, Variant &r_ret) const {
+bool SkeletonModification3DJiggle::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
 	if (path.begins_with("joint_data/")) {
@@ -1582,7 +1582,7 @@ bool SkeletonModification3D_Jiggle::_get(const StringName &p_path, Variant &r_re
 	return true;
 }
 
-void SkeletonModification3D_Jiggle::_get_property_list(List<PropertyInfo> *p_list) const {
+void SkeletonModification3DJiggle::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (int i = 0; i < jiggle_data_chain.size(); i++) {
 		String base_string = "joint_data/" + itos(i) + "/";
 
@@ -1602,7 +1602,7 @@ void SkeletonModification3D_Jiggle::_get_property_list(List<PropertyInfo> *p_lis
 	}
 }
 
-void SkeletonModification3D_Jiggle::execute(float delta) {
+void SkeletonModification3DJiggle::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
 	if (!enabled) {
@@ -1622,7 +1622,7 @@ void SkeletonModification3D_Jiggle::execute(float delta) {
 	}
 }
 
-void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3D *target, float delta) {
+void SkeletonModification3DJiggle::_execute_jiggle_joint(int p_joint_idx, Node3D *target, float delta) {
 	// Adopted from: https://wiki.unity3d.com/index.php/JiggleBone
 	// With modifications by TwistedTwigleg.
 
@@ -1659,7 +1659,7 @@ void SkeletonModification3D_Jiggle::_execute_jiggle_joint(int p_joint_idx, Node3
 	stack->skeleton->force_update_bone_children_transforms(jiggle_data_chain[p_joint_idx].bone_idx);
 }
 
-void SkeletonModification3D_Jiggle::_update_jiggle_joint_data() {
+void SkeletonModification3DJiggle::_update_jiggle_joint_data() {
 	for (int i = 0; i < jiggle_data_chain.size(); i++) {
 		if (jiggle_data_chain[i].override_defaults == false) {
 			jiggle_joint_set_stiffness(i, stiffness);
@@ -1671,7 +1671,7 @@ void SkeletonModification3D_Jiggle::_update_jiggle_joint_data() {
 	}
 }
 
-void SkeletonModification3D_Jiggle::setup_modification(SkeletonModificationStack3D *p_stack) {
+void SkeletonModification3DJiggle::setup_modification(SkeletonModificationStack3D *p_stack) {
 	stack = p_stack;
 
 	if (stack != nullptr) {
@@ -1690,7 +1690,7 @@ void SkeletonModification3D_Jiggle::setup_modification(SkeletonModificationStack
 	}
 }
 
-void SkeletonModification3D_Jiggle::update_cache() {
+void SkeletonModification3DJiggle::update_cache() {
 	if (!is_setup || !stack) {
 		WARN_PRINT("Cannot update cache: modification is not properly setup!");
 		return;
@@ -1709,75 +1709,75 @@ void SkeletonModification3D_Jiggle::update_cache() {
 	}
 }
 
-void SkeletonModification3D_Jiggle::set_target_node(const NodePath &p_target_node) {
+void SkeletonModification3DJiggle::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_cache();
 }
 
-NodePath SkeletonModification3D_Jiggle::get_target_node() const {
+NodePath SkeletonModification3DJiggle::get_target_node() const {
 	return target_node;
 }
 
-void SkeletonModification3D_Jiggle::set_stiffness(float p_stiffness) {
+void SkeletonModification3DJiggle::set_stiffness(float p_stiffness) {
 	ERR_FAIL_COND_MSG(p_stiffness < 0, "Stiffness cannot be set to a negative value!");
 	stiffness = p_stiffness;
 	_update_jiggle_joint_data();
 }
 
-float SkeletonModification3D_Jiggle::get_stiffness() const {
+float SkeletonModification3DJiggle::get_stiffness() const {
 	return stiffness;
 }
 
-void SkeletonModification3D_Jiggle::set_mass(float p_mass) {
+void SkeletonModification3DJiggle::set_mass(float p_mass) {
 	ERR_FAIL_COND_MSG(p_mass < 0, "Mass cannot be set to a negative value!");
 	mass = p_mass;
 	_update_jiggle_joint_data();
 }
 
-float SkeletonModification3D_Jiggle::get_mass() const {
+float SkeletonModification3DJiggle::get_mass() const {
 	return mass;
 }
 
-void SkeletonModification3D_Jiggle::set_damping(float p_damping) {
+void SkeletonModification3DJiggle::set_damping(float p_damping) {
 	ERR_FAIL_COND_MSG(p_damping < 0, "Damping cannot be set to a negative value!");
 	ERR_FAIL_COND_MSG(p_damping > 1, "Damping cannot be more than one!");
 	damping = p_damping;
 	_update_jiggle_joint_data();
 }
 
-float SkeletonModification3D_Jiggle::get_damping() const {
+float SkeletonModification3DJiggle::get_damping() const {
 	return damping;
 }
 
-void SkeletonModification3D_Jiggle::set_use_gravity(bool p_use_gravity) {
+void SkeletonModification3DJiggle::set_use_gravity(bool p_use_gravity) {
 	use_gravity = p_use_gravity;
 	_update_jiggle_joint_data();
 }
 
-bool SkeletonModification3D_Jiggle::get_use_gravity() const {
+bool SkeletonModification3DJiggle::get_use_gravity() const {
 	return use_gravity;
 }
 
-void SkeletonModification3D_Jiggle::set_gravity(Vector3 p_gravity) {
+void SkeletonModification3DJiggle::set_gravity(Vector3 p_gravity) {
 	gravity = p_gravity;
 	_update_jiggle_joint_data();
 }
 
-Vector3 SkeletonModification3D_Jiggle::get_gravity() const {
+Vector3 SkeletonModification3DJiggle::get_gravity() const {
 	return gravity;
 }
 
-int SkeletonModification3D_Jiggle::get_jiggle_data_chain_length() {
+int SkeletonModification3DJiggle::get_jiggle_data_chain_length() {
 	return jiggle_data_chain.size();
 }
 
-void SkeletonModification3D_Jiggle::set_jiggle_data_chain_length(int p_length) {
+void SkeletonModification3DJiggle::set_jiggle_data_chain_length(int p_length) {
 	ERR_FAIL_COND(p_length < 0);
 	jiggle_data_chain.resize(p_length);
 	_change_notify();
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_bone_name(int joint_idx, String p_name) {
+void SkeletonModification3DJiggle::jiggle_joint_set_bone_name(int joint_idx, String p_name) {
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 
 	jiggle_data_chain.write[joint_idx].bone_name = p_name;
@@ -1788,17 +1788,17 @@ void SkeletonModification3D_Jiggle::jiggle_joint_set_bone_name(int joint_idx, St
 	_change_notify();
 }
 
-String SkeletonModification3D_Jiggle::jiggle_joint_get_bone_name(int joint_idx) const {
+String SkeletonModification3DJiggle::jiggle_joint_get_bone_name(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), "");
 	return jiggle_data_chain[joint_idx].bone_name;
 }
 
-int SkeletonModification3D_Jiggle::jiggle_joint_get_bone_index(int joint_idx) const {
+int SkeletonModification3DJiggle::jiggle_joint_get_bone_index(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
 	return jiggle_data_chain[joint_idx].bone_idx;
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_bone_index(int joint_idx, int p_bone_idx) {
+void SkeletonModification3DJiggle::jiggle_joint_set_bone_index(int joint_idx, int p_bone_idx) {
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
 	jiggle_data_chain.write[joint_idx].bone_idx = p_bone_idx;
@@ -1816,107 +1816,107 @@ void SkeletonModification3D_Jiggle::jiggle_joint_set_bone_index(int joint_idx, i
 	_change_notify();
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_override(int joint_idx, bool p_override) {
+void SkeletonModification3DJiggle::jiggle_joint_set_override(int joint_idx, bool p_override) {
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	jiggle_data_chain.write[joint_idx].override_defaults = p_override;
 	_update_jiggle_joint_data();
 	_change_notify();
 }
 
-bool SkeletonModification3D_Jiggle::jiggle_joint_get_override(int joint_idx) const {
+bool SkeletonModification3DJiggle::jiggle_joint_get_override(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), false);
 	return jiggle_data_chain[joint_idx].override_defaults;
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_stiffness(int joint_idx, float p_stiffness) {
+void SkeletonModification3DJiggle::jiggle_joint_set_stiffness(int joint_idx, float p_stiffness) {
 	ERR_FAIL_COND_MSG(p_stiffness < 0, "Stiffness cannot be set to a negative value!");
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	jiggle_data_chain.write[joint_idx].stiffness = p_stiffness;
 }
 
-float SkeletonModification3D_Jiggle::jiggle_joint_get_stiffness(int joint_idx) const {
+float SkeletonModification3DJiggle::jiggle_joint_get_stiffness(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
 	return jiggle_data_chain[joint_idx].stiffness;
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_mass(int joint_idx, float p_mass) {
+void SkeletonModification3DJiggle::jiggle_joint_set_mass(int joint_idx, float p_mass) {
 	ERR_FAIL_COND_MSG(p_mass < 0, "Mass cannot be set to a negative value!");
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	jiggle_data_chain.write[joint_idx].mass = p_mass;
 }
 
-float SkeletonModification3D_Jiggle::jiggle_joint_get_mass(int joint_idx) const {
+float SkeletonModification3DJiggle::jiggle_joint_get_mass(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
 	return jiggle_data_chain[joint_idx].mass;
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_damping(int joint_idx, float p_damping) {
+void SkeletonModification3DJiggle::jiggle_joint_set_damping(int joint_idx, float p_damping) {
 	ERR_FAIL_COND_MSG(p_damping < 0, "Damping cannot be set to a negative value!");
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	jiggle_data_chain.write[joint_idx].damping = p_damping;
 }
 
-float SkeletonModification3D_Jiggle::jiggle_joint_get_damping(int joint_idx) const {
+float SkeletonModification3DJiggle::jiggle_joint_get_damping(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), -1);
 	return jiggle_data_chain[joint_idx].damping;
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_use_gravity(int joint_idx, bool p_use_gravity) {
+void SkeletonModification3DJiggle::jiggle_joint_set_use_gravity(int joint_idx, bool p_use_gravity) {
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	jiggle_data_chain.write[joint_idx].use_gravity = p_use_gravity;
 	_change_notify();
 }
 
-bool SkeletonModification3D_Jiggle::jiggle_joint_get_use_gravity(int joint_idx) const {
+bool SkeletonModification3DJiggle::jiggle_joint_get_use_gravity(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), false);
 	return jiggle_data_chain[joint_idx].use_gravity;
 }
 
-void SkeletonModification3D_Jiggle::jiggle_joint_set_gravity(int joint_idx, Vector3 p_gravity) {
+void SkeletonModification3DJiggle::jiggle_joint_set_gravity(int joint_idx, Vector3 p_gravity) {
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 	jiggle_data_chain.write[joint_idx].gravity = p_gravity;
 }
 
-Vector3 SkeletonModification3D_Jiggle::jiggle_joint_get_gravity(int joint_idx) const {
+Vector3 SkeletonModification3DJiggle::jiggle_joint_get_gravity(int joint_idx) const {
 	ERR_FAIL_INDEX_V(joint_idx, jiggle_data_chain.size(), Vector3(0, 0, 0));
 	return jiggle_data_chain[joint_idx].gravity;
 }
 
-void SkeletonModification3D_Jiggle::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3D_Jiggle::set_target_node);
-	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3D_Jiggle::get_target_node);
+void SkeletonModification3DJiggle::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3DJiggle::set_target_node);
+	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3DJiggle::get_target_node);
 
-	ClassDB::bind_method(D_METHOD("set_jiggle_data_chain_length", "length"), &SkeletonModification3D_Jiggle::set_jiggle_data_chain_length);
-	ClassDB::bind_method(D_METHOD("get_jiggle_data_chain_length"), &SkeletonModification3D_Jiggle::get_jiggle_data_chain_length);
+	ClassDB::bind_method(D_METHOD("set_jiggle_data_chain_length", "length"), &SkeletonModification3DJiggle::set_jiggle_data_chain_length);
+	ClassDB::bind_method(D_METHOD("get_jiggle_data_chain_length"), &SkeletonModification3DJiggle::get_jiggle_data_chain_length);
 
-	ClassDB::bind_method(D_METHOD("set_stiffness", "stiffness"), &SkeletonModification3D_Jiggle::set_stiffness);
-	ClassDB::bind_method(D_METHOD("get_stiffness"), &SkeletonModification3D_Jiggle::get_stiffness);
-	ClassDB::bind_method(D_METHOD("set_mass", "mass"), &SkeletonModification3D_Jiggle::set_mass);
-	ClassDB::bind_method(D_METHOD("get_mass"), &SkeletonModification3D_Jiggle::get_mass);
-	ClassDB::bind_method(D_METHOD("set_damping", "damping"), &SkeletonModification3D_Jiggle::set_damping);
-	ClassDB::bind_method(D_METHOD("get_damping"), &SkeletonModification3D_Jiggle::get_damping);
-	ClassDB::bind_method(D_METHOD("set_use_gravity", "use_gravity"), &SkeletonModification3D_Jiggle::set_use_gravity);
-	ClassDB::bind_method(D_METHOD("get_use_gravity"), &SkeletonModification3D_Jiggle::get_use_gravity);
-	ClassDB::bind_method(D_METHOD("set_gravity", "gravity"), &SkeletonModification3D_Jiggle::set_gravity);
-	ClassDB::bind_method(D_METHOD("get_gravity"), &SkeletonModification3D_Jiggle::get_gravity);
+	ClassDB::bind_method(D_METHOD("set_stiffness", "stiffness"), &SkeletonModification3DJiggle::set_stiffness);
+	ClassDB::bind_method(D_METHOD("get_stiffness"), &SkeletonModification3DJiggle::get_stiffness);
+	ClassDB::bind_method(D_METHOD("set_mass", "mass"), &SkeletonModification3DJiggle::set_mass);
+	ClassDB::bind_method(D_METHOD("get_mass"), &SkeletonModification3DJiggle::get_mass);
+	ClassDB::bind_method(D_METHOD("set_damping", "damping"), &SkeletonModification3DJiggle::set_damping);
+	ClassDB::bind_method(D_METHOD("get_damping"), &SkeletonModification3DJiggle::get_damping);
+	ClassDB::bind_method(D_METHOD("set_use_gravity", "use_gravity"), &SkeletonModification3DJiggle::set_use_gravity);
+	ClassDB::bind_method(D_METHOD("get_use_gravity"), &SkeletonModification3DJiggle::get_use_gravity);
+	ClassDB::bind_method(D_METHOD("set_gravity", "gravity"), &SkeletonModification3DJiggle::set_gravity);
+	ClassDB::bind_method(D_METHOD("get_gravity"), &SkeletonModification3DJiggle::get_gravity);
 
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_name", "joint_idx", "name"), &SkeletonModification3D_Jiggle::jiggle_joint_set_bone_name);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_name", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_bone_name);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_index", "joint_idx", "bone_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_set_bone_index);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_index", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_bone_index);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_name", "joint_idx", "name"), &SkeletonModification3DJiggle::jiggle_joint_set_bone_name);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_name", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_bone_name);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_index", "joint_idx", "bone_idx"), &SkeletonModification3DJiggle::jiggle_joint_set_bone_index);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_index", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_bone_index);
 
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_override", "joint_idx", "override"), &SkeletonModification3D_Jiggle::jiggle_joint_set_override);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_override", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_override);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_stiffness", "joint_idx", "stiffness"), &SkeletonModification3D_Jiggle::jiggle_joint_set_stiffness);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_stiffness", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_stiffness);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_mass", "joint_idx", "mass"), &SkeletonModification3D_Jiggle::jiggle_joint_set_mass);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_mass", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_mass);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_damping", "joint_idx", "damping"), &SkeletonModification3D_Jiggle::jiggle_joint_set_damping);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_damping", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_damping);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_use_gravity", "joint_idx", "use_gravity"), &SkeletonModification3D_Jiggle::jiggle_joint_set_use_gravity);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_use_gravity", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_use_gravity);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_set_gravity", "joint_idx", "gravity"), &SkeletonModification3D_Jiggle::jiggle_joint_set_gravity);
-	ClassDB::bind_method(D_METHOD("jiggle_joint_get_gravity", "joint_idx"), &SkeletonModification3D_Jiggle::jiggle_joint_get_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_override", "joint_idx", "override"), &SkeletonModification3DJiggle::jiggle_joint_set_override);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_override", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_override);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_stiffness", "joint_idx", "stiffness"), &SkeletonModification3DJiggle::jiggle_joint_set_stiffness);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_stiffness", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_stiffness);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_mass", "joint_idx", "mass"), &SkeletonModification3DJiggle::jiggle_joint_set_mass);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_mass", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_mass);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_damping", "joint_idx", "damping"), &SkeletonModification3DJiggle::jiggle_joint_set_damping);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_damping", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_damping);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_use_gravity", "joint_idx", "use_gravity"), &SkeletonModification3DJiggle::jiggle_joint_set_use_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_use_gravity", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_use_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_set_gravity", "joint_idx", "gravity"), &SkeletonModification3DJiggle::jiggle_joint_set_gravity);
+	ClassDB::bind_method(D_METHOD("jiggle_joint_get_gravity", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_gravity);
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "jiggle_data_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_jiggle_data_chain_length", "get_jiggle_data_chain_length");
@@ -1929,7 +1929,7 @@ void SkeletonModification3D_Jiggle::_bind_methods() {
 	ADD_GROUP("", "");
 }
 
-SkeletonModification3D_Jiggle::SkeletonModification3D_Jiggle() {
+SkeletonModification3DJiggle::SkeletonModification3DJiggle() {
 	stack = nullptr;
 	is_setup = false;
 	jiggle_data_chain = Vector<Jiggle_Joint_Data>();
@@ -1941,7 +1941,7 @@ SkeletonModification3D_Jiggle::SkeletonModification3D_Jiggle() {
 	enabled = true;
 }
 
-SkeletonModification3D_Jiggle::~SkeletonModification3D_Jiggle() {
+SkeletonModification3DJiggle::~SkeletonModification3DJiggle() {
 }
 
 ///////////////////////////////////////
@@ -2222,7 +2222,6 @@ String SkeletonModification3DTwoBoneIK::get_joint_one_bone_name() const {
 
 void SkeletonModification3DTwoBoneIK::set_joint_one_bone_idx(int p_bone_idx) {
 	joint_one_bone_idx = p_bone_idx;
-	joint_one_bone_name = "";
 	if (stack && stack->skeleton) {
 		joint_one_bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 	}
@@ -2257,7 +2256,6 @@ String SkeletonModification3DTwoBoneIK::get_joint_two_bone_name() const {
 
 void SkeletonModification3DTwoBoneIK::set_joint_two_bone_idx(int p_bone_idx) {
 	joint_two_bone_idx = p_bone_idx;
-	joint_two_bone_name = "";
 	if (stack && stack->skeleton) {
 		joint_two_bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 	}
@@ -2304,8 +2302,6 @@ void SkeletonModification3DTwoBoneIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_joint_two_length"), &SkeletonModification3DTwoBoneIK::get_joint_two_length);
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
-	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "axis_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_axis_node", "get_axis_node");
-
 	ADD_GROUP("", "");
 }
 

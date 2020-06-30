@@ -113,11 +113,11 @@ public:
 };
 
 ///////////////////////////////////////
-// SkeletonModification3D_LookAt
+// SkeletonModification3DLookAt
 ///////////////////////////////////////
 
-class SkeletonModification3D_LookAt : public SkeletonModification3D {
-	GDCLASS(SkeletonModification3D_LookAt, SkeletonModification3D);
+class SkeletonModification3DLookAt : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3DLookAt, SkeletonModification3D);
 
 private:
 	String bone_name = "";
@@ -158,16 +158,16 @@ public:
 	bool get_lock_rotation_y() const;
 	bool get_lock_rotation_z() const;
 
-	SkeletonModification3D_LookAt();
-	~SkeletonModification3D_LookAt();
+	SkeletonModification3DLookAt();
+	~SkeletonModification3DLookAt();
 };
 
 ///////////////////////////////////////
 // SkeletonModification3D_CCDIK
 ///////////////////////////////////////
 
-class SkeletonModification3D_CCDIK : public SkeletonModification3D {
-	GDCLASS(SkeletonModification3D_CCDIK, SkeletonModification3D);
+class SkeletonModification3DCCDIK : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3DCCDIK, SkeletonModification3D);
 
 private:
 	enum CCDIK_Axes {
@@ -254,16 +254,16 @@ public:
 	int get_ccdik_data_chain_length();
 	void set_ccdik_data_chain_length(int p_new_length);
 
-	SkeletonModification3D_CCDIK();
-	~SkeletonModification3D_CCDIK();
+	SkeletonModification3DCCDIK();
+	~SkeletonModification3DCCDIK();
 };
 
 ///////////////////////////////////////
-// SkeletonModification3D_FABRIK
+// SkeletonModification3DFABRIK
 ///////////////////////////////////////
 
-class SkeletonModification3D_FABRIK : public SkeletonModification3D {
-	GDCLASS(SkeletonModification3D_FABRIK, SkeletonModification3D);
+class SkeletonModification3DFABRIK : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3DFABRIK, SkeletonModification3D);
 
 private:
 	struct FABRIK_Joint_Data {
@@ -339,16 +339,16 @@ public:
 	bool fabrik_joint_get_use_target_basis(int p_joint_idx) const;
 	void fabrik_joint_set_use_target_basis(int p_joint_idx, bool use_basis);
 
-	SkeletonModification3D_FABRIK();
-	~SkeletonModification3D_FABRIK();
+	SkeletonModification3DFABRIK();
+	~SkeletonModification3DFABRIK();
 };
 
 ///////////////////////////////////////
 // SkeletonModification3D_Jiggle
 ///////////////////////////////////////
 
-class SkeletonModification3D_Jiggle : public SkeletonModification3D {
-	GDCLASS(SkeletonModification3D_Jiggle, SkeletonModification3D);
+class SkeletonModification3DJiggle : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3DJiggle, SkeletonModification3D);
 
 private:
 	struct Jiggle_Joint_Data {
@@ -430,8 +430,8 @@ public:
 	void jiggle_joint_set_gravity(int joint_idx, Vector3 p_gravity);
 	Vector3 jiggle_joint_get_gravity(int joint_idx) const;
 
-	SkeletonModification3D_Jiggle();
-	~SkeletonModification3D_Jiggle();
+	SkeletonModification3DJiggle();
+	~SkeletonModification3DJiggle();
 };
 
 ///////////////////////////////////////
@@ -442,7 +442,6 @@ class SkeletonModification3DTwoBoneIK : public SkeletonModification3D {
 	GDCLASS(SkeletonModification3DTwoBoneIK, SkeletonModification3D);
 
 private:
-
 	NodePath target_node;
 	ObjectID target_node_cache;
 
