@@ -34,6 +34,8 @@
 #include "scene/3d/skeleton_3d.h"
 
 ///////////////////////////////////////
+// SkeletonModificationStack3D
+///////////////////////////////////////
 
 class Skeleton3D;
 class SkeletonModification3D;
@@ -85,6 +87,8 @@ public:
 };
 
 ///////////////////////////////////////
+// SkeletonModification3D
+///////////////////////////////////////
 
 class SkeletonModification3D : public Resource {
 	GDCLASS(SkeletonModification3D, Resource);
@@ -108,6 +112,8 @@ public:
 	SkeletonModification3D();
 };
 
+///////////////////////////////////////
+// SkeletonModification3D_LookAt
 ///////////////////////////////////////
 
 class SkeletonModification3D_LookAt : public SkeletonModification3D {
@@ -157,7 +163,7 @@ public:
 };
 
 ///////////////////////////////////////
-
+// SkeletonModification3D_CCDIK
 ///////////////////////////////////////
 
 class SkeletonModification3D_CCDIK : public SkeletonModification3D {
@@ -253,7 +259,7 @@ public:
 };
 
 ///////////////////////////////////////
-
+// SkeletonModification3D_FABRIK
 ///////////////////////////////////////
 
 class SkeletonModification3D_FABRIK : public SkeletonModification3D {
@@ -338,7 +344,7 @@ public:
 };
 
 ///////////////////////////////////////
-
+// SkeletonModification3D_Jiggle
 ///////////////////////////////////////
 
 class SkeletonModification3D_Jiggle : public SkeletonModification3D {
@@ -429,5 +435,70 @@ public:
 };
 
 ///////////////////////////////////////
+// SkeletonModification3DTwoBoneIK
+///////////////////////////////////////
+
+class SkeletonModification3DTwoBoneIK : public SkeletonModification3D {
+	GDCLASS(SkeletonModification3DTwoBoneIK, SkeletonModification3D);
+
+private:
+
+	NodePath target_node;
+	ObjectID target_node_cache;
+
+	bool use_tip_node = false;
+	NodePath tip_node;
+	ObjectID tip_node_cache;
+
+	String joint_one_bone_name = "";
+	int joint_one_bone_idx = -1;
+	String joint_two_bone_name = "";
+	int joint_two_bone_idx = -1;
+
+	bool auto_calculate_joint_length = false;
+	float joint_one_length = -1;
+	float joint_two_length = -1;
+
+	void update_cache_target();
+	void update_cache_tip();
+
+protected:
+	static void _bind_methods();
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	bool _set(const StringName &p_path, const Variant &p_value);
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+
+public:
+	virtual void execute(float delta);
+	virtual void setup_modification(SkeletonModificationStack3D *p_stack);
+
+	void set_target_node(const NodePath &p_target_node);
+	NodePath get_target_node() const;
+
+	void set_use_tip_node(const bool p_use_tip_node);
+	bool get_use_tip_node() const;
+	void set_tip_node(const NodePath &p_tip_node);
+	NodePath get_tip_node() const;
+
+	void set_auto_calculate_joint_length(bool p_calculate);
+	bool get_auto_calculate_joint_length() const;
+
+	void set_joint_one_bone_name(String p_bone_name);
+	String get_joint_one_bone_name() const;
+	void set_joint_one_bone_idx(int p_bone_idx);
+	int get_joint_one_bone_idx() const;
+	void set_joint_one_length(float p_length);
+	float get_joint_one_length() const;
+
+	void set_joint_two_bone_name(String p_bone_name);
+	String get_joint_two_bone_name() const;
+	void set_joint_two_bone_idx(int p_bone_idx);
+	int get_joint_two_bone_idx() const;
+	void set_joint_two_length(float p_length);
+	float get_joint_two_length() const;
+
+	SkeletonModification3DTwoBoneIK();
+	~SkeletonModification3DTwoBoneIK();
+};
 
 #endif // SKELETONMODIFICATION3D_H
