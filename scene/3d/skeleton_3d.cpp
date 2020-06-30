@@ -385,13 +385,13 @@ Transform Skeleton3D::get_bone_local_pose_override(int p_bone) const {
 }
 
 void Skeleton3D::update_bone_rest_forward_vector(int p_bone, bool force_update) {
-	if (bones[p_bone].rest_direction_forward.length_squared() > 0 && force_update == false) {
+	if (bones[p_bone].rest_bone_forward_vector.length_squared() > 0 && force_update == false) {
 		update_bone_rest_forward_axis(p_bone, force_update);
 	}
 
 	// If it is a child/leaf bone...
 	if (get_bone_parent(p_bone) > 0) {
-		bones.write[p_bone].rest_direction_forward = bones[p_bone].rest.origin.normalized();
+		bones.write[p_bone].rest_bone_forward_vector = bones[p_bone].rest.origin.normalized();
 	} else {
 		// If it has children...
 		Vector<int> child_bones = get_bone_children(p_bone);
@@ -401,12 +401,12 @@ void Skeleton3D::update_bone_rest_forward_vector(int p_bone, bool force_update) 
 				combined_child_dir += bones[child_bones[i]].rest.origin.normalized();
 			}
 			combined_child_dir = combined_child_dir / child_bones.size();
-			bones.write[p_bone].rest_direction_forward = combined_child_dir.normalized();
+			bones.write[p_bone].rest_bone_forward_vector = combined_child_dir.normalized();
 		} else {
 			// TODO: see if there is a better way to calculate bone direction!
 			WARN_PRINT("Cannot calculate forward direction for bone " + itos(p_bone));
 			WARN_PRINT("Assuming direction of (0, 1, 0) for bone");
-			bones.write[p_bone].rest_direction_forward = Vector3(0, 1, 0);
+			bones.write[p_bone].rest_bone_forward_vector = Vector3(0, 1, 0);
 		}
 	}
 	update_bone_rest_forward_axis(p_bone, force_update);
@@ -418,26 +418,31 @@ void Skeleton3D::update_bone_rest_forward_axis(int p_bone, bool force_update) {
 		return;
 	}
 
-	Vector3 forward_axis_absolute = bones[p_bone].rest_direction_forward.abs();
+	Vector3 forward_axis_absolute = bones[p_bone].rest_bone_forward_vector.abs();
 	if (forward_axis_absolute.x > forward_axis_absolute.y && forward_axis_absolute.x > forward_axis_absolute.z) {
-		if (bones[p_bone].rest_direction_forward.x > 0) {
+		if (bones[p_bone].rest_bone_forward_vector.x > 0) {
 			bones.write[p_bone].rest_bone_forward_axis = BONE_AXIS_X_FORWARD;
 		} else {
 			bones.write[p_bone].rest_bone_forward_axis = BONE_AXIS_NEGATIVE_X_FORWARD;
 		}
 	} else if (forward_axis_absolute.y > forward_axis_absolute.x && forward_axis_absolute.y > forward_axis_absolute.z) {
-		if (bones[p_bone].rest_direction_forward.y > 0) {
+		if (bones[p_bone].rest_bone_forward_vector.y > 0) {
 			bones.write[p_bone].rest_bone_forward_axis = BONE_AXIS_Y_FORWARD;
 		} else {
 			bones.write[p_bone].rest_bone_forward_axis = BONE_AXIS_NEGATIVE_Y_FORWARD;
 		}
 	} else {
-		if (bones[p_bone].rest_direction_forward.z > 0) {
+		if (bones[p_bone].rest_bone_forward_vector.z > 0) {
 			bones.write[p_bone].rest_bone_forward_axis = BONE_AXIS_Z_FORWARD;
 		} else {
 			bones.write[p_bone].rest_bone_forward_axis = BONE_AXIS_NEGATIVE_Z_FORWARD;
 		}
 	}
+}
+
+Vector3 Skeleton3D::get_bone_axis_forward_vector(int p_bone) {
+	ERR_FAIL_INDEX_V(p_bone, bones.size(), Vector3(0, 0, 0));
+	return bones[p_bone].rest_bone_forward_vector;
 }
 
 int Skeleton3D::get_bone_axis_forward_enum(int p_bone) {

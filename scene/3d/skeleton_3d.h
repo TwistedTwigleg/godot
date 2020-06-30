@@ -107,7 +107,7 @@ private:
 
 		// The forward direction vector and rest bone forward acis are cached because they do not change
 		// 99% of the time, but recalculating them can be expensive on models with many bones.
-		Vector3 rest_direction_forward;
+		Vector3 rest_bone_forward_vector;
 		int rest_bone_forward_axis = -1;
 
 		Bone() {
@@ -125,7 +125,7 @@ private:
 			local_pose_override_reset = false;
 			child_bones = Vector<int>();
 
-			rest_direction_forward = Vector3(0, 0, 0);
+			rest_bone_forward_vector = Vector3(0, 0, 0);
 			rest_bone_forward_axis = -1;
 		}
 	};
@@ -244,6 +244,7 @@ public:
 
 	void update_bone_rest_forward_vector(int p_bone, bool force_update = false);
 	void update_bone_rest_forward_axis(int p_bone, bool force_update = false);
+	Vector3 get_bone_axis_forward_vector(int p_bone);
 	int get_bone_axis_forward_enum(int p_bone);
 
 	// Helper functions
