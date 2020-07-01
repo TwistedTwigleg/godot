@@ -2035,10 +2035,19 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		return;
 	}
 
+	// Update joint lengths (if needed)
+	if (auto_calculate_joint_length && (joint_one_length < 0 || joint_two_length < 0)) {
+		calculate_joint_lengths();
+		// For some reason, the lengths get swapped...
+		float tmp = joint_one_length;
+		joint_one_length = joint_two_length;
+		joint_two_length = tmp;
+	}
+
 	// Adopted from the links below:
 	// http://theorangeduck.com/page/simple-two-joint
 	// https://www.alanzucconi.com/2018/05/02/ik-2d-2/
-	// With slight modifications
+	// With modifications by TwistedTwigleg
 
 	Node3D *target = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
 	ERR_FAIL_COND_MSG(!target, "Target node is not a Node3D-based node. Cannot execute modification!");
@@ -2049,34 +2058,19 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	Transform bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
 	Transform bone_two_tip_trans = Transform();
 
-	// TODO: cache this - and use the rest transform so bone position is (hopefully) not as much of an issue.
-	if (auto_calculate_joint_length) {
-		joint_one_length = bone_one_trans.origin.distance_to(bone_two_trans.origin);
-	}
-
 	if (use_tip_node) {
 		Node3D *tip = Object::cast_to<Node3D>(ObjectDB::get_instance(tip_node_cache));
 		ERR_FAIL_COND_MSG(!tip, "Tip node is not a Node3D-based node. Cannot execute modification!");
 		ERR_FAIL_COND_MSG(!tip->is_inside_tree(), "Tip node is not in the scene tree. Cannot execute modification!");
-
 		bone_two_tip_trans = stack->skeleton->world_transform_to_global_pose(tip->get_global_transform());
-
-		// TODO: cache this - and use the rest transform so bone position is (hopefully) not as much of an issue.
-		if (auto_calculate_joint_length) {
-			joint_two_length = bone_two_trans.origin.distance_to(bone_two_tip_trans.origin);
-		}
 	} else {
-		if (auto_calculate_joint_length == true) {
-			WARN_PRINT("TwoBoneIK modification: Cannot auto calculate length for joint 2!");
-		}
-
 		// Needs testing!
 		bone_two_tip_trans.origin = bone_two_tip_trans.origin;
 		bone_two_tip_trans.origin += bone_two_trans.basis.xform(stack->skeleton->get_bone_axis_forward_vector(joint_two_bone_idx)).normalized() * joint_two_length;
 	}
-	float joint_one_to_target_length = bone_one_trans.origin.distance_to(target_trans.origin);
 
 	// If the target is too far, then straighten the bones
+	float joint_one_to_target_length = bone_one_trans.origin.distance_to(target_trans.origin);
 	if (joint_one_length + joint_two_length < joint_one_to_target_length) {
 		// Set the target *just* out of reach
 		joint_one_to_target_length = joint_one_length + joint_two_length + 0.01;
@@ -2088,27 +2082,30 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	float sqr_three_length = joint_one_to_target_length * joint_one_to_target_length;
 
 	// Calcualte the angles
-	float ac_ab_0 = Math::acos(bone_two_tip_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_one_trans.origin)));
-	float ba_bc_0 = Math::acos(bone_two_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_two_tip_trans.origin)));
-	float ac_at_0 = Math::acos(bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).dot(bone_one_trans.origin.direction_to(target_trans.origin)));
+	float ac_ab_0 = Math::acos(CLAMP(bone_two_tip_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_one_trans.origin)), -1, 1));
+	float ba_bc_0 = Math::acos(CLAMP(bone_two_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_two_tip_trans.origin)), -1, 1));
+	float ac_at_0 = Math::acos(CLAMP(bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).dot(bone_one_trans.origin.direction_to(target_trans.origin)), -1, 1));
 
 	float ac_ab_1 = Math::acos(CLAMP((sqr_two_length - sqr_one_length - sqr_three_length) / (-2.0 * joint_one_length * joint_one_to_target_length), -1, 1));
 	float ba_bc_1 = Math::acos(CLAMP((sqr_three_length - sqr_one_length - sqr_two_length) / (-2.0 * joint_one_length * joint_two_length), -1, 1));
 
 	// TODO: add option for manually defining axis0
-	Vector3 axis_0 = (bone_two_tip_trans.origin - bone_one_trans.origin).cross(bone_two_trans.origin - bone_one_trans.origin).normalized();
-	Vector3 axis_1 = (bone_two_tip_trans.origin - bone_one_trans.origin).cross(target_trans.origin - bone_one_trans.origin).normalized();
+	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
+	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
 	float r0_angle = ac_ab_1 - ac_ab_0;
 	float r1_angle = ba_bc_1 - ba_bc_0;
 	float r2_angle = ac_at_0;
 
-	Quat rot_0 = Quat(bone_one_trans.basis.get_rotation_quat().inverse().xform(axis_0).normalized(), r0_angle);
-	Quat rot_1 = Quat(bone_two_trans.basis.get_rotation_quat().inverse().xform(axis_0).normalized(), r1_angle);
-	Quat rot_2 = Quat(bone_one_trans.basis.get_rotation_quat().inverse().xform(axis_1).normalized(), r2_angle);
+	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
+	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
 
-	bone_one_trans.basis.set_quat((bone_one_trans.basis.get_rotation_quat() * rot_0) * rot_2);
-	bone_two_trans.basis.set_quat(bone_two_trans.basis.get_rotation_quat() * (rot_1 * rot_2));
+	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), r0_angle);
+	Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), r1_angle);
+	Quat rot_2 = Quat(bone_one_quat.inverse().xform(axis_1).normalized(), r2_angle);
+
+	bone_one_trans.basis.set_quat(bone_one_quat * (rot_0 * rot_2));
+	bone_two_trans.basis.set_quat(bone_two_quat * rot_1);
 
 	bone_one_trans = stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans);
 	bone_one_trans.origin = Vector3(0, 0, 0);
@@ -2119,8 +2116,6 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	bone_two_trans.origin = Vector3(0, 0, 0);
 	stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
 	stack->skeleton->force_update_bone_children_transforms(joint_two_bone_idx);
-
-	// TODO: allow for using a manually defined bend axis!
 }
 
 void SkeletonModification3DTwoBoneIK::setup_modification(SkeletonModificationStack3D *p_stack) {
@@ -2200,11 +2195,54 @@ NodePath SkeletonModification3DTwoBoneIK::get_tip_node() const {
 
 void SkeletonModification3DTwoBoneIK::set_auto_calculate_joint_length(bool p_calculate) {
 	auto_calculate_joint_length = p_calculate;
+	if (p_calculate == true) {
+		calculate_joint_lengths();
+	}
 	_change_notify();
 }
 
 bool SkeletonModification3DTwoBoneIK::get_auto_calculate_joint_length() const {
 	return auto_calculate_joint_length;
+}
+
+void SkeletonModification3DTwoBoneIK::calculate_joint_lengths() {
+	if (!is_setup) {
+		return; // fail silently, as we likely just loaded the scene.
+	}
+	ERR_FAIL_COND_MSG(!stack || stack->skeleton == nullptr,
+			"Modification is not setup and therefore cannot calculate joint lengths!");
+
+	Transform bone_one_rest_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_rest(joint_one_bone_idx));
+	Transform bone_two_rest_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_rest(joint_two_bone_idx));
+
+	joint_one_length = bone_one_rest_trans.origin.distance_to(bone_two_rest_trans.origin);
+
+	if (use_tip_node) {
+		if (tip_node_cache.is_null()) {
+			update_cache_tip();
+			WARN_PRINT("Tip cache is out of date. Updating...");
+		}
+
+		Node3D *tip = Object::cast_to<Node3D>(ObjectDB::get_instance(tip_node_cache));
+		if (tip) {
+			Transform bone_tip_trans = stack->skeleton->world_transform_to_global_pose(tip->get_global_transform());
+			joint_two_length = bone_two_rest_trans.origin.distance_to(bone_tip_trans.origin);
+		}
+	} else {
+		// Attempt to use children bones to get the length
+		Vector<int> bone_two_children = stack->skeleton->get_bone_children(joint_two_bone_idx);
+		if (bone_two_children.size() > 0) {
+			joint_two_length = 0;
+			for (int i = 0; i < bone_two_children.size(); i++) {
+				joint_two_length += bone_two_rest_trans.origin.distance_to(
+						stack->skeleton->local_pose_to_global_pose(bone_two_children[i], stack->skeleton->get_bone_rest(bone_two_children[i])).origin);
+			}
+			joint_two_length = joint_two_length / bone_two_children.size();
+		} else {
+			WARN_PRINT("TwoBoneIK modification: Cannot auto calculate length for joint 2! Auto setting the length to 1...");
+			joint_two_length = 1.0;
+		}
+	}
 }
 
 void SkeletonModification3DTwoBoneIK::set_joint_one_bone_name(String p_bone_name) {
@@ -2233,7 +2271,6 @@ int SkeletonModification3DTwoBoneIK::get_joint_one_bone_idx() const {
 }
 
 void SkeletonModification3DTwoBoneIK::set_joint_one_length(float p_length) {
-	ERR_FAIL_COND_MSG(p_length <= 0, "Joint one length must be more than zero!");
 	joint_one_length = p_length;
 }
 
@@ -2267,7 +2304,6 @@ int SkeletonModification3DTwoBoneIK::get_joint_two_bone_idx() const {
 }
 
 void SkeletonModification3DTwoBoneIK::set_joint_two_length(float p_length) {
-	ERR_FAIL_COND_MSG(p_length <= 0, "Joint two length must be more than zero!");
 	joint_two_length = p_length;
 }
 

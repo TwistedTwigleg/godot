@@ -481,6 +481,7 @@ public:
 
 	void set_auto_calculate_joint_length(bool p_calculate);
 	bool get_auto_calculate_joint_length() const;
+	void calculate_joint_lengths();
 
 	void set_joint_one_bone_name(String p_bone_name);
 	String get_joint_one_bone_name() const;
