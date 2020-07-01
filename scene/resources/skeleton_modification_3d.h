@@ -458,6 +458,9 @@ private:
 	float joint_one_length = -1;
 	float joint_two_length = -1;
 
+	bool auto_calculate_joint_axis = true;
+	Vector3 manual_joint_axis = Vector3(0, 0, 1);
+
 	void update_cache_target();
 	void update_cache_tip();
 
@@ -482,6 +485,11 @@ public:
 	void set_auto_calculate_joint_length(bool p_calculate);
 	bool get_auto_calculate_joint_length() const;
 	void calculate_joint_lengths();
+
+	void set_auto_calculate_joint_axis(bool p_calculate);
+	bool get_auto_calculate_joint_axis() const;
+	void set_manual_joint_axis(Vector3 p_axis);
+	Vector3 get_manual_joint_axis() const;
 
 	void set_joint_one_bone_name(String p_bone_name);
 	String get_joint_one_bone_name() const;

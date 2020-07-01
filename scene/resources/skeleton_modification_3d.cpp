@@ -1957,6 +1957,10 @@ bool SkeletonModification3DTwoBoneIK::_set(const StringName &p_path, const Varia
 		set_tip_node(p_value);
 	} else if (path == "auto_calculate_joint_length") {
 		set_auto_calculate_joint_length(p_value);
+	} else if (path == "auto_calculate_joint_axis") {
+		set_auto_calculate_joint_axis(p_value);
+	} else if (path == "manual_joint_axis") {
+		set_manual_joint_axis(p_value);
 	} else if (path == "joint_one_length") {
 		set_joint_one_length(p_value);
 	} else if (path == "joint_two_length") {
@@ -1983,6 +1987,10 @@ bool SkeletonModification3DTwoBoneIK::_get(const StringName &p_path, Variant &r_
 		r_ret = get_tip_node();
 	} else if (path == "auto_calculate_joint_length") {
 		r_ret = get_auto_calculate_joint_length();
+	} else if (path == "auto_calculate_joint_axis") {
+		r_ret = get_auto_calculate_joint_axis();
+	} else if (path == "manual_joint_axis") {
+		r_ret = get_manual_joint_axis();
 	} else if (path == "joint_one_length") {
 		r_ret = get_joint_one_length();
 	} else if (path == "joint_two_length") {
@@ -2008,8 +2016,13 @@ void SkeletonModification3DTwoBoneIK::_get_property_list(List<PropertyInfo> *p_l
 
 	p_list->push_back(PropertyInfo(Variant::BOOL, "auto_calculate_joint_length", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	if (!auto_calculate_joint_length) {
-		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_one_length", PROPERTY_HINT_RANGE, "0.001, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
-		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_two_length", PROPERTY_HINT_RANGE, "0.001, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_one_length", PROPERTY_HINT_RANGE, "-1, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_two_length", PROPERTY_HINT_RANGE, "-1, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
+	}
+
+	p_list->push_back(PropertyInfo(Variant::BOOL, "auto_calculate_joint_axis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	if (!auto_calculate_joint_axis) {
+		p_list->push_back(PropertyInfo(Variant::VECTOR3, "manual_joint_axis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	}
 
 	p_list->push_back(PropertyInfo(Variant::STRING, "joint_one_bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
@@ -2089,16 +2102,32 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	float ac_ab_1 = Math::acos(CLAMP((sqr_two_length - sqr_one_length - sqr_three_length) / (-2.0 * joint_one_length * joint_one_to_target_length), -1, 1));
 	float ba_bc_1 = Math::acos(CLAMP((sqr_three_length - sqr_one_length - sqr_two_length) / (-2.0 * joint_one_length * joint_two_length), -1, 1));
 
-	// TODO: add option for manually defining axis0
-	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
+	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
+	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
+
+	Vector3 axis_0;
+	if (auto_calculate_joint_axis) {
+		axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
+	} else {
+		if (manual_joint_axis.length_squared() > 0) {
+			WARN_PRINT_ONCE("Manual bend-axis/pole-axis is currently not working as intended!");
+			axis_0 = manual_joint_axis;
+
+			// References to look at and examine for potential solutions:
+			// * https://github.com/nitronoid/SimpleIK
+			// * http://guillaumeblanc.github.io/ozz-animation/samples/two_bone_ik/
+			// * https://github.com/guillaumeblanc/ozz-animation/blob/master/src/animation/runtime/ik_two_bone_job.cc
+			// * https://wirewhiz.com/how-to-code-two-bone-ik-in-unity/
+		} else {
+			ERR_PRINT_ONCE("Manual joint axis has to be a normalized vector! It cannot be an empty vector! Using automatic axis as fallback...");
+			axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
+		}
+	}
 	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
 	float r0_angle = ac_ab_1 - ac_ab_0;
 	float r1_angle = ba_bc_1 - ba_bc_0;
 	float r2_angle = ac_at_0;
-
-	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
-	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
 
 	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), r0_angle);
 	Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), r1_angle);
@@ -2245,9 +2274,25 @@ void SkeletonModification3DTwoBoneIK::calculate_joint_lengths() {
 	}
 }
 
+void SkeletonModification3DTwoBoneIK::set_auto_calculate_joint_axis(bool p_calculate) {
+	auto_calculate_joint_axis = p_calculate;
+	_change_notify();
+}
+
+bool SkeletonModification3DTwoBoneIK::get_auto_calculate_joint_axis() const {
+	return auto_calculate_joint_axis;
+}
+
+void SkeletonModification3DTwoBoneIK::set_manual_joint_axis(Vector3 p_axis) {
+	manual_joint_axis = p_axis.normalized();
+}
+
+Vector3 SkeletonModification3DTwoBoneIK::get_manual_joint_axis() const {
+	return manual_joint_axis;
+}
+
 void SkeletonModification3DTwoBoneIK::set_joint_one_bone_name(String p_bone_name) {
 	joint_one_bone_name = p_bone_name;
-	joint_one_bone_idx = -1;
 	if (stack && stack->skeleton) {
 		joint_one_bone_idx = stack->skeleton->find_bone(p_bone_name);
 	}
@@ -2280,7 +2325,6 @@ float SkeletonModification3DTwoBoneIK::get_joint_one_length() const {
 
 void SkeletonModification3DTwoBoneIK::set_joint_two_bone_name(String p_bone_name) {
 	joint_two_bone_name = p_bone_name;
-	joint_two_bone_idx = -1;
 	if (stack && stack->skeleton) {
 		joint_two_bone_idx = stack->skeleton->find_bone(p_bone_name);
 	}
