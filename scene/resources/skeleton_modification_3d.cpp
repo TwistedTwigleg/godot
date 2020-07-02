@@ -1957,12 +1957,6 @@ bool SkeletonModification3DTwoBoneIK::_set(const StringName &p_path, const Varia
 		set_tip_node(p_value);
 	} else if (path == "auto_calculate_joint_length") {
 		set_auto_calculate_joint_length(p_value);
-	} else if (path == "constrain_to_plane") {
-		set_constrain_to_plane(p_value);
-	} else if (path == "constraint_plane_use_alternate_axis") {
-		set_constraint_plane_use_alternate_axis(p_value);
-	} else if (path == "constraint_plane_rotation") {
-		set_constraint_plane_rotation(p_value);
 	} else if (path == "joint_one_length") {
 		set_joint_one_length(p_value);
 	} else if (path == "joint_two_length") {
@@ -1989,12 +1983,6 @@ bool SkeletonModification3DTwoBoneIK::_get(const StringName &p_path, Variant &r_
 		r_ret = get_tip_node();
 	} else if (path == "auto_calculate_joint_length") {
 		r_ret = get_auto_calculate_joint_length();
-	} else if (path == "constrain_to_plane") {
-		r_ret = get_constrain_to_plane();
-	} else if (path == "constraint_plane_use_alternate_axis") {
-		r_ret = get_constraint_plane_use_alternate_axis();
-	} else if (path == "constraint_plane_rotation") {
-		r_ret = get_constraint_plane_rotation();
 	} else if (path == "joint_one_length") {
 		r_ret = get_joint_one_length();
 	} else if (path == "joint_two_length") {
@@ -2024,12 +2012,6 @@ void SkeletonModification3DTwoBoneIK::_get_property_list(List<PropertyInfo> *p_l
 		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_two_length", PROPERTY_HINT_RANGE, "-1, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
 	}
 
-	p_list->push_back(PropertyInfo(Variant::BOOL, "constrain_to_plane", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-	if (constrain_to_plane) {
-		p_list->push_back(PropertyInfo(Variant::BOOL, "constraint_plane_use_alternate_axis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-		p_list->push_back(PropertyInfo(Variant::FLOAT, "constraint_plane_rotation", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-	}
-
 	p_list->push_back(PropertyInfo(Variant::STRING, "joint_one_bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	p_list->push_back(PropertyInfo(Variant::INT, "joint_one_bone_idx", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	p_list->push_back(PropertyInfo(Variant::STRING, "joint_two_bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
@@ -2052,6 +2034,11 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		WARN_PRINT("Tip cache is out of date. Updating...");
 		return;
 	}
+	if (pole_node_cache.is_null()) {
+		update_cache_pole();
+		WARN_PRINT("Pole cache is out of date. Updating...");
+		return;
+	}
 
 	// Update joint lengths (if needed)
 	if (auto_calculate_joint_length && (joint_one_length < 0 || joint_two_length < 0)) {
@@ -2066,7 +2053,6 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	// http://theorangeduck.com/page/simple-two-joint
 	// https://www.alanzucconi.com/2018/05/02/ik-2d-2/
 	// With modifications by TwistedTwigleg
-
 	Node3D *target = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
 	ERR_FAIL_COND_MSG(!target, "Target node is not a Node3D-based node. Cannot execute modification!");
 	ERR_FAIL_COND_MSG(!target->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
@@ -2085,41 +2071,6 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		// Needs testing!
 		bone_two_tip_trans.origin = bone_two_tip_trans.origin;
 		bone_two_tip_trans.origin += bone_two_trans.basis.xform(stack->skeleton->get_bone_axis_forward_vector(joint_two_bone_idx)).normalized() * joint_two_length;
-	}
-
-	// Not working...
-	if (constrain_to_plane) {
-		// TODO: Need to test with negative facing skeletons.
-		Vector3 plane_normal;
-		int bone_forward_enum = stack->skeleton->get_bone_axis_forward_enum(joint_one_bone_idx);
-		if (bone_forward_enum == stack->skeleton->BONE_AXIS_X_FORWARD || bone_forward_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
-			if (constraint_plane_use_alternate_axis) {
-				plane_normal = Vector3(0, 0, 1);
-			} else {
-				plane_normal = Vector3(0, 1, 0);
-			}
-			plane_normal.rotate(Vector3(1, 0, 0), constraint_plane_rotation);
-		} else if (bone_forward_enum == stack->skeleton->BONE_AXIS_Y_FORWARD || bone_forward_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
-			if (constraint_plane_use_alternate_axis) {
-				plane_normal = Vector3(1, 0, 0);
-			} else {
-				plane_normal = Vector3(0, 0, 1);
-			}
-			plane_normal.rotate(Vector3(0, 1, 0), constraint_plane_rotation);
-		} else {
-			if (constraint_plane_use_alternate_axis) {
-				plane_normal = Vector3(0, 1, 0);
-			} else {
-				plane_normal = Vector3(1, 0, 0);
-			}
-			plane_normal.rotate(Vector3(0, 0, 1), constraint_plane_rotation);
-		}
-
-		Plane constraint_plane = Plane(bone_one_trans.origin, plane_normal);
-		bone_one_trans.origin = constraint_plane.project(bone_one_trans.origin);
-		bone_two_trans.origin = constraint_plane.project(bone_two_trans.origin);
-		bone_two_tip_trans.origin = constraint_plane.project(bone_two_tip_trans.origin);
-		target_trans.origin = constraint_plane.project(target_trans.origin);
 	}
 
 	// If the target is too far, then straighten the bones
@@ -2146,10 +2097,22 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
 	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
+	// TEST - Using a pole target for handling rotation.
+	// Reference: https://github.com/WireWhiz/VR-Instincts/blob/master/Assets/VR%20Instincts/Scripts/BodyTracking/IK.cs
+	// Notes:
+	// It seems Axis0 handles the bones moving inward/outward, while Axis1 (and r2_angle) handles rotating the whole assembly
+	// to reach the target. This might be the missing link with getting a pole vector to work.
+	// If I can get pole vectors to work, then I will consider TwoBoneIK to be (more or less) feature complete.
+	Node3D *pole = Object::cast_to<Node3D>(ObjectDB::get_instance(pole_node_cache));
+	ERR_FAIL_COND_MSG(!pole, "Pole node is not a Node3D-based node. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(!pole->is_inside_tree(), "Pole node is not in the scene tree. Cannot execute modification!");
+	Transform pole_trans = stack->skeleton->world_transform_to_global_pose(pole->get_global_transform());
+	axis_1 = bone_one_trans.origin.direction_to(pole_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin)).normalized();
+
 	float r0_angle = ac_ab_1 - ac_ab_0;
 	float r1_angle = ba_bc_1 - ba_bc_0;
 	float r2_angle = ac_at_0;
-	
+
 	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
 	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
 	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), r0_angle);
@@ -2218,6 +2181,25 @@ void SkeletonModification3DTwoBoneIK::update_cache_tip() {
 	}
 }
 
+void SkeletonModification3DTwoBoneIK::update_cache_pole() {
+	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update tip cache: modification is not properly setup!");
+		return;
+	}
+
+	pole_node_cache = ObjectID();
+	if (stack->skeleton) {
+		if (stack->skeleton->is_inside_tree()) {
+			if (stack->skeleton->has_node(pole_node)) {
+				Node *node = stack->skeleton->get_node(tip_node);
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update pole cache: Pole node is this modification's skeleton or cannot be found!");
+				pole_node_cache = node->get_instance_id();
+			}
+		}
+	}
+}
+
 void SkeletonModification3DTwoBoneIK::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_cache_target();
@@ -2243,6 +2225,15 @@ void SkeletonModification3DTwoBoneIK::set_tip_node(const NodePath &p_tip_node) {
 
 NodePath SkeletonModification3DTwoBoneIK::get_tip_node() const {
 	return tip_node;
+}
+
+void SkeletonModification3DTwoBoneIK::set_pole_node(const NodePath &p_pole_node) {
+	pole_node = p_pole_node;
+	update_cache_pole();
+}
+
+NodePath SkeletonModification3DTwoBoneIK::get_pole_node() const {
+	return pole_node;
 }
 
 void SkeletonModification3DTwoBoneIK::set_auto_calculate_joint_length(bool p_calculate) {
@@ -2295,31 +2286,6 @@ void SkeletonModification3DTwoBoneIK::calculate_joint_lengths() {
 			joint_two_length = 1.0;
 		}
 	}
-}
-
-void SkeletonModification3DTwoBoneIK::set_constrain_to_plane(bool p_constrain) {
-	constrain_to_plane = p_constrain;
-	_change_notify();
-}
-
-bool SkeletonModification3DTwoBoneIK::get_constrain_to_plane() const {
-	return constrain_to_plane;
-}
-
-void SkeletonModification3DTwoBoneIK::set_constraint_plane_use_alternate_axis(bool p_use_alt) {
-	constraint_plane_use_alternate_axis = p_use_alt;
-}
-
-bool SkeletonModification3DTwoBoneIK::get_constraint_plane_use_alternate_axis() const {
-	return constraint_plane_use_alternate_axis;
-}
-
-void SkeletonModification3DTwoBoneIK::set_constraint_plane_rotation(float p_rotation_degrees) {
-	constraint_plane_rotation = Math::deg2rad(p_rotation_degrees); // TODO: move this conversion elsewhere!
-}
-
-float SkeletonModification3DTwoBoneIK::get_constraint_plane_rotation() const {
-	return Math::rad2deg(constraint_plane_rotation); // TODO: move this conversion elsewhere!
 }
 
 void SkeletonModification3DTwoBoneIK::set_joint_one_bone_name(String p_bone_name) {
@@ -2390,6 +2356,9 @@ void SkeletonModification3DTwoBoneIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3DTwoBoneIK::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3DTwoBoneIK::get_target_node);
 
+	ClassDB::bind_method(D_METHOD("set_pole_node", "pole_nodepath"), &SkeletonModification3DTwoBoneIK::set_pole_node);
+	ClassDB::bind_method(D_METHOD("get_pole_node"), &SkeletonModification3DTwoBoneIK::get_pole_node);
+
 	ClassDB::bind_method(D_METHOD("set_use_tip_node", "use_tip_node"), &SkeletonModification3DTwoBoneIK::set_use_tip_node);
 	ClassDB::bind_method(D_METHOD("get_use_tip_node"), &SkeletonModification3DTwoBoneIK::get_use_tip_node);
 	ClassDB::bind_method(D_METHOD("set_tip_node", "tip_nodepath"), &SkeletonModification3DTwoBoneIK::set_tip_node);
@@ -2413,6 +2382,7 @@ void SkeletonModification3DTwoBoneIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_joint_two_length"), &SkeletonModification3DTwoBoneIK::get_joint_two_length);
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "pole_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_pole_node", "get_pole_node");
 	ADD_GROUP("", "");
 }
 
