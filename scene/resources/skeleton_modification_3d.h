@@ -449,7 +449,7 @@ private:
 	NodePath tip_node;
 	ObjectID tip_node_cache;
 
-	// TODO: make pole use optional.
+	bool use_pole_node = false;
 	NodePath pole_node;
 	ObjectID pole_node_cache;
 
@@ -484,6 +484,8 @@ public:
 	void set_tip_node(const NodePath &p_tip_node);
 	NodePath get_tip_node() const;
 
+	void set_use_pole_node(const bool p_use_pole_node);
+	bool get_use_pole_node() const;
 	void set_pole_node(const NodePath &p_pole_node);
 	NodePath get_pole_node() const;
 

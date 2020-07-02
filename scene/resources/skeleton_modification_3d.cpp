@@ -1957,6 +1957,10 @@ bool SkeletonModification3DTwoBoneIK::_set(const StringName &p_path, const Varia
 		set_tip_node(p_value);
 	} else if (path == "auto_calculate_joint_length") {
 		set_auto_calculate_joint_length(p_value);
+	} else if (path == "use_pole_node") {
+		set_use_pole_node(p_value);
+	} else if (path == "pole_node") {
+		set_pole_node(p_value);
 	} else if (path == "joint_one_length") {
 		set_joint_one_length(p_value);
 	} else if (path == "joint_two_length") {
@@ -1983,6 +1987,10 @@ bool SkeletonModification3DTwoBoneIK::_get(const StringName &p_path, Variant &r_
 		r_ret = get_tip_node();
 	} else if (path == "auto_calculate_joint_length") {
 		r_ret = get_auto_calculate_joint_length();
+	} else if (path == "use_pole_node") {
+		r_ret = get_use_pole_node();
+	} else if (path == "pole_node") {
+		r_ret = get_pole_node();
 	} else if (path == "joint_one_length") {
 		r_ret = get_joint_one_length();
 	} else if (path == "joint_two_length") {
@@ -2012,6 +2020,11 @@ void SkeletonModification3DTwoBoneIK::_get_property_list(List<PropertyInfo> *p_l
 		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_two_length", PROPERTY_HINT_RANGE, "-1, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
 	}
 
+	p_list->push_back(PropertyInfo(Variant::BOOL, "use_pole_node", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	if (use_pole_node) {
+		p_list->push_back(PropertyInfo(Variant::NODE_PATH, "pole_node", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D", PROPERTY_USAGE_DEFAULT));
+	}
+
 	p_list->push_back(PropertyInfo(Variant::STRING, "joint_one_bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	p_list->push_back(PropertyInfo(Variant::INT, "joint_one_bone_idx", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	p_list->push_back(PropertyInfo(Variant::STRING, "joint_two_bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
@@ -2027,16 +2040,6 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	if (target_node_cache.is_null()) {
 		update_cache_target();
 		WARN_PRINT("Target cache is out of date. Updating...");
-		return;
-	}
-	if (tip_node_cache.is_null()) {
-		update_cache_tip();
-		WARN_PRINT("Tip cache is out of date. Updating...");
-		return;
-	}
-	if (pole_node_cache.is_null()) {
-		update_cache_pole();
-		WARN_PRINT("Pole cache is out of date. Updating...");
 		return;
 	}
 
@@ -2062,10 +2065,49 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	Transform bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
 	Transform bone_two_tip_trans = Transform();
 
+	// TODO: In progress - not working just yet!
+	// Make the first joint look at the pole, and the second look at the target. That way, the
+	// TwoBoneIK solver has to really only handle extension/contraction, which should make it align with the pole.
+	// Not ideal, but hopefully it is a workable solution.
+	if (use_pole_node) {
+		if (pole_node_cache.is_null()) {
+			update_cache_pole();
+			WARN_PRINT("Pole cache is out of date. Updating...");
+			return;
+		}
+
+		Node3D *pole = Object::cast_to<Node3D>(ObjectDB::get_instance(pole_node_cache));
+		ERR_FAIL_COND_MSG(!pole, "Pole node is not a Node3D-based node. Cannot execute modification!");
+		ERR_FAIL_COND_MSG(!pole->is_inside_tree(), "Pole node is not in the scene tree. Cannot execute modification!");
+		Transform pole_trans = stack->skeleton->world_transform_to_global_pose(pole->get_global_transform());
+
+		bone_one_trans = bone_one_trans.looking_at(pole_trans.origin, Vector3(0, 1, 0));
+		bone_one_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_one_bone_idx, bone_one_trans.basis);
+		bone_one_trans = stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans);
+		stack->skeleton->set_bone_local_pose_override(joint_one_bone_idx, bone_one_trans, stack->strength, true);
+		stack->skeleton->force_update_bone_children_transforms(joint_one_bone_idx);
+		bone_one_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, bone_one_trans);
+
+		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
+		bone_two_trans = bone_two_trans.looking_at(target_trans.origin, Vector3(0, 1, 0));
+		bone_two_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_two_bone_idx, bone_two_trans.basis);
+		bone_two_trans = stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans);
+		stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
+		stack->skeleton->force_update_bone_children_transforms(joint_two_bone_idx);
+		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, bone_two_trans);
+	}
+
 	if (use_tip_node) {
+		if (tip_node_cache.is_null()) {
+			update_cache_tip();
+			WARN_PRINT("Tip cache is out of date. Updating...");
+			return;
+		}
+
 		Node3D *tip = Object::cast_to<Node3D>(ObjectDB::get_instance(tip_node_cache));
 		ERR_FAIL_COND_MSG(!tip, "Tip node is not a Node3D-based node. Cannot execute modification!");
 		ERR_FAIL_COND_MSG(!tip->is_inside_tree(), "Tip node is not in the scene tree. Cannot execute modification!");
+		tip->force_update_transform();
 		bone_two_tip_trans = stack->skeleton->world_transform_to_global_pose(tip->get_global_transform());
 	} else {
 		// Needs testing!
@@ -2093,31 +2135,14 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	float ac_ab_1 = Math::acos(CLAMP((sqr_two_length - sqr_one_length - sqr_three_length) / (-2.0 * joint_one_length * joint_one_to_target_length), -1, 1));
 	float ba_bc_1 = Math::acos(CLAMP((sqr_three_length - sqr_one_length - sqr_two_length) / (-2.0 * joint_one_length * joint_two_length), -1, 1));
 
-	// TODO: See about manually defining the bend axis. I (TwistedTwigleg) tried this and found it was more complex than I had thought.
 	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
 	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
-	// TEST - Using a pole target for handling rotation.
-	// Reference: https://github.com/WireWhiz/VR-Instincts/blob/master/Assets/VR%20Instincts/Scripts/BodyTracking/IK.cs
-	// Notes:
-	// It seems Axis0 handles the bones moving inward/outward, while Axis1 (and r2_angle) handles rotating the whole assembly
-	// to reach the target. This might be the missing link with getting a pole vector to work.
-	// If I can get pole vectors to work, then I will consider TwoBoneIK to be (more or less) feature complete.
-	Node3D *pole = Object::cast_to<Node3D>(ObjectDB::get_instance(pole_node_cache));
-	ERR_FAIL_COND_MSG(!pole, "Pole node is not a Node3D-based node. Cannot execute modification!");
-	ERR_FAIL_COND_MSG(!pole->is_inside_tree(), "Pole node is not in the scene tree. Cannot execute modification!");
-	Transform pole_trans = stack->skeleton->world_transform_to_global_pose(pole->get_global_transform());
-	axis_1 = bone_one_trans.origin.direction_to(pole_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin)).normalized();
-
-	float r0_angle = ac_ab_1 - ac_ab_0;
-	float r1_angle = ba_bc_1 - ba_bc_0;
-	float r2_angle = ac_at_0;
-
 	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
 	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
-	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), r0_angle);
-	Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), r1_angle);
-	Quat rot_2 = Quat(bone_one_quat.inverse().xform(axis_1).normalized(), r2_angle);
+	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), (ac_ab_1 - ac_ab_0));
+	Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), (ba_bc_1 - ba_bc_0));
+	Quat rot_2 = Quat(bone_one_quat.inverse().xform(axis_1).normalized(), ac_at_0);
 
 	bone_one_trans.basis.set_quat(bone_one_quat * (rot_0 * rot_2));
 	bone_two_trans.basis.set_quat(bone_two_quat * rot_1);
@@ -2183,7 +2208,7 @@ void SkeletonModification3DTwoBoneIK::update_cache_tip() {
 
 void SkeletonModification3DTwoBoneIK::update_cache_pole() {
 	if (!is_setup || !stack) {
-		WARN_PRINT("Cannot update tip cache: modification is not properly setup!");
+		WARN_PRINT("Cannot update pole cache: modification is not properly setup!");
 		return;
 	}
 
@@ -2191,7 +2216,7 @@ void SkeletonModification3DTwoBoneIK::update_cache_pole() {
 	if (stack->skeleton) {
 		if (stack->skeleton->is_inside_tree()) {
 			if (stack->skeleton->has_node(pole_node)) {
-				Node *node = stack->skeleton->get_node(tip_node);
+				Node *node = stack->skeleton->get_node(pole_node);
 				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
 						"Cannot update pole cache: Pole node is this modification's skeleton or cannot be found!");
 				pole_node_cache = node->get_instance_id();
@@ -2225,6 +2250,15 @@ void SkeletonModification3DTwoBoneIK::set_tip_node(const NodePath &p_tip_node) {
 
 NodePath SkeletonModification3DTwoBoneIK::get_tip_node() const {
 	return tip_node;
+}
+
+void SkeletonModification3DTwoBoneIK::set_use_pole_node(const bool p_use_pole_node) {
+	use_pole_node = p_use_pole_node;
+	_change_notify();
+}
+
+bool SkeletonModification3DTwoBoneIK::get_use_pole_node() const {
+	return use_pole_node;
 }
 
 void SkeletonModification3DTwoBoneIK::set_pole_node(const NodePath &p_pole_node) {
@@ -2356,6 +2390,8 @@ void SkeletonModification3DTwoBoneIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification3DTwoBoneIK::set_target_node);
 	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification3DTwoBoneIK::get_target_node);
 
+	ClassDB::bind_method(D_METHOD("set_use_pole_node", "use_pole_node"), &SkeletonModification3DTwoBoneIK::set_use_pole_node);
+	ClassDB::bind_method(D_METHOD("get_use_pole_node"), &SkeletonModification3DTwoBoneIK::get_use_pole_node);
 	ClassDB::bind_method(D_METHOD("set_pole_node", "pole_nodepath"), &SkeletonModification3DTwoBoneIK::set_pole_node);
 	ClassDB::bind_method(D_METHOD("get_pole_node"), &SkeletonModification3DTwoBoneIK::get_pole_node);
 
@@ -2382,7 +2418,6 @@ void SkeletonModification3DTwoBoneIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_joint_two_length"), &SkeletonModification3DTwoBoneIK::get_joint_two_length);
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_target_node", "get_target_node");
-	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "pole_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node3D"), "set_pole_node", "get_pole_node");
 	ADD_GROUP("", "");
 }
 
