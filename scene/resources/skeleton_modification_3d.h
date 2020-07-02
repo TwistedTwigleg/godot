@@ -458,8 +458,9 @@ private:
 	float joint_one_length = -1;
 	float joint_two_length = -1;
 
-	bool auto_calculate_joint_axis = true;
-	Vector3 manual_joint_axis = Vector3(0, 0, 1);
+	bool constrain_to_plane = false;
+	bool constraint_plane_use_alternate_axis = false;
+	float constraint_plane_rotation = 0.0;
 
 	void update_cache_target();
 	void update_cache_tip();
@@ -486,10 +487,12 @@ public:
 	bool get_auto_calculate_joint_length() const;
 	void calculate_joint_lengths();
 
-	void set_auto_calculate_joint_axis(bool p_calculate);
-	bool get_auto_calculate_joint_axis() const;
-	void set_manual_joint_axis(Vector3 p_axis);
-	Vector3 get_manual_joint_axis() const;
+	void set_constrain_to_plane(bool p_calculate);
+	bool get_constrain_to_plane() const;
+	void set_constraint_plane_use_alternate_axis(bool p_alternate_axis);
+	bool get_constraint_plane_use_alternate_axis() const;
+	void set_constraint_plane_rotation(float p_rotation);
+	float get_constraint_plane_rotation() const;
 
 	void set_joint_one_bone_name(String p_bone_name);
 	String get_joint_one_bone_name() const;

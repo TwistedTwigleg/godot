@@ -1957,10 +1957,12 @@ bool SkeletonModification3DTwoBoneIK::_set(const StringName &p_path, const Varia
 		set_tip_node(p_value);
 	} else if (path == "auto_calculate_joint_length") {
 		set_auto_calculate_joint_length(p_value);
-	} else if (path == "auto_calculate_joint_axis") {
-		set_auto_calculate_joint_axis(p_value);
-	} else if (path == "manual_joint_axis") {
-		set_manual_joint_axis(p_value);
+	} else if (path == "constrain_to_plane") {
+		set_constrain_to_plane(p_value);
+	} else if (path == "constraint_plane_use_alternate_axis") {
+		set_constraint_plane_use_alternate_axis(p_value);
+	} else if (path == "constraint_plane_rotation") {
+		set_constraint_plane_rotation(p_value);
 	} else if (path == "joint_one_length") {
 		set_joint_one_length(p_value);
 	} else if (path == "joint_two_length") {
@@ -1987,10 +1989,12 @@ bool SkeletonModification3DTwoBoneIK::_get(const StringName &p_path, Variant &r_
 		r_ret = get_tip_node();
 	} else if (path == "auto_calculate_joint_length") {
 		r_ret = get_auto_calculate_joint_length();
-	} else if (path == "auto_calculate_joint_axis") {
-		r_ret = get_auto_calculate_joint_axis();
-	} else if (path == "manual_joint_axis") {
-		r_ret = get_manual_joint_axis();
+	} else if (path == "constrain_to_plane") {
+		r_ret = get_constrain_to_plane();
+	} else if (path == "constraint_plane_use_alternate_axis") {
+		r_ret = get_constraint_plane_use_alternate_axis();
+	} else if (path == "constraint_plane_rotation") {
+		r_ret = get_constraint_plane_rotation();
 	} else if (path == "joint_one_length") {
 		r_ret = get_joint_one_length();
 	} else if (path == "joint_two_length") {
@@ -2020,9 +2024,10 @@ void SkeletonModification3DTwoBoneIK::_get_property_list(List<PropertyInfo> *p_l
 		p_list->push_back(PropertyInfo(Variant::FLOAT, "joint_two_length", PROPERTY_HINT_RANGE, "-1, 10000, 0.001", PROPERTY_USAGE_DEFAULT));
 	}
 
-	p_list->push_back(PropertyInfo(Variant::BOOL, "auto_calculate_joint_axis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-	if (!auto_calculate_joint_axis) {
-		p_list->push_back(PropertyInfo(Variant::VECTOR3, "manual_joint_axis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	p_list->push_back(PropertyInfo(Variant::BOOL, "constrain_to_plane", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	if (constrain_to_plane) {
+		p_list->push_back(PropertyInfo(Variant::BOOL, "constraint_plane_use_alternate_axis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "constraint_plane_rotation", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 	}
 
 	p_list->push_back(PropertyInfo(Variant::STRING, "joint_one_bone_name", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
@@ -2082,6 +2087,41 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		bone_two_tip_trans.origin += bone_two_trans.basis.xform(stack->skeleton->get_bone_axis_forward_vector(joint_two_bone_idx)).normalized() * joint_two_length;
 	}
 
+	// Not working...
+	if (constrain_to_plane) {
+		// TODO: Need to test with negative facing skeletons.
+		Vector3 plane_normal;
+		int bone_forward_enum = stack->skeleton->get_bone_axis_forward_enum(joint_one_bone_idx);
+		if (bone_forward_enum == stack->skeleton->BONE_AXIS_X_FORWARD || bone_forward_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
+			if (constraint_plane_use_alternate_axis) {
+				plane_normal = Vector3(0, 0, 1);
+			} else {
+				plane_normal = Vector3(0, 1, 0);
+			}
+			plane_normal.rotate(Vector3(1, 0, 0), constraint_plane_rotation);
+		} else if (bone_forward_enum == stack->skeleton->BONE_AXIS_Y_FORWARD || bone_forward_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
+			if (constraint_plane_use_alternate_axis) {
+				plane_normal = Vector3(1, 0, 0);
+			} else {
+				plane_normal = Vector3(0, 0, 1);
+			}
+			plane_normal.rotate(Vector3(0, 1, 0), constraint_plane_rotation);
+		} else {
+			if (constraint_plane_use_alternate_axis) {
+				plane_normal = Vector3(0, 1, 0);
+			} else {
+				plane_normal = Vector3(1, 0, 0);
+			}
+			plane_normal.rotate(Vector3(0, 0, 1), constraint_plane_rotation);
+		}
+
+		Plane constraint_plane = Plane(bone_one_trans.origin, plane_normal);
+		bone_one_trans.origin = constraint_plane.project(bone_one_trans.origin);
+		bone_two_trans.origin = constraint_plane.project(bone_two_trans.origin);
+		bone_two_tip_trans.origin = constraint_plane.project(bone_two_tip_trans.origin);
+		target_trans.origin = constraint_plane.project(target_trans.origin);
+	}
+
 	// If the target is too far, then straighten the bones
 	float joint_one_to_target_length = bone_one_trans.origin.distance_to(target_trans.origin);
 	if (joint_one_length + joint_two_length < joint_one_to_target_length) {
@@ -2102,33 +2142,16 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	float ac_ab_1 = Math::acos(CLAMP((sqr_two_length - sqr_one_length - sqr_three_length) / (-2.0 * joint_one_length * joint_one_to_target_length), -1, 1));
 	float ba_bc_1 = Math::acos(CLAMP((sqr_three_length - sqr_one_length - sqr_two_length) / (-2.0 * joint_one_length * joint_two_length), -1, 1));
 
-	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
-	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
-
-	Vector3 axis_0;
-	if (auto_calculate_joint_axis) {
-		axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
-	} else {
-		if (manual_joint_axis.length_squared() > 0) {
-			WARN_PRINT_ONCE("Manual bend-axis/pole-axis is currently not working as intended!");
-			axis_0 = manual_joint_axis;
-
-			// References to look at and examine for potential solutions:
-			// * https://github.com/nitronoid/SimpleIK
-			// * http://guillaumeblanc.github.io/ozz-animation/samples/two_bone_ik/
-			// * https://github.com/guillaumeblanc/ozz-animation/blob/master/src/animation/runtime/ik_two_bone_job.cc
-			// * https://wirewhiz.com/how-to-code-two-bone-ik-in-unity/
-		} else {
-			ERR_PRINT_ONCE("Manual joint axis has to be a normalized vector! It cannot be an empty vector! Using automatic axis as fallback...");
-			axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
-		}
-	}
+	// TODO: See about manually defining the bend axis. I (TwistedTwigleg) tried this and found it was more complex than I had thought.
+	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
 	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
 	float r0_angle = ac_ab_1 - ac_ab_0;
 	float r1_angle = ba_bc_1 - ba_bc_0;
 	float r2_angle = ac_at_0;
-
+	
+	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
+	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
 	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), r0_angle);
 	Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), r1_angle);
 	Quat rot_2 = Quat(bone_one_quat.inverse().xform(axis_1).normalized(), r2_angle);
@@ -2274,21 +2297,29 @@ void SkeletonModification3DTwoBoneIK::calculate_joint_lengths() {
 	}
 }
 
-void SkeletonModification3DTwoBoneIK::set_auto_calculate_joint_axis(bool p_calculate) {
-	auto_calculate_joint_axis = p_calculate;
+void SkeletonModification3DTwoBoneIK::set_constrain_to_plane(bool p_constrain) {
+	constrain_to_plane = p_constrain;
 	_change_notify();
 }
 
-bool SkeletonModification3DTwoBoneIK::get_auto_calculate_joint_axis() const {
-	return auto_calculate_joint_axis;
+bool SkeletonModification3DTwoBoneIK::get_constrain_to_plane() const {
+	return constrain_to_plane;
 }
 
-void SkeletonModification3DTwoBoneIK::set_manual_joint_axis(Vector3 p_axis) {
-	manual_joint_axis = p_axis.normalized();
+void SkeletonModification3DTwoBoneIK::set_constraint_plane_use_alternate_axis(bool p_use_alt) {
+	constraint_plane_use_alternate_axis = p_use_alt;
 }
 
-Vector3 SkeletonModification3DTwoBoneIK::get_manual_joint_axis() const {
-	return manual_joint_axis;
+bool SkeletonModification3DTwoBoneIK::get_constraint_plane_use_alternate_axis() const {
+	return constraint_plane_use_alternate_axis;
+}
+
+void SkeletonModification3DTwoBoneIK::set_constraint_plane_rotation(float p_rotation_degrees) {
+	constraint_plane_rotation = Math::deg2rad(p_rotation_degrees); // TODO: move this conversion elsewhere!
+}
+
+float SkeletonModification3DTwoBoneIK::get_constraint_plane_rotation() const {
+	return Math::rad2deg(constraint_plane_rotation); // TODO: move this conversion elsewhere!
 }
 
 void SkeletonModification3DTwoBoneIK::set_joint_one_bone_name(String p_bone_name) {
