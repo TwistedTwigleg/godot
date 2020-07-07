@@ -188,7 +188,7 @@
 	</methods>
 	<members>
 		<member name="chain_max_iterations" type="int" setter="set_chain_max_iterations" getter="get_chain_max_iterations" default="10">
-			The number of times FABRIK will try to solve each time the [method execute] function is called. Setting this value to a lower number will be result in better performance, but this can also result in harsher movements and slower solves.
+			The number of times FABRIK will try to solve each time the [code]execute[/code] function is called. Setting this value to a lower number will be result in better performance, but this can also result in harsher movements and slower solves.
 		</member>
 		<member name="chain_tolerance" type="float" setter="set_chain_tolerance" getter="get_chain_tolerance" default="0.01">
 			The minimum distance the target has to be from the tip of the final bone in the bone chain. Setting this value to a higher number allows for greater performance, but less accurate solves.

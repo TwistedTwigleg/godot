@@ -2034,6 +2034,9 @@ void SkeletonModification3DTwoBoneIK::_get_property_list(List<PropertyInfo> *p_l
 void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
+	ERR_FAIL_COND_MSG(joint_one_bone_idx <= -1 || joint_two_bone_idx <= -1,
+			"One (or more) of the bones in the TwoBoneIK modification are not set! Cannot execute modification!");
+
 	if (!enabled) {
 		return;
 	}
@@ -2151,8 +2154,8 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	if (use_pole_node) {
 		// Update bone_two_trans so its at the latest position, with the rotation of bone_one_trans taken into account, then look at the target.
 		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
-		bone_two_trans = bone_two_trans.looking_at(target_trans.origin, Vector3(0, 1, 0));
-		bone_two_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_two_bone_idx, bone_two_trans.basis);
+		Vector3 forward_vector = stack->skeleton->get_bone_axis_forward_vector(joint_two_bone_idx);
+		bone_two_trans.basis.rotate_to_align(forward_vector, bone_two_trans.origin.direction_to(target_trans.origin));
 
 		bone_two_trans = stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans);
 		stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
@@ -2303,10 +2306,11 @@ void SkeletonModification3DTwoBoneIK::calculate_joint_lengths() {
 	}
 	ERR_FAIL_COND_MSG(!stack || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot calculate joint lengths!");
+	ERR_FAIL_COND_MSG(joint_one_bone_idx <= -1 || joint_two_bone_idx <= -1,
+			"One of the bones in the TwoBoneIK modification are not set! Cannot calculate joint lengths!");
 
 	Transform bone_one_rest_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_rest(joint_one_bone_idx));
 	Transform bone_two_rest_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_rest(joint_two_bone_idx));
-
 	joint_one_length = bone_one_rest_trans.origin.distance_to(bone_two_rest_trans.origin);
 
 	if (use_tip_node) {

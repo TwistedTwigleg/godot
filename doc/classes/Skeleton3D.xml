@@ -228,7 +228,7 @@
 			</argument>
 			<description>
 				Takes the passed-in global pose and converts it to a world transform.
-				This can be used to easily convert a global pose from [Method get_bone_global_pose] to a global transform usable with a node's transform, like [member Node3D.global_transform] for example.
+				This can be used to easily convert a global pose from [method get_bone_global_pose] to a global transform usable with a node's transform, like [member Node3D.global_transform] for example.
 			</description>
 		</method>
 		<method name="global_pose_z_forward_to_bone_forward">
@@ -349,7 +349,7 @@
 			</argument>
 			<description>
 				Sets the custom pose transform, [code]custom_pose[/code], for the bone at [code]bone_idx[/code]. This pose is an addition to the bone rest pose.
-				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_bone_transform] to convert a world transform, like one you can get from a [Node3D], to bone space.
+				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_global_pose] to convert a world transform, like one you can get from a [Node3D], to bone space.
 			</description>
 		</method>
 		<method name="set_bone_disable_rest">
@@ -418,7 +418,7 @@
 			</argument>
 			<description>
 				Returns the pose transform for bone [code]bone_idx[/code].
-				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_bone_transform] to convert a world transform, like one you can get from a [Node3D], to bone space.
+				[b]Note[/b]: The pose transform needs to be in bone space. Use [method world_transform_to_global_pose] to convert a world transform, like one you can get from a [Node3D], to bone space.
 			</description>
 		</method>
 		<method name="set_bone_rest">
@@ -468,7 +468,7 @@
 			</argument>
 			<description>
 				Takes the passed-in global transform and converts it to a global pose.
-				This can be used to easily convert a global transform from [method Node3D.get_global_transform] to a global pose usable with [method set_bone_global_pose_override], for example.
+				This can be used to easily convert a global transform from [member Node3D.global_transform] to a global pose usable with [method set_bone_global_pose_override], for example.
 			</description>
 		</method>
 	</methods>
