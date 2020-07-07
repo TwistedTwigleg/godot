@@ -2061,14 +2061,11 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	ERR_FAIL_COND_MSG(!target->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
 	Transform target_trans = stack->skeleton->world_transform_to_global_pose(target->get_global_transform());
 
-	Transform bone_one_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_one_bone_idx));
-	Transform bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
-	Transform bone_two_tip_trans = Transform();
+	Transform bone_one_trans;
+	Transform bone_two_trans;
 
-	// TODO: In progress - not working just yet!
 	// Make the first joint look at the pole, and the second look at the target. That way, the
 	// TwoBoneIK solver has to really only handle extension/contraction, which should make it align with the pole.
-	// Not ideal, but hopefully it is a workable solution.
 	if (use_pole_node) {
 		if (pole_node_cache.is_null()) {
 			update_cache_pole();
@@ -2081,6 +2078,7 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		ERR_FAIL_COND_MSG(!pole->is_inside_tree(), "Pole node is not in the scene tree. Cannot execute modification!");
 		Transform pole_trans = stack->skeleton->world_transform_to_global_pose(pole->get_global_transform());
 
+		bone_one_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_one_bone_idx));
 		bone_one_trans = bone_one_trans.looking_at(pole_trans.origin, Vector3(0, 1, 0));
 		bone_one_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_one_bone_idx, bone_one_trans.basis);
 		bone_one_trans = stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans);
@@ -2091,71 +2089,88 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
 		bone_two_trans = bone_two_trans.looking_at(target_trans.origin, Vector3(0, 1, 0));
 		bone_two_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_two_bone_idx, bone_two_trans.basis);
-		bone_two_trans = stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans);
-		stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
+		stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans), stack->strength, true);
 		stack->skeleton->force_update_bone_children_transforms(joint_two_bone_idx);
-		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, bone_two_trans);
+	} else {
+		bone_one_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_one_bone_idx));
+		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
 	}
 
+	Transform bone_two_tip_trans;
 	if (use_tip_node) {
 		if (tip_node_cache.is_null()) {
 			update_cache_tip();
 			WARN_PRINT("Tip cache is out of date. Updating...");
 			return;
 		}
-
 		Node3D *tip = Object::cast_to<Node3D>(ObjectDB::get_instance(tip_node_cache));
 		ERR_FAIL_COND_MSG(!tip, "Tip node is not a Node3D-based node. Cannot execute modification!");
 		ERR_FAIL_COND_MSG(!tip->is_inside_tree(), "Tip node is not in the scene tree. Cannot execute modification!");
-		tip->force_update_transform();
 		bone_two_tip_trans = stack->skeleton->world_transform_to_global_pose(tip->get_global_transform());
 	} else {
-		// Needs testing!
-		bone_two_tip_trans.origin = bone_two_tip_trans.origin;
+		// TODO: Needs testing!
+		bone_two_tip_trans = bone_two_tip_trans;
 		bone_two_tip_trans.origin += bone_two_trans.basis.xform(stack->skeleton->get_bone_axis_forward_vector(joint_two_bone_idx)).normalized() * joint_two_length;
 	}
 
-	// If the target is too far, then straighten the bones
 	float joint_one_to_target_length = bone_one_trans.origin.distance_to(target_trans.origin);
 	if (joint_one_length + joint_two_length < joint_one_to_target_length) {
-		// Set the target *just* out of reach
+		// Set the target *just* out of reach to straighten the bones
 		joint_one_to_target_length = joint_one_length + joint_two_length + 0.01;
+	} else if (joint_one_to_target_length < joint_one_length) {
+		// Place the target in reach so the solver doesn't do crazy things
+		joint_one_to_target_length = joint_one_length;
 	}
-	// TODO: handle when the target is too close!
 
+	// Get the square lengths for all three sides of the triangle we'll use to calculate the angles
 	float sqr_one_length = joint_one_length * joint_one_length;
 	float sqr_two_length = joint_two_length * joint_two_length;
 	float sqr_three_length = joint_one_to_target_length * joint_one_to_target_length;
 
-	// Calcualte the angles
+	// Calculate the angles for the first joint using the law of cosigns
 	float ac_ab_0 = Math::acos(CLAMP(bone_two_tip_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_one_trans.origin)), -1, 1));
-	float ba_bc_0 = Math::acos(CLAMP(bone_two_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_two_tip_trans.origin)), -1, 1));
 	float ac_at_0 = Math::acos(CLAMP(bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).dot(bone_one_trans.origin.direction_to(target_trans.origin)), -1, 1));
-
 	float ac_ab_1 = Math::acos(CLAMP((sqr_two_length - sqr_one_length - sqr_three_length) / (-2.0 * joint_one_length * joint_one_to_target_length), -1, 1));
-	float ba_bc_1 = Math::acos(CLAMP((sqr_three_length - sqr_one_length - sqr_two_length) / (-2.0 * joint_one_length * joint_two_length), -1, 1));
 
+	// Calculate the angles of rotation. Angle 0 is the extension/contraction axis, while angle 1 is the rotation axis to align the triangle to the target
 	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
 	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
+	// Make a quaternion with the delta rotation needed to rotate the first joint into alignment
 	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
-	Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
 	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), (ac_ab_1 - ac_ab_0));
-	Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), (ba_bc_1 - ba_bc_0));
 	Quat rot_2 = Quat(bone_one_quat.inverse().xform(axis_1).normalized(), ac_at_0);
 
+	// Apply the rotation to the first joint
 	bone_one_trans.basis.set_quat(bone_one_quat * (rot_0 * rot_2));
-	bone_two_trans.basis.set_quat(bone_two_quat * rot_1);
-
 	bone_one_trans = stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans);
 	bone_one_trans.origin = Vector3(0, 0, 0);
 	stack->skeleton->set_bone_local_pose_override(joint_one_bone_idx, bone_one_trans, stack->strength, true);
 	stack->skeleton->force_update_bone_children_transforms(joint_one_bone_idx);
 
-	bone_two_trans = stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans);
-	bone_two_trans.origin = Vector3(0, 0, 0);
-	stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
-	stack->skeleton->force_update_bone_children_transforms(joint_two_bone_idx);
+	if (use_pole_node) {
+		// Update bone_two_trans so its at the latest position, with the rotation of bone_one_trans taken into account, then look at the target.
+		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
+		bone_two_trans = bone_two_trans.looking_at(target_trans.origin, Vector3(0, 1, 0));
+		bone_two_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_two_bone_idx, bone_two_trans.basis);
+
+		bone_two_trans = stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans);
+		stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
+		stack->skeleton->force_update_bone_children_transforms(joint_two_bone_idx);
+	} else {
+		// Calculate the angles for the second joint using the law of cosigns, make a quaternion with the delta rotation needed to rotate the joint into
+		// alignment, and then apply it to the second joint.
+		float ba_bc_0 = Math::acos(CLAMP(bone_two_trans.origin.direction_to(bone_one_trans.origin).dot(bone_two_trans.origin.direction_to(bone_two_tip_trans.origin)), -1, 1));
+		float ba_bc_1 = Math::acos(CLAMP((sqr_three_length - sqr_one_length - sqr_two_length) / (-2.0 * joint_one_length * joint_two_length), -1, 1));
+		Quat bone_two_quat = bone_two_trans.basis.get_rotation_quat();
+		Quat rot_1 = Quat(bone_two_quat.inverse().xform(axis_0).normalized(), (ba_bc_1 - ba_bc_0));
+		bone_two_trans.basis.set_quat(bone_two_quat * rot_1);
+
+		bone_two_trans = stack->skeleton->global_pose_to_local_pose(joint_two_bone_idx, bone_two_trans);
+		bone_two_trans.origin = Vector3(0, 0, 0);
+		stack->skeleton->set_bone_local_pose_override(joint_two_bone_idx, bone_two_trans, stack->strength, true);
+		stack->skeleton->force_update_bone_children_transforms(joint_two_bone_idx);
+	}
 }
 
 void SkeletonModification3DTwoBoneIK::setup_modification(SkeletonModificationStack3D *p_stack) {
