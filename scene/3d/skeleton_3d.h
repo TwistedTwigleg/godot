@@ -253,7 +253,6 @@ public:
 	Transform global_pose_to_local_pose(int p_bone_idx, Transform p_global_pose);
 	Transform local_pose_to_global_pose(int p_bone_idx, Transform p_local_pose);
 
-	Basis global_pose_bone_forward_to_z_forward(int p_bone_idx, Basis p_basis);
 	Basis global_pose_z_forward_to_bone_forward(int p_bone_idx, Basis p_basis);
 
 	// Modifications

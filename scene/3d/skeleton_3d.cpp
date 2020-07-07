@@ -1073,33 +1073,6 @@ Transform Skeleton3D::local_pose_to_global_pose(int p_bone_idx, Transform p_loca
 	}
 }
 
-// Needs testing!
-Basis Skeleton3D::global_pose_bone_forward_to_z_forward(int p_bone_idx, Basis p_basis) {
-	ERR_FAIL_INDEX_V(p_bone_idx, bones.size(), Basis());
-	Basis return_basis = p_basis;
-
-	// Make sure the data we need is there!
-	if (bones[p_bone_idx].rest_bone_forward_axis < 0) {
-		update_bone_rest_forward_vector(p_bone_idx, true);
-	}
-
-	if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_X_FORWARD) {
-		return_basis.rotate_local(Vector3(0, 1, 0), -(Math_PI / 2.0));
-	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_X_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(0, 1, 0), (Math_PI / 2.0));
-	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_Y_FORWARD) {
-		return_basis.rotate_local(Vector3(1, 0, 0), (Math_PI / 2.0));
-	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_Y_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(1, 0, 0), -(Math_PI / 2.0));
-	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_Z_FORWARD) {
-		// Do nothing!
-	} else if (bones[p_bone_idx].rest_bone_forward_axis == BONE_AXIS_NEGATIVE_Z_FORWARD) { // Needs testing!
-		return_basis.rotate_local(Vector3(0, 0, 1), -Math_PI);
-	}
-
-	return return_basis;
-}
-
 Basis Skeleton3D::global_pose_z_forward_to_bone_forward(int p_bone_idx, Basis p_basis) {
 	ERR_FAIL_INDEX_V(p_bone_idx, bones.size(), Basis());
 	Basis return_basis = p_basis;
@@ -1211,9 +1184,8 @@ void Skeleton3D::_bind_methods() {
 	// Helper functions
 	ClassDB::bind_method(D_METHOD("global_pose_to_world_transform", "global_pose"), &Skeleton3D::global_pose_to_world_transform);
 	ClassDB::bind_method(D_METHOD("world_transform_to_global_pose", "world_transform"), &Skeleton3D::world_transform_to_global_pose);
-	ClassDB::bind_method(D_METHOD("global_pose_to_local_pose", "global_pose"), &Skeleton3D::global_pose_to_local_pose);
-	ClassDB::bind_method(D_METHOD("local_pose_to_global_pose", "local_pose"), &Skeleton3D::local_pose_to_global_pose);
-	ClassDB::bind_method(D_METHOD("global_pose_bone_forward_to_z_forward", "bone_idx", "basis"), &Skeleton3D::global_pose_bone_forward_to_z_forward);
+	ClassDB::bind_method(D_METHOD("global_pose_to_local_pose", "bone_idx", "global_pose"), &Skeleton3D::global_pose_to_local_pose);
+	ClassDB::bind_method(D_METHOD("local_pose_to_global_pose", "bone_idx", "local_pose"), &Skeleton3D::local_pose_to_global_pose);
 	ClassDB::bind_method(D_METHOD("global_pose_z_forward_to_bone_forward", "bone_idx", "basis"), &Skeleton3D::global_pose_z_forward_to_bone_forward);
 
 #ifndef _3D_DISABLED
