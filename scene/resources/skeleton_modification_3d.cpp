@@ -200,9 +200,6 @@ void SkeletonModificationStack3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_modification_count"), &SkeletonModificationStack3D::set_modification_count);
 	ClassDB::bind_method(D_METHOD("get_modification_count"), &SkeletonModificationStack3D::get_modification_count);
 
-	//ClassDB::bind_method(D_METHOD("set_skeleton", "skeleton"), &SkeletonModificationStack3D::set_skeleton);
-	//ClassDB::bind_method(D_METHOD("get_skeleton"), &SkeletonModificationStack3D::get_skeleton);
-
 	ClassDB::bind_method(D_METHOD("get_is_setup"), &SkeletonModificationStack3D::get_is_setup);
 
 	ClassDB::bind_method(D_METHOD("set_enabled", "enabled"), &SkeletonModificationStack3D::set_enabled);
@@ -236,8 +233,7 @@ void SkeletonModification3D::execute(float delta) {
 
 void SkeletonModification3D::setup_modification(SkeletonModificationStack3D *p_stack) {
 	stack = p_stack;
-
-	if (stack != nullptr) {
+	if (stack) {
 		is_setup = true;
 	}
 }
@@ -286,13 +282,13 @@ void SkeletonModification3DLookAt::execute(float delta) {
 		bone_idx = stack->skeleton->find_bone(bone_name);
 	}
 
-	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
-	ERR_FAIL_COND_MSG(!n, "Target node is not a Node3D-based node. Cannot execute modification!");
-	ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
+	Node3D *target = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
+	ERR_FAIL_COND_MSG(!target, "Target node is not a Node3D-based node. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(!target->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
 	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
 
 	Transform new_bone_trans = stack->skeleton->local_pose_to_global_pose(bone_idx, stack->skeleton->get_bone_local_pose_override(bone_idx));
-	Vector3 target_pos = stack->skeleton->world_transform_to_global_pose(n->get_global_transform()).origin;
+	Vector3 target_pos = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
 
 	// Limit rotation by changing the target's position.
 	// NOTE: this does not work when two limits are applied. Will need to adjust.
@@ -333,7 +329,6 @@ void SkeletonModification3DLookAt::setup_modification(SkeletonModificationStack3
 
 void SkeletonModification3DLookAt::set_bone_name(String p_name) {
 	bone_name = p_name;
-	bone_idx = -1;
 	if (stack && stack->skeleton) {
 		bone_idx = stack->skeleton->find_bone(bone_name);
 	}
@@ -354,11 +349,6 @@ void SkeletonModification3DLookAt::set_bone_index(int p_bone_idx) {
 
 	if (stack) {
 		if (stack->skeleton) {
-			if (p_bone_idx > stack->skeleton->get_bone_count()) {
-				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
-				bone_idx = -1;
-				return;
-			}
 			bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 		}
 	}
@@ -609,62 +599,62 @@ void SkeletonModification3DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D *
 
 	// Rotate the ccdik joint
 	if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_TIP) {
-		Vector3 u1;
-		Vector3 u2;
+		Vector3 rotation_vector_from;
+		Vector3 rotation_vector_to;
 
 		// Get the two positions needed.
 		if (perform_in_local_pose) {
-			u1 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin;
-			u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+			rotation_vector_from = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(tip->get_global_transform())).origin;
+			rotation_vector_to = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
 		} else {
-			u1 = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin);
-			u2 = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin);
+			rotation_vector_from = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(tip->get_global_transform()).origin);
+			rotation_vector_to = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin);
 		}
 
 		// Restrict them to the axis and normalize them.
-		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
-		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
+		rotation_vector_from = (rotation_vector_from * ccdik_data.ccdik_axis_vector_inverse).normalized();
+		rotation_vector_to = (rotation_vector_to * ccdik_data.ccdik_axis_vector_inverse).normalized();
 
 		// Rotate the Basis from the first vector, to the second vector.
-		bone_trans.basis.rotate_to_align(u1, u2);
+		bone_trans.basis.rotate_to_align(rotation_vector_from, rotation_vector_to);
 
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FROM_JOINT) {
 		// Get the forward direction that the basis is facing in right now, with a fallback of using
 		// the rest forward axis.
-		Vector3 u1 = Vector3(0, 0, 0);
+		Vector3 rotation_vector_from = Vector3(0, 0, 0);
 		stack->skeleton->update_bone_rest_forward_vector(ccdik_data.bone_idx);
 		int bone_forward_axis_enum = stack->skeleton->get_bone_axis_forward_enum(ccdik_data.bone_idx);
 		if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_X_FORWARD) {
-			u1 = bone_trans.basis[0].normalized();
+			rotation_vector_from = bone_trans.basis[0].normalized();
 		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_X_FORWARD) {
-			u1 = -bone_trans.basis[0].normalized();
+			rotation_vector_from = -bone_trans.basis[0].normalized();
 		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Y_FORWARD) {
-			u1 = bone_trans.basis[1].normalized();
+			rotation_vector_from = bone_trans.basis[1].normalized();
 		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Y_FORWARD) {
-			u1 = -bone_trans.basis[1].normalized();
+			rotation_vector_from = -bone_trans.basis[1].normalized();
 		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_Z_FORWARD) {
-			u1 = bone_trans.basis[2].normalized();
+			rotation_vector_from = bone_trans.basis[2].normalized();
 		} else if (bone_forward_axis_enum == stack->skeleton->BONE_AXIS_NEGATIVE_Z_FORWARD) {
-			u1 = -bone_trans.basis[2].normalized();
+			rotation_vector_from = -bone_trans.basis[2].normalized();
 		} else {
 			// Assume Y+ when in doubt.
-			u1 = bone_trans.basis[1].normalized();
+			rotation_vector_from = bone_trans.basis[1].normalized();
 		}
 
 		// The target's position
-		Vector3 u2;
+		Vector3 rotation_vector_to;
 		if (perform_in_local_pose) {
-			u2 = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
+			rotation_vector_to = stack->skeleton->global_pose_to_local_pose(ccdik_data.bone_idx, stack->skeleton->world_transform_to_global_pose(target->get_global_transform())).origin;
 		} else {
-			u2 = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin);
+			rotation_vector_to = bone_trans.origin.direction_to(stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin);
 		}
 
 		// Restrict them to the axis and normalize them.
-		u1 = (u1 * ccdik_data.ccdik_axis_vector_inverse).normalized();
-		u2 = (u2 * ccdik_data.ccdik_axis_vector_inverse).normalized();
+		rotation_vector_from = (rotation_vector_from * ccdik_data.ccdik_axis_vector_inverse).normalized();
+		rotation_vector_to = (rotation_vector_to * ccdik_data.ccdik_axis_vector_inverse).normalized();
 
 		// Rotate the Basis from the first vector, to the second vector
-		bone_trans.basis.rotate_to_align(u1, u2);
+		bone_trans.basis.rotate_to_align(rotation_vector_from, rotation_vector_to);
 
 	} else if (ccdik_data.rotate_mode == ROTATE_MODE_FREE) { // Free mode: allow rotation on any axis. Needs testing!
 		Vector3 target_position = stack->skeleton->world_transform_to_global_pose(target->get_global_transform()).origin;
@@ -679,7 +669,7 @@ void SkeletonModification3DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node3D *
 	}
 
 	// Apply constraints
-	// (Still needs adjusting)
+	// (Todo: Still needs adjusting?)
 	if (ccdik_data.enable_constraint) {
 		float ccdik_rotation_angle;
 		Vector3 ccdik_rotation_axis;
@@ -795,7 +785,6 @@ String SkeletonModification3DCCDIK::ccdik_joint_get_bone_name(int p_joint_idx) c
 void SkeletonModification3DCCDIK::ccdik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
 	ERR_FAIL_INDEX(p_joint_idx, ccdik_data_chain.size());
 	ccdik_data_chain.write[p_joint_idx].bone_name = p_bone_name;
-	ccdik_data_chain.write[p_joint_idx].bone_idx = -1;
 
 	if (stack) {
 		if (stack->skeleton) {
@@ -817,11 +806,6 @@ void SkeletonModification3DCCDIK::ccdik_joint_set_bone_index(int p_joint_idx, in
 
 	if (stack) {
 		if (stack->skeleton) {
-			if (p_bone_idx > stack->skeleton->get_bone_count()) {
-				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
-				ccdik_data_chain.write[p_joint_idx].bone_idx = -1;
-				return;
-			}
 			ccdik_data_chain.write[p_joint_idx].bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 		}
 	}
@@ -1057,11 +1041,11 @@ void SkeletonModification3DFABRIK::_get_property_list(List<PropertyInfo> *p_list
 			}
 		}
 
-		// Cannot apply magnet to the origin of the chain, it will not do anything.
+		// Cannot apply magnet to the origin of the chain, it will not do anything, so do not include this property for the origin.
 		if (i > 0) {
 			p_list->push_back(PropertyInfo(Variant::VECTOR3, base_string + "magnet_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		}
-		// Only give the override basis option on the last bone in the chain.
+		// Only give the override basis option on the last bone in the chain, so only include it for the last bone.
 		if (i == fabrik_data_chain.size() - 1) {
 			p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "use_target_basis", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		}
@@ -1202,10 +1186,7 @@ void SkeletonModification3DFABRIK::chain_apply() {
 
 			} else { // Use the target's Basis...
 				Vector3 tmp_scale = current_trans.basis.get_scale();
-				current_trans.basis = target_global_pose.basis;
-				current_trans.basis[0].normalize();
-				current_trans.basis[1].normalize();
-				current_trans.basis[2].normalize();
+				current_trans.basis = target_global_pose.basis.orthonormalized();
 				current_trans.basis.scale(tmp_scale);
 			}
 		} else { // every other bone in the chain...
@@ -1247,7 +1228,7 @@ void SkeletonModification3DFABRIK::update_target_cache() {
 	}
 	target_node_cache = ObjectID();
 	if (stack->skeleton) {
-		if (stack->skeleton->is_inside_tree() && stack->skeleton->is_inside_world()) {
+		if (stack->skeleton->is_inside_tree() && target_node.is_empty() == false) {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
 				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
@@ -1266,15 +1247,12 @@ void SkeletonModification3DFABRIK::update_joint_tip_cache(int p_joint_idx) {
 	}
 	fabrik_data_chain.write[p_joint_idx].tip_node_cache = ObjectID();
 	if (stack->skeleton) {
-		if (stack->skeleton->is_inside_tree()) {
-			if (fabrik_data_chain[p_joint_idx].tip_node.is_empty() == false) {
-				if (stack->skeleton->has_node(fabrik_data_chain[p_joint_idx].tip_node)) {
-					Node *node = stack->skeleton->get_node(fabrik_data_chain[p_joint_idx].tip_node);
-					ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
-							"Cannot update tip cache for joint " + itos(p_joint_idx) + ":node is this modification's skeleton or cannot be found!");
-					fabrik_data_chain.write[p_joint_idx].tip_node_cache = node->get_instance_id();
-					fabrik_joint_get_auto_calculate_length(p_joint_idx);
-				}
+		if (stack->skeleton->is_inside_tree() && fabrik_data_chain[p_joint_idx].tip_node.is_empty() == false) {
+			if (stack->skeleton->has_node(fabrik_data_chain[p_joint_idx].tip_node)) {
+				Node *node = stack->skeleton->get_node(fabrik_data_chain[p_joint_idx].tip_node);
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update tip cache for joint " + itos(p_joint_idx) + ":node is this modification's skeleton or cannot be found!");
+				fabrik_data_chain.write[p_joint_idx].tip_node_cache = node->get_instance_id();
 			}
 		}
 	}
@@ -1325,7 +1303,6 @@ String SkeletonModification3DFABRIK::fabrik_joint_get_bone_name(int p_joint_idx)
 void SkeletonModification3DFABRIK::fabrik_joint_set_bone_name(int p_joint_idx, String p_bone_name) {
 	ERR_FAIL_INDEX(p_joint_idx, fabrik_data_chain.size());
 	fabrik_data_chain.write[p_joint_idx].bone_name = p_bone_name;
-	fabrik_data_chain.write[p_joint_idx].bone_idx = -1;
 
 	if (stack) {
 		if (stack->skeleton) {
@@ -1347,11 +1324,6 @@ void SkeletonModification3DFABRIK::fabrik_joint_set_bone_index(int p_joint_idx, 
 
 	if (stack) {
 		if (stack->skeleton) {
-			if (p_bone_idx > stack->skeleton->get_bone_count()) {
-				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
-				fabrik_data_chain.write[p_joint_idx].bone_idx = -1;
-				return;
-			}
 			fabrik_data_chain.write[p_joint_idx].bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 		}
 	}
@@ -1416,19 +1388,18 @@ void SkeletonModification3DFABRIK::fabrik_joint_auto_calculate_length(int p_join
 
 		update_joint_tip_cache(p_joint_idx);
 
-		Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(fabrik_data_chain[p_joint_idx].tip_node_cache));
-		ERR_FAIL_COND_MSG(!n, "Tip node for joint " + itos(p_joint_idx) + "is not a Node3D-based node. Cannot calculate length...");
-		ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Tip node for joint " + itos(p_joint_idx) + "is not in the scene tree. Cannot calculate length...");
+		Node3D *tip_node = Object::cast_to<Node3D>(ObjectDB::get_instance(fabrik_data_chain[p_joint_idx].tip_node_cache));
+		ERR_FAIL_COND_MSG(!tip_node, "Tip node for joint " + itos(p_joint_idx) + "is not a Node3D-based node. Cannot calculate length...");
+		ERR_FAIL_COND_MSG(!tip_node->is_inside_tree(), "Tip node for joint " + itos(p_joint_idx) + "is not in the scene tree. Cannot calculate length...");
 
-		Transform node_trans = n->get_global_transform();
+		Transform node_trans = tip_node->get_global_transform();
 		node_trans = stack->skeleton->world_transform_to_global_pose(node_trans);
 		node_trans = stack->skeleton->global_pose_to_local_pose(fabrik_data_chain[p_joint_idx].bone_idx, node_trans);
 		fabrik_data_chain.write[p_joint_idx].length = node_trans.origin.length();
 	} else { // Use child bone(s) to update joint length, if possible
 		Vector<int> bone_children = stack->skeleton->get_bone_children(fabrik_data_chain[p_joint_idx].bone_idx);
 		if (bone_children.size() <= 0) {
-			ERR_FAIL_MSG("Cannot calculate length for joint " + itos(p_joint_idx) + "joint uses leaf bone");
-			WARN_PRINT("Please manually set the bone length or use a tip node!");
+			ERR_FAIL_MSG("Cannot calculate length for joint " + itos(p_joint_idx) + "joint uses leaf bone. \nPlease manually set the bone length or use a tip node!");
 			return;
 		}
 
@@ -1613,12 +1584,12 @@ void SkeletonModification3DJiggle::execute(float delta) {
 		WARN_PRINT("Target cache is out of date. Updating...");
 		return;
 	}
-	Node3D *n = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
-	ERR_FAIL_COND_MSG(!n, "Target node is not a Node3D-based node. Cannot execute modification!");
-	ERR_FAIL_COND_MSG(!n->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
+	Node3D *target = Object::cast_to<Node3D>(ObjectDB::get_instance(target_node_cache));
+	ERR_FAIL_COND_MSG(!target, "Target node is not a Node3D-based node. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(!target->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
 
 	for (int i = 0; i < jiggle_data_chain.size(); i++) {
-		_execute_jiggle_joint(i, n, delta);
+		_execute_jiggle_joint(i, target, delta);
 	}
 }
 
@@ -1637,7 +1608,8 @@ void SkeletonModification3DJiggle::_execute_jiggle_joint(int p_joint_idx, Node3D
 	jiggle_data_chain.write[p_joint_idx].force = (target_position - jiggle_data_chain[p_joint_idx].dynamic_position) * jiggle_data_chain[p_joint_idx].stiffness * delta;
 
 	if (jiggle_data_chain[p_joint_idx].use_gravity) {
-		jiggle_data_chain.write[p_joint_idx].force += jiggle_data_chain[p_joint_idx].gravity * delta;
+		Vector3 gravity_to_apply = new_bone_trans.basis.inverse().xform(jiggle_data_chain[p_joint_idx].gravity);
+		jiggle_data_chain.write[p_joint_idx].force += gravity_to_apply * delta;
 	}
 
 	jiggle_data_chain.write[p_joint_idx].acceleration = jiggle_data_chain[p_joint_idx].force / jiggle_data_chain[p_joint_idx].mass;
@@ -1674,10 +1646,10 @@ void SkeletonModification3DJiggle::_update_jiggle_joint_data() {
 void SkeletonModification3DJiggle::setup_modification(SkeletonModificationStack3D *p_stack) {
 	stack = p_stack;
 
-	if (stack != nullptr) {
+	if (stack) {
 		is_setup = true;
 
-		if (stack->skeleton != nullptr) {
+		if (stack->skeleton) {
 			for (int i = 0; i < jiggle_data_chain.size(); i++) {
 				int bone_idx = jiggle_data_chain[i].bone_idx;
 				if (bone_idx > 0 && bone_idx < stack->skeleton->get_bone_count()) {
@@ -1767,6 +1739,7 @@ Vector3 SkeletonModification3DJiggle::get_gravity() const {
 	return gravity;
 }
 
+// Jiggle joint data functions
 int SkeletonModification3DJiggle::get_jiggle_data_chain_length() {
 	return jiggle_data_chain.size();
 }
@@ -1781,7 +1754,6 @@ void SkeletonModification3DJiggle::jiggle_joint_set_bone_name(int joint_idx, Str
 	ERR_FAIL_INDEX(joint_idx, jiggle_data_chain.size());
 
 	jiggle_data_chain.write[joint_idx].bone_name = p_name;
-	jiggle_data_chain.write[joint_idx].bone_idx = -1;
 	if (stack && stack->skeleton) {
 		jiggle_data_chain.write[joint_idx].bone_idx = stack->skeleton->find_bone(p_name);
 	}
@@ -1805,11 +1777,6 @@ void SkeletonModification3DJiggle::jiggle_joint_set_bone_index(int joint_idx, in
 
 	if (stack) {
 		if (stack->skeleton) {
-			if (p_bone_idx > stack->skeleton->get_bone_count()) {
-				ERR_FAIL_MSG("Bone index is out of range: The index is too high!");
-				jiggle_data_chain.write[joint_idx].bone_idx = -1;
-				return;
-			}
 			jiggle_data_chain.write[joint_idx].bone_name = stack->skeleton->get_bone_name(p_bone_idx);
 		}
 	}
@@ -1900,11 +1867,11 @@ void SkeletonModification3DJiggle::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_gravity", "gravity"), &SkeletonModification3DJiggle::set_gravity);
 	ClassDB::bind_method(D_METHOD("get_gravity"), &SkeletonModification3DJiggle::get_gravity);
 
+	// Jiggle joint data functions
 	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_name", "joint_idx", "name"), &SkeletonModification3DJiggle::jiggle_joint_set_bone_name);
 	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_name", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_bone_name);
 	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone_index", "joint_idx", "bone_idx"), &SkeletonModification3DJiggle::jiggle_joint_set_bone_index);
 	ClassDB::bind_method(D_METHOD("jiggle_joint_get_bone_index", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_bone_index);
-
 	ClassDB::bind_method(D_METHOD("jiggle_joint_set_override", "joint_idx", "override"), &SkeletonModification3DJiggle::jiggle_joint_set_override);
 	ClassDB::bind_method(D_METHOD("jiggle_joint_get_override", "joint_idx"), &SkeletonModification3DJiggle::jiggle_joint_get_override);
 	ClassDB::bind_method(D_METHOD("jiggle_joint_set_stiffness", "joint_idx", "stiffness"), &SkeletonModification3DJiggle::jiggle_joint_set_stiffness);
@@ -2188,7 +2155,7 @@ void SkeletonModification3DTwoBoneIK::update_cache_target() {
 
 	target_node_cache = ObjectID();
 	if (stack->skeleton) {
-		if (stack->skeleton->is_inside_tree()) {
+		if (stack->skeleton->is_inside_tree() && target_node.is_empty() == false) {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
 				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
