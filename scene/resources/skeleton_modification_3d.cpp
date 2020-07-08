@@ -2049,10 +2049,6 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	// Update joint lengths (if needed)
 	if (auto_calculate_joint_length && (joint_one_length < 0 || joint_two_length < 0)) {
 		calculate_joint_lengths();
-		// For some reason, the lengths get swapped...
-		float tmp = joint_one_length;
-		joint_one_length = joint_two_length;
-		joint_two_length = tmp;
 	}
 
 	// Adopted from the links below:
@@ -2084,10 +2080,8 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 		bone_one_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_one_bone_idx));
 		bone_one_trans = bone_one_trans.looking_at(pole_trans.origin, Vector3(0, 1, 0));
 		bone_one_trans.basis = stack->skeleton->global_pose_z_forward_to_bone_forward(joint_one_bone_idx, bone_one_trans.basis);
-		bone_one_trans = stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans);
-		stack->skeleton->set_bone_local_pose_override(joint_one_bone_idx, bone_one_trans, stack->strength, true);
+		stack->skeleton->set_bone_local_pose_override(joint_one_bone_idx, stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans), stack->strength, true);
 		stack->skeleton->force_update_bone_children_transforms(joint_one_bone_idx);
-		bone_one_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, bone_one_trans);
 
 		bone_two_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_local_pose_override(joint_two_bone_idx));
 		bone_two_trans = bone_two_trans.looking_at(target_trans.origin, Vector3(0, 1, 0));
@@ -2139,13 +2133,13 @@ void SkeletonModification3DTwoBoneIK::execute(float delta) {
 	Vector3 axis_0 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(bone_two_trans.origin));
 	Vector3 axis_1 = bone_one_trans.origin.direction_to(bone_two_tip_trans.origin).cross(bone_one_trans.origin.direction_to(target_trans.origin));
 
-	// Make a quaternion with the delta rotation needed to rotate the first joint into alignment
+	// Make a quaternion with the delta rotation needed to rotate the first joint into alignment and apply it to the transform.
 	Quat bone_one_quat = bone_one_trans.basis.get_rotation_quat();
 	Quat rot_0 = Quat(bone_one_quat.inverse().xform(axis_0).normalized(), (ac_ab_1 - ac_ab_0));
 	Quat rot_2 = Quat(bone_one_quat.inverse().xform(axis_1).normalized(), ac_at_0);
+	bone_one_trans.basis.set_quat(bone_one_quat * (rot_0 * rot_2));
 
 	// Apply the rotation to the first joint
-	bone_one_trans.basis.set_quat(bone_one_quat * (rot_0 * rot_2));
 	bone_one_trans = stack->skeleton->global_pose_to_local_pose(joint_one_bone_idx, bone_one_trans);
 	bone_one_trans.origin = Vector3(0, 0, 0);
 	stack->skeleton->set_bone_local_pose_override(joint_one_bone_idx, bone_one_trans, stack->strength, true);
@@ -2309,8 +2303,9 @@ void SkeletonModification3DTwoBoneIK::calculate_joint_lengths() {
 	ERR_FAIL_COND_MSG(joint_one_bone_idx <= -1 || joint_two_bone_idx <= -1,
 			"One of the bones in the TwoBoneIK modification are not set! Cannot calculate joint lengths!");
 
-	Transform bone_one_rest_trans = stack->skeleton->local_pose_to_global_pose(joint_one_bone_idx, stack->skeleton->get_bone_rest(joint_one_bone_idx));
-	Transform bone_two_rest_trans = stack->skeleton->local_pose_to_global_pose(joint_two_bone_idx, stack->skeleton->get_bone_rest(joint_two_bone_idx));
+	Transform bone_one_rest_trans = stack->skeleton->get_bone_global_pose(joint_one_bone_idx);
+	Transform bone_two_rest_trans = stack->skeleton->get_bone_global_pose(joint_two_bone_idx);
+
 	joint_one_length = bone_one_rest_trans.origin.distance_to(bone_two_rest_trans.origin);
 
 	if (use_tip_node) {
