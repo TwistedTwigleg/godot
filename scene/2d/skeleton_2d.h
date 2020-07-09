@@ -32,6 +32,7 @@
 #define SKELETON_2D_H
 
 #include "scene/2d/node_2d.h"
+#include "scene/resources/skeleton_modification_2d.h"
 
 class Skeleton2D;
 
@@ -70,6 +71,8 @@ public:
 	Bone2D();
 };
 
+class SkeletonModificationStack2D;
+
 class Skeleton2D : public Node2D {
 	GDCLASS(Skeleton2D, Node2D);
 
@@ -86,6 +89,11 @@ class Skeleton2D : public Node2D {
 		int parent_index;
 		Transform2D accum_transform;
 		Transform2D rest_inverse;
+
+		Transform2D local_pose_cache;
+		Transform2D local_pose_override;
+		float local_pose_override_amount = 0;
+		bool local_pose_override_persistent = false;
 	};
 
 	Vector<Bone> bones;
@@ -100,15 +108,28 @@ class Skeleton2D : public Node2D {
 
 	RID skeleton;
 
+	Ref<SkeletonModificationStack2D> modification_stack;
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
+	bool _set(const StringName &p_path, const Variant &p_value);
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
 	int get_bone_count() const;
 	Bone2D *get_bone(int p_idx);
 
 	RID get_skeleton() const;
+
+	void set_bone_local_pose_override(int bone_idx, Transform2D p_override, float amount, bool persistent = true);
+	Transform2D get_bone_local_pose_override(int bone_idx);
+
+	Ref<SkeletonModificationStack2D> get_modification_stack() const;
+	void set_modification_stack(Ref<SkeletonModificationStack2D> p_stack);
+	void execute_modification(float delta);
+
 	Skeleton2D();
 	~Skeleton2D();
 };

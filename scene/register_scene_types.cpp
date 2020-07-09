@@ -158,6 +158,7 @@
 #include "scene/resources/rectangle_shape_2d.h"
 #include "scene/resources/resource_format_text.h"
 #include "scene/resources/segment_shape_2d.h"
+#include "scene/resources/skeleton_modification_2d.h"
 #include "scene/resources/sky.h"
 #include "scene/resources/sky_material.h"
 #include "scene/resources/sphere_shape_3d.h"
@@ -614,6 +615,10 @@ void register_scene_types() {
 	ClassDB::register_class<ParallaxLayer>();
 	ClassDB::register_class<TouchScreenButton>();
 	ClassDB::register_class<RemoteTransform2D>();
+
+	ClassDB::register_class<SkeletonModificationStack2D>();
+	ClassDB::register_class<SkeletonModification2D>();
+	ClassDB::register_class<SkeletonModification2DLookAt>();
 
 	OS::get_singleton()->yield(); //may take time to init
 

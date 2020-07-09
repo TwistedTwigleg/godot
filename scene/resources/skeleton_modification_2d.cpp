@@ -1,0 +1,435 @@
+/*************************************************************************/
+/*  skeleton_modification_2d.cpp                                         */
+/*************************************************************************/
+/*                       This file is part of:                           */
+/*                           GODOT ENGINE                                */
+/*                      https://godotengine.org                          */
+/*************************************************************************/
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
+/*                                                                       */
+/* Permission is hereby granted, free of charge, to any person obtaining */
+/* a copy of this software and associated documentation files (the       */
+/* "Software"), to deal in the Software without restriction, including   */
+/* without limitation the rights to use, copy, modify, merge, publish,   */
+/* distribute, sublicense, and/or sell copies of the Software, and to    */
+/* permit persons to whom the Software is furnished to do so, subject to */
+/* the following conditions:                                             */
+/*                                                                       */
+/* The above copyright notice and this permission notice shall be        */
+/* included in all copies or substantial portions of the Software.       */
+/*                                                                       */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
+/*************************************************************************/
+
+#include "skeleton_modification_2d.h"
+#include "scene/2d/skeleton_2d.h"
+
+///////////////////////////////////////
+// ModificationStack2D
+///////////////////////////////////////
+
+void SkeletonModificationStack2D::_get_property_list(List<PropertyInfo> *p_list) const {
+	for (int i = 0; i < modifications.size(); i++) {
+		p_list->push_back(
+				PropertyInfo(Variant::OBJECT, "modifications/" + itos(i),
+						PROPERTY_HINT_RESOURCE_TYPE,
+						"SkeletonModification2D",
+						PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_DEFERRED_SET_RESOURCE));
+	}
+}
+
+bool SkeletonModificationStack2D::_set(const StringName &p_path, const Variant &p_value) {
+	String path = p_path;
+
+	if (path.begins_with("modifications/")) {
+		int mod_idx = path.get_slicec('/', 1).to_int();
+		set_modification(mod_idx, p_value);
+		return true;
+	}
+	return true;
+}
+
+bool SkeletonModificationStack2D::_get(const StringName &p_path, Variant &r_ret) const {
+	String path = p_path;
+
+	if (path.begins_with("modifications/")) {
+		int mod_idx = path.get_slicec('/', 1).to_int();
+		r_ret = get_modification(mod_idx);
+		return true;
+	}
+	return true;
+}
+
+void SkeletonModificationStack2D::setup() {
+	if (is_setup) {
+		return;
+	}
+
+	if (skeleton != nullptr) {
+		is_setup = true;
+		for (int i = 0; i < modifications.size(); i++) {
+			if (!modifications[i].is_valid()) {
+				continue;
+			}
+			modifications.get(i)->setup_modification(this);
+		}
+	} else {
+		WARN_PRINT("Cannot setup SkeletonModificationStack2D: no Skeleton2D set!");
+	}
+}
+
+void SkeletonModificationStack2D::execute(float delta) {
+	ERR_FAIL_COND_MSG(!is_setup || skeleton == nullptr || is_queued_for_deletion(),
+			"Modification stack is not properly setup and therefore cannot execute!");
+
+	if (!skeleton->is_inside_tree()) {
+		ERR_PRINT_ONCE("Skeleton is not inside SceneTree! Cannot execute modification!");
+		return;
+	}
+
+	if (!enabled) {
+		return;
+	}
+
+	for (int i = 0; i < modifications.size(); i++) {
+		if (!modifications[i].is_valid()) {
+			continue;
+		}
+		modifications.get(i)->execute(delta);
+	}
+}
+
+void SkeletonModificationStack2D::enable_all_modifications(bool p_enabled) {
+	for (int i = 0; i < modifications.size(); i++) {
+		if (!modifications[i].is_valid()) {
+			continue;
+		}
+		modifications.get(i)->set_enabled(p_enabled);
+	}
+}
+
+Ref<SkeletonModification2D> SkeletonModificationStack2D::get_modification(int p_mod_idx) const {
+	ERR_FAIL_INDEX_V(p_mod_idx, modifications.size(), nullptr);
+	return modifications[p_mod_idx];
+}
+
+void SkeletonModificationStack2D::add_modification(Ref<SkeletonModification2D> p_mod) {
+	p_mod->setup_modification(this);
+	modifications.push_back(p_mod);
+}
+
+void SkeletonModificationStack2D::delete_modification(int p_mod_idx) {
+	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
+	modifications.remove(p_mod_idx);
+}
+
+void SkeletonModificationStack2D::set_modification(int p_mod_idx, Ref<SkeletonModification2D> p_mod) {
+	ERR_FAIL_INDEX(p_mod_idx, modifications.size());
+
+	if (p_mod == nullptr) {
+		modifications.set(p_mod_idx, nullptr);
+	} else {
+		p_mod->setup_modification(this);
+		modifications.set(p_mod_idx, p_mod);
+	}
+}
+
+void SkeletonModificationStack2D::set_modification_count(int p_count) {
+	modifications.resize(p_count);
+	_change_notify();
+}
+
+int SkeletonModificationStack2D::get_modification_count() const {
+	return modifications.size();
+}
+
+void SkeletonModificationStack2D::set_skeleton(Skeleton2D *p_skeleton) {
+	skeleton = p_skeleton;
+}
+
+Skeleton2D *SkeletonModificationStack2D::get_skeleton() const {
+	return skeleton;
+}
+
+bool SkeletonModificationStack2D::get_is_setup() const {
+	return is_setup;
+}
+
+void SkeletonModificationStack2D::set_enabled(bool p_enabled) {
+	enabled = p_enabled;
+}
+
+bool SkeletonModificationStack2D::get_enabled() const {
+	return enabled;
+}
+
+void SkeletonModificationStack2D::set_strength(float p_strength) {
+	ERR_FAIL_COND_MSG(p_strength < 0, "Strength cannot be less than zero!");
+	ERR_FAIL_COND_MSG(p_strength > 1, "Strength cannot be more than one!");
+	strength = p_strength;
+}
+
+float SkeletonModificationStack2D::get_strength() const {
+	return strength;
+}
+
+void SkeletonModificationStack2D::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("setup"), &SkeletonModificationStack2D::setup);
+	ClassDB::bind_method(D_METHOD("execute", "delta"), &SkeletonModificationStack2D::execute);
+
+	ClassDB::bind_method(D_METHOD("enable_all_modifications", "enabled"), &SkeletonModificationStack2D::enable_all_modifications);
+	ClassDB::bind_method(D_METHOD("get_modification", "mod_idx"), &SkeletonModificationStack2D::get_modification);
+	ClassDB::bind_method(D_METHOD("add_modification", "modification"), &SkeletonModificationStack2D::add_modification);
+	ClassDB::bind_method(D_METHOD("delete_modification", "mod_idx"), &SkeletonModificationStack2D::delete_modification);
+	ClassDB::bind_method(D_METHOD("set_modification", "mod_idx", "modification"), &SkeletonModificationStack2D::set_modification);
+
+	ClassDB::bind_method(D_METHOD("set_modification_count"), &SkeletonModificationStack2D::set_modification_count);
+	ClassDB::bind_method(D_METHOD("get_modification_count"), &SkeletonModificationStack2D::get_modification_count);
+
+	ClassDB::bind_method(D_METHOD("get_is_setup"), &SkeletonModificationStack2D::get_is_setup);
+
+	ClassDB::bind_method(D_METHOD("set_enabled", "enabled"), &SkeletonModificationStack2D::set_enabled);
+	ClassDB::bind_method(D_METHOD("get_enabled"), &SkeletonModificationStack2D::get_enabled);
+
+	ClassDB::bind_method(D_METHOD("set_strength", "strength"), &SkeletonModificationStack2D::set_strength);
+	ClassDB::bind_method(D_METHOD("get_strength"), &SkeletonModificationStack2D::get_strength);
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "get_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_strength", "get_strength");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "modification_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
+}
+
+SkeletonModificationStack2D::SkeletonModificationStack2D() {
+	skeleton = nullptr;
+	modifications = Vector<Ref<SkeletonModification2D>>();
+	is_setup = false;
+	enabled = false;
+	modifications_count = 0;
+	strength = 0;
+}
+
+///////////////////////////////////////
+// Modification2D
+///////////////////////////////////////
+
+void SkeletonModification2D::execute(float delta) {
+	if (!enabled)
+		return;
+}
+
+void SkeletonModification2D::setup_modification(SkeletonModificationStack2D *p_stack) {
+	stack = p_stack;
+	if (stack) {
+		is_setup = true;
+	}
+}
+
+void SkeletonModification2D::set_enabled(bool p_enabled) {
+	enabled = p_enabled;
+}
+
+bool SkeletonModification2D::get_enabled() {
+	return enabled;
+}
+
+void SkeletonModification2D::_bind_methods() {
+	BIND_VMETHOD(MethodInfo("execute"));
+	BIND_VMETHOD(MethodInfo("setup_modification"));
+
+	ClassDB::bind_method(D_METHOD("set_enabled", "enabled"), &SkeletonModification2D::set_enabled);
+	ClassDB::bind_method(D_METHOD("get_enabled"), &SkeletonModification2D::get_enabled);
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "get_enabled");
+}
+
+SkeletonModification2D::SkeletonModification2D() {
+	stack = nullptr;
+	is_setup = false;
+}
+
+///////////////////////////////////////
+// LookAt
+///////////////////////////////////////
+
+void SkeletonModification2DLookAt::execute(float delta) {
+	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
+			"Modification is not setup and therefore cannot execute!");
+	if (!enabled) {
+		return;
+	}
+
+	if (target_node_cache.is_null()) {
+		update_cache();
+		WARN_PRINT("Target cache is out of date. Updating...");
+		return;
+	}
+
+	Node2D *target = Object::cast_to<Node2D>(ObjectDB::get_instance(target_node_cache));
+	ERR_FAIL_COND_MSG(!target, "Target node is not a Node2D-based node. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(!target->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
+	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
+
+    Bone2D* operation_bone = stack->skeleton->get_bone(bone_idx);
+    Transform2D operation_transform = operation_bone->get_global_transform();
+    Transform2D target_trans = target->get_global_transform();
+
+	// Look at the target!
+	operation_transform = operation_transform.looking_at(target_trans.get_origin());
+
+	// Account for the direction the bone faces in: TODO
+    // Apply constraints: TODO
+
+	// Apply additional rotation
+    operation_transform.set_rotation(operation_transform.get_rotation() + additional_rotation);
+
+	// Convert from a global transform to a delta and then apply the delta to the local transform.
+    operation_transform = operation_bone->get_global_transform().affine_inverse() * operation_transform;
+    operation_transform = operation_bone->get_transform() * operation_transform;
+
+    // Set the local pose override, and to make sure child bones are also updated, set the transform of the bone.
+    stack->skeleton->set_bone_local_pose_override(bone_idx, operation_transform, stack->strength, true);
+    operation_bone->set_transform(operation_transform);
+}
+
+void SkeletonModification2DLookAt::setup_modification(SkeletonModificationStack2D *p_stack) {
+	stack = p_stack;
+
+	if (stack != nullptr) {
+		is_setup = true;
+		update_cache();
+	}
+}
+
+int SkeletonModification2DLookAt::get_bone_index() const {
+	return bone_idx;
+}
+
+void SkeletonModification2DLookAt::set_bone_index(int p_bone_idx) {
+	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
+	bone_idx = p_bone_idx;
+	_change_notify();
+}
+
+void SkeletonModification2DLookAt::update_cache() {
+	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update cache: modification is not properly setup!");
+		return;
+	}
+
+	target_node_cache = ObjectID();
+	if (stack->skeleton) {
+		if (stack->skeleton->is_inside_tree()) {
+			if (stack->skeleton->has_node(target_node)) {
+				Node *node = stack->skeleton->get_node(target_node);
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update cache: Target node is this modification's skeleton or cannot be found!");
+				target_node_cache = node->get_instance_id();
+			}
+		}
+	}
+}
+
+void SkeletonModification2DLookAt::set_target_node(const NodePath &p_target_node) {
+	target_node = p_target_node;
+	update_cache();
+}
+
+NodePath SkeletonModification2DLookAt::get_target_node() const {
+	return target_node;
+}
+
+float SkeletonModification2DLookAt::get_additional_rotation() const {
+	return additional_rotation;
+}
+
+void SkeletonModification2DLookAt::set_additional_rotation(float p_rotation) {
+	additional_rotation = p_rotation;
+}
+
+void SkeletonModification2DLookAt::set_enable_constraint(bool p_constraint) {
+    enable_constraint = p_constraint;
+}
+
+bool SkeletonModification2DLookAt::get_enable_constraint() const {
+    return enable_constraint;
+}
+
+void SkeletonModification2DLookAt::set_constraint_angle_min(float p_angle_min) {
+    constraint_angle_min = p_angle_min;
+}
+
+float SkeletonModification2DLookAt::get_constraint_angle_min() const {
+    return constraint_angle_min;
+}
+
+void SkeletonModification2DLookAt::set_constraint_angle_max(float p_angle_max) {
+    constraint_angle_max = p_angle_max;
+}
+
+float SkeletonModification2DLookAt::get_constraint_angle_max() const {
+    return constraint_angle_max;
+}
+
+void SkeletonModification2DLookAt::set_constraint_angle_invert(bool p_invert) {
+    constraint_angle_invert = p_invert;
+}
+
+bool SkeletonModification2DLookAt::get_constraint_angle_invert() const {
+    return constraint_angle_invert;
+}
+
+void SkeletonModification2DLookAt::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification2DLookAt::set_bone_index);
+	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification2DLookAt::get_bone_index);
+
+	ClassDB::bind_method(D_METHOD("set_target_node", "target_nodepath"), &SkeletonModification2DLookAt::set_target_node);
+	ClassDB::bind_method(D_METHOD("get_target_node"), &SkeletonModification2DLookAt::get_target_node);
+
+	ClassDB::bind_method(D_METHOD("set_additional_rotation", "rotation"), &SkeletonModification2DLookAt::set_additional_rotation);
+	ClassDB::bind_method(D_METHOD("get_additional_rotation"), &SkeletonModification2DLookAt::get_additional_rotation);
+
+    ClassDB::bind_method(D_METHOD("set_enable_constraint", "enable_constraint"), &SkeletonModification2DLookAt::set_enable_constraint);
+	ClassDB::bind_method(D_METHOD("get_enable_constraint"), &SkeletonModification2DLookAt::get_enable_constraint);
+    ClassDB::bind_method(D_METHOD("set_constraint_angle_min", "angle_min"), &SkeletonModification2DLookAt::set_constraint_angle_min);
+	ClassDB::bind_method(D_METHOD("get_constraint_angle_min"), &SkeletonModification2DLookAt::get_constraint_angle_min);
+    ClassDB::bind_method(D_METHOD("set_constraint_angle_max", "angle_max"), &SkeletonModification2DLookAt::set_constraint_angle_max);
+	ClassDB::bind_method(D_METHOD("get_constraint_angle_max"), &SkeletonModification2DLookAt::get_constraint_angle_max);
+    ClassDB::bind_method(D_METHOD("set_constraint_angle_invert", "invert"), &SkeletonModification2DLookAt::set_constraint_angle_invert);
+	ClassDB::bind_method(D_METHOD("get_constraint_angle_invert"), &SkeletonModification2DLookAt::get_constraint_angle_invert);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node2D"), "set_target_node", "get_target_node");
+	ADD_GROUP("Additional Settings", "");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enable_constraint"), "set_enable_constraint", "get_enable_constraint");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "constraint_angle_min"), "set_constraint_angle_min", "get_constraint_angle_min");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "constraint_angle_max"), "set_constraint_angle_max", "get_constraint_angle_max");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "constraint_angle_invert"), "set_constraint_angle_invert", "get_constraint_angle_invert");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "additional_rotation"), "set_additional_rotation", "get_additional_rotation");
+	ADD_GROUP("", "");
+}
+
+SkeletonModification2DLookAt::SkeletonModification2DLookAt() {
+	stack = nullptr;
+	is_setup = false;
+	bone_idx = -1;
+	additional_rotation = 0;
+	enable_constraint = false;
+    constraint_angle_min = 0;
+    constraint_angle_max = Math_PI * 2;
+    constraint_angle_invert = false;
+	enabled = true;
+}
+
+SkeletonModification2DLookAt::~SkeletonModification2DLookAt() {
+}
+
+///////////////////////////////////////
+// TODO: add more!
+///////////////////////////////////////
