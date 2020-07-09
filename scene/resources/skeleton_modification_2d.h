@@ -129,11 +129,17 @@ private:
     float constraint_angle_min = 0;
     float constraint_angle_max = (2.0 * Math_PI);
     bool constraint_angle_invert = false;
+	bool constraint_in_localspace = true;
 
 	void update_cache();
 
+	float clamp_angle(float angle, bool invert_angle=false);
+
 protected:
 	static void _bind_methods();
+    bool _set(const StringName &p_path, const Variant &p_value);
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
 	virtual void execute(float delta);
@@ -156,6 +162,8 @@ public:
     float get_constraint_angle_max() const;
     void set_constraint_angle_invert(bool p_invert);
     bool get_constraint_angle_invert() const;
+	void set_constraint_in_localspace(bool p_constraint_in_localspace);
+	bool get_constraint_in_localspace() const;
 
 	SkeletonModification2DLookAt();
 	~SkeletonModification2DLookAt();

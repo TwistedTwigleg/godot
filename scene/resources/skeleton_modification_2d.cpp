@@ -258,6 +258,55 @@ SkeletonModification2D::SkeletonModification2D() {
 // LookAt
 ///////////////////////////////////////
 
+bool SkeletonModification2DLookAt::_set(const StringName &p_path, const Variant &p_value) {
+	String path = p_path;
+
+	if (path.begins_with("enable_constraint")) {
+		set_enable_constraint(p_value);
+	} else if (path.begins_with("constraint_angle_min")) {
+		set_constraint_angle_min(Math::deg2rad(float(p_value)));
+	} else if (path.begins_with("constraint_angle_max")) {
+		set_constraint_angle_max(Math::deg2rad(float(p_value)));
+	} else if (path.begins_with("constraint_angle_invert")) {
+		set_constraint_angle_invert(p_value);
+	} else if (path.begins_with("constraint_in_localspace")) {
+		set_constraint_in_localspace(p_value);
+	} else if (path.begins_with("additional_rotation")) {
+		set_additional_rotation(Math::deg2rad(float(p_value)));
+	}
+	return true;
+}
+
+bool SkeletonModification2DLookAt::_get(const StringName &p_path, Variant &r_ret) const {
+	String path = p_path;
+
+	if (path.begins_with("enable_constraint")) {
+		r_ret = get_enable_constraint();
+	} else if (path.begins_with("constraint_angle_min")) {
+		r_ret = Math::rad2deg(get_constraint_angle_min());
+	} else if (path.begins_with("constraint_angle_max")) {
+		r_ret = Math::rad2deg(get_constraint_angle_max());
+	} else if (path.begins_with("constraint_angle_invert")) {
+		r_ret = get_constraint_angle_invert();
+	} else if (path.begins_with("constraint_in_localspace")) {
+		r_ret = get_constraint_in_localspace();
+	} else if (path.begins_with("additional_rotation")) {
+		r_ret = Math::rad2deg(get_additional_rotation());
+	}
+	return true;
+}
+
+void SkeletonModification2DLookAt::_get_property_list(List<PropertyInfo> *p_list) const {
+	p_list->push_back(PropertyInfo(Variant::BOOL, "enable_constraint", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	if (enable_constraint) {
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "constraint_angle_min", PROPERTY_HINT_RANGE, "-360, 360, 0.01", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "constraint_angle_max", PROPERTY_HINT_RANGE, "-360, 360, 0.01", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::BOOL, "constraint_angle_invert", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::BOOL, "constraint_in_localspace", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	}
+	p_list->push_back(PropertyInfo(Variant::FLOAT, "additional_rotation", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+}
+
 void SkeletonModification2DLookAt::execute(float delta) {
 	ERR_FAIL_COND_MSG(!stack || !is_setup || stack->skeleton == nullptr,
 			"Modification is not setup and therefore cannot execute!");
@@ -276,26 +325,35 @@ void SkeletonModification2DLookAt::execute(float delta) {
 	ERR_FAIL_COND_MSG(!target->is_inside_tree(), "Target node is not in the scene tree. Cannot execute modification!");
 	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
 
-    Bone2D* operation_bone = stack->skeleton->get_bone(bone_idx);
-    Transform2D operation_transform = operation_bone->get_global_transform();
-    Transform2D target_trans = target->get_global_transform();
+	Bone2D *operation_bone = stack->skeleton->get_bone(bone_idx);
+	Transform2D operation_transform = operation_bone->get_global_transform();
+	Transform2D target_trans = target->get_global_transform();
 
 	// Look at the target!
 	operation_transform = operation_transform.looking_at(target_trans.get_origin());
 
 	// Account for the direction the bone faces in: TODO
-    // Apply constraints: TODO
 
-	// Apply additional rotation
-    operation_transform.set_rotation(operation_transform.get_rotation() + additional_rotation);
+	// Apply constraints in globalspace:
+	if (enable_constraint && !constraint_in_localspace) {
+		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation()));
+	}
 
 	// Convert from a global transform to a delta and then apply the delta to the local transform.
-    operation_transform = operation_bone->get_global_transform().affine_inverse() * operation_transform;
-    operation_transform = operation_bone->get_transform() * operation_transform;
+	operation_transform = operation_bone->get_global_transform().affine_inverse() * operation_transform;
+	operation_transform = operation_bone->get_transform() * operation_transform;
 
-    // Set the local pose override, and to make sure child bones are also updated, set the transform of the bone.
-    stack->skeleton->set_bone_local_pose_override(bone_idx, operation_transform, stack->strength, true);
-    operation_bone->set_transform(operation_transform);
+	// Apply constraints in localspace:
+	if (enable_constraint && constraint_in_localspace) {
+		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation()));
+	}
+
+	// Apply additional rotation
+	operation_transform.set_rotation(operation_transform.get_rotation() + additional_rotation);
+
+	// Set the local pose override, and to make sure child bones are also updated, set the transform of the bone.
+	stack->skeleton->set_bone_local_pose_override(bone_idx, operation_transform, stack->strength, true);
+	operation_bone->set_transform(operation_transform);
 }
 
 void SkeletonModification2DLookAt::setup_modification(SkeletonModificationStack2D *p_stack) {
@@ -336,6 +394,30 @@ void SkeletonModification2DLookAt::update_cache() {
 	}
 }
 
+float SkeletonModification2DLookAt::clamp_angle(float angle, bool invert_angle) {
+	// Map to the 0 to 360 range (in radians though) instead of the -180 to 180 range.
+	if (angle < 0) {
+		angle = Math_PI + (Math_PI + angle);
+	}
+
+	if (constraint_angle_invert == false) { // Normal clamping:
+		if (angle < constraint_angle_min) {
+			angle = constraint_angle_min;
+		} else if (angle > constraint_angle_max) {
+			angle = constraint_angle_max;
+		}
+	} else { // Inverse clamping:
+		if (angle > constraint_angle_min && angle < constraint_angle_max) {
+			if (angle - constraint_angle_min < constraint_angle_max - angle) {
+				angle = constraint_angle_min;
+			} else {
+				angle = constraint_angle_max;
+			}
+		}
+	}
+	return angle;
+}
+
 void SkeletonModification2DLookAt::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_cache();
@@ -354,35 +436,44 @@ void SkeletonModification2DLookAt::set_additional_rotation(float p_rotation) {
 }
 
 void SkeletonModification2DLookAt::set_enable_constraint(bool p_constraint) {
-    enable_constraint = p_constraint;
+	enable_constraint = p_constraint;
+	_change_notify();
 }
 
 bool SkeletonModification2DLookAt::get_enable_constraint() const {
-    return enable_constraint;
+	return enable_constraint;
 }
 
 void SkeletonModification2DLookAt::set_constraint_angle_min(float p_angle_min) {
-    constraint_angle_min = p_angle_min;
+	constraint_angle_min = p_angle_min;
 }
 
 float SkeletonModification2DLookAt::get_constraint_angle_min() const {
-    return constraint_angle_min;
+	return constraint_angle_min;
 }
 
 void SkeletonModification2DLookAt::set_constraint_angle_max(float p_angle_max) {
-    constraint_angle_max = p_angle_max;
+	constraint_angle_max = p_angle_max;
 }
 
 float SkeletonModification2DLookAt::get_constraint_angle_max() const {
-    return constraint_angle_max;
+	return constraint_angle_max;
 }
 
 void SkeletonModification2DLookAt::set_constraint_angle_invert(bool p_invert) {
-    constraint_angle_invert = p_invert;
+	constraint_angle_invert = p_invert;
 }
 
 bool SkeletonModification2DLookAt::get_constraint_angle_invert() const {
-    return constraint_angle_invert;
+	return constraint_angle_invert;
+}
+
+void SkeletonModification2DLookAt::set_constraint_in_localspace(bool p_constraint_in_localspace) {
+	constraint_in_localspace = p_constraint_in_localspace;
+}
+
+bool SkeletonModification2DLookAt::get_constraint_in_localspace() const {
+	return constraint_in_localspace;
 }
 
 void SkeletonModification2DLookAt::_bind_methods() {
@@ -395,24 +486,17 @@ void SkeletonModification2DLookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_additional_rotation", "rotation"), &SkeletonModification2DLookAt::set_additional_rotation);
 	ClassDB::bind_method(D_METHOD("get_additional_rotation"), &SkeletonModification2DLookAt::get_additional_rotation);
 
-    ClassDB::bind_method(D_METHOD("set_enable_constraint", "enable_constraint"), &SkeletonModification2DLookAt::set_enable_constraint);
+	ClassDB::bind_method(D_METHOD("set_enable_constraint", "enable_constraint"), &SkeletonModification2DLookAt::set_enable_constraint);
 	ClassDB::bind_method(D_METHOD("get_enable_constraint"), &SkeletonModification2DLookAt::get_enable_constraint);
-    ClassDB::bind_method(D_METHOD("set_constraint_angle_min", "angle_min"), &SkeletonModification2DLookAt::set_constraint_angle_min);
+	ClassDB::bind_method(D_METHOD("set_constraint_angle_min", "angle_min"), &SkeletonModification2DLookAt::set_constraint_angle_min);
 	ClassDB::bind_method(D_METHOD("get_constraint_angle_min"), &SkeletonModification2DLookAt::get_constraint_angle_min);
-    ClassDB::bind_method(D_METHOD("set_constraint_angle_max", "angle_max"), &SkeletonModification2DLookAt::set_constraint_angle_max);
+	ClassDB::bind_method(D_METHOD("set_constraint_angle_max", "angle_max"), &SkeletonModification2DLookAt::set_constraint_angle_max);
 	ClassDB::bind_method(D_METHOD("get_constraint_angle_max"), &SkeletonModification2DLookAt::get_constraint_angle_max);
-    ClassDB::bind_method(D_METHOD("set_constraint_angle_invert", "invert"), &SkeletonModification2DLookAt::set_constraint_angle_invert);
+	ClassDB::bind_method(D_METHOD("set_constraint_angle_invert", "invert"), &SkeletonModification2DLookAt::set_constraint_angle_invert);
 	ClassDB::bind_method(D_METHOD("get_constraint_angle_invert"), &SkeletonModification2DLookAt::get_constraint_angle_invert);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node2D"), "set_target_node", "get_target_node");
-	ADD_GROUP("Additional Settings", "");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enable_constraint"), "set_enable_constraint", "get_enable_constraint");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "constraint_angle_min"), "set_constraint_angle_min", "get_constraint_angle_min");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "constraint_angle_max"), "set_constraint_angle_max", "get_constraint_angle_max");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "constraint_angle_invert"), "set_constraint_angle_invert", "get_constraint_angle_invert");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "additional_rotation"), "set_additional_rotation", "get_additional_rotation");
-	ADD_GROUP("", "");
 }
 
 SkeletonModification2DLookAt::SkeletonModification2DLookAt() {
@@ -421,9 +505,9 @@ SkeletonModification2DLookAt::SkeletonModification2DLookAt() {
 	bone_idx = -1;
 	additional_rotation = 0;
 	enable_constraint = false;
-    constraint_angle_min = 0;
-    constraint_angle_max = Math_PI * 2;
-    constraint_angle_invert = false;
+	constraint_angle_min = 0;
+	constraint_angle_max = Math_PI * 2;
+	constraint_angle_invert = false;
 	enabled = true;
 }
 
