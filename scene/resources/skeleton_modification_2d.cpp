@@ -332,7 +332,8 @@ void SkeletonModification2DLookAt::execute(float delta) {
 	// Look at the target!
 	operation_transform = operation_transform.looking_at(target_trans.get_origin());
 
-	// Account for the direction the bone faces in: TODO
+	// Account for the direction the bone faces in:
+	operation_transform.set_rotation(operation_transform.get_rotation() - operation_bone->get_bone_angle());
 
 	// Apply constraints in globalspace:
 	if (enable_constraint && !constraint_in_localspace) {

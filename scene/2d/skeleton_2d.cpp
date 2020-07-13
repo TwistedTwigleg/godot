@@ -31,6 +31,40 @@
 #include "skeleton_2d.h"
 #include "scene/resources/skeleton_modification_2d.h"
 
+bool Bone2D::_set(const StringName &p_path, const Variant &p_value) {
+	String path = p_path;
+
+	if (path.begins_with("auto_calculate_length_and_angle")) {
+		set_autocalculate_length_and_angle(p_value);
+	} else if (path.begins_with("length")) {
+		set_length(p_value);
+	} else if (path.begins_with("bone_angle")) {
+		set_bone_angle(Math::deg2rad(float(p_value)));
+	}
+	return true;
+}
+
+bool Bone2D::_get(const StringName &p_path, Variant &r_ret) const {
+	String path = p_path;
+
+	if (path.begins_with("auto_calculate_length_and_angle")) {
+		r_ret = get_autocalculate_length_and_angle();
+	} else if (path.begins_with("length")) {
+		r_ret = get_length();
+	} else if (path.begins_with("bone_angle")) {
+		r_ret = Math::rad2deg(get_bone_angle());
+	}
+	return true;
+}
+
+void Bone2D::_get_property_list(List<PropertyInfo> *p_list) const {
+	p_list->push_back(PropertyInfo(Variant::BOOL, "auto_calculate_length_and_angle", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	if (!autocalculate_length_and_angle) {
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "length", PROPERTY_HINT_RANGE, "1, 1024, 1", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::FLOAT, "bone_angle", PROPERTY_HINT_RANGE, "-360, 360, 0.01", PROPERTY_USAGE_DEFAULT));
+	}
+}
+
 void Bone2D::_notification(int p_what) {
 	if (p_what == NOTIFICATION_ENTER_TREE) {
 		Node *parent = get_parent();
@@ -79,6 +113,12 @@ void Bone2D::_notification(int p_what) {
 		}
 		parent_bone = nullptr;
 	}
+
+	if (p_what == NOTIFICATION_READY) {
+		if (autocalculate_length_and_angle) {
+			calculate_length_and_rotation();
+		}
+	}
 }
 
 void Bone2D::_bind_methods() {
@@ -91,8 +131,14 @@ void Bone2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_default_length", "default_length"), &Bone2D::set_default_length);
 	ClassDB::bind_method(D_METHOD("get_default_length"), &Bone2D::get_default_length);
 
+	ClassDB::bind_method(D_METHOD("set_autocalculate_length_and_angle", "auto_calculate"), &Bone2D::set_autocalculate_length_and_angle);
+	ClassDB::bind_method(D_METHOD("get_autocalculate_length_and_angle"), &Bone2D::get_autocalculate_length_and_angle);
+	ClassDB::bind_method(D_METHOD("set_length", "length"), &Bone2D::set_length);
+	ClassDB::bind_method(D_METHOD("get_length"), &Bone2D::get_length);
+	ClassDB::bind_method(D_METHOD("get_bone_angle", "bone_angle"), &Bone2D::get_bone_angle);
+	ClassDB::bind_method(D_METHOD("set_bone_angle"), &Bone2D::set_bone_angle);
+
 	ADD_PROPERTY(PropertyInfo(Variant::TRANSFORM2D, "rest"), "set_rest", "get_rest");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "default_length", PROPERTY_HINT_RANGE, "1,1024,1"), "set_default_length", "get_default_length");
 }
 
 void Bone2D::set_rest(const Transform2D &p_rest) {
@@ -121,11 +167,13 @@ void Bone2D::apply_rest() {
 }
 
 void Bone2D::set_default_length(float p_length) {
-	default_length = p_length;
+	WARN_DEPRECATED_MSG("set_default_length is deprecated. Please use set_length instead!");
+	set_length(p_length);
 }
 
 float Bone2D::get_default_length() const {
-	return default_length;
+	WARN_DEPRECATED_MSG("get_default_length is deprecated. Please use get_length instead!");
+	return get_length();
 }
 
 int Bone2D::get_index_in_skeleton() const {
@@ -157,11 +205,66 @@ String Bone2D::get_configuration_warning() const {
 	return warning;
 }
 
+void Bone2D::calculate_length_and_rotation() {
+	// if there is at least a single child Bone2D node, we can calculate
+	// the length and direction. We will always just use the first Bone2D for this.
+	bool calculated = false;
+	int child_count = get_child_count();
+	if (child_count > 0) {
+		for (int i = 0; i < child_count; i++) {
+			Bone2D *child = Object::cast_to<Bone2D>(get_child(i));
+			if (child) {
+				Vector2 child_local_pos = to_local(child->get_global_transform().get_origin());
+				length = child_local_pos.length();
+				bone_angle = Math::atan2(child_local_pos.normalized().y, child_local_pos.normalized().x);
+				calculated = true;
+				break;
+			}
+		}
+	}
+	if (calculated) {
+		return; // Finished!
+	} else {
+		WARN_PRINT("No Bone2D children of node " + get_name() + ". Cannot calculate bone length or angle reliably.\nUsing transform rotation for bone angle");
+		bone_angle = get_transform().get_rotation();
+		return;
+	}
+}
+
+void Bone2D::set_autocalculate_length_and_angle(bool p_autocalculate) {
+	autocalculate_length_and_angle = p_autocalculate;
+	if (autocalculate_length_and_angle == true) {
+		calculate_length_and_rotation();
+	}
+	_change_notify();
+}
+
+bool Bone2D::get_autocalculate_length_and_angle() const {
+	return autocalculate_length_and_angle;
+}
+
+void Bone2D::set_length(float p_length) {
+	length = p_length;
+}
+
+float Bone2D::get_length() const {
+	return length;
+}
+
+void Bone2D::set_bone_angle(float p_angle) {
+	bone_angle = p_angle;
+}
+float Bone2D::get_bone_angle() const {
+	return bone_angle;
+}
+
 Bone2D::Bone2D() {
 	skeleton = nullptr;
 	parent_bone = nullptr;
 	skeleton_index = -1;
-	default_length = 16;
+	length = 16;
+	bone_angle = 0;
+	autocalculate_length_and_angle = true;
 	set_notify_local_transform(true);
 	//this is a clever hack so the bone knows no rest has been set yet, allowing to show an error.
 	for (int i = 0; i < 3; i++) {
@@ -370,8 +473,7 @@ void Skeleton2D::execute_modification(float delta) {
 			if (bones[i].local_pose_override_persistent) {
 				bones.write[i].local_pose_override_amount = 0.0;
 			}
-		}
-		else {
+		} else {
 			// TODO: see if there is a way to undo the override without having to resort to setting every bone's transform.
 			RenderingServer::get_singleton()->canvas_item_set_transform(bones[i].bone->get_canvas_item(), bones[i].local_pose_cache);
 		}

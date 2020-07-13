@@ -47,13 +47,21 @@ class Bone2D : public Node2D {
 	Bone2D *parent_bone;
 	Skeleton2D *skeleton;
 	Transform2D rest;
-	float default_length;
+
+	bool autocalculate_length_and_angle = true;
+	float length = 16;
+	float bone_angle = 0;
 
 	int skeleton_index;
+
+	void calculate_length_and_rotation();
 
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
+	bool _set(const StringName &p_path, const Variant &p_value);
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
 	void set_rest(const Transform2D &p_rest);
@@ -65,6 +73,13 @@ public:
 
 	void set_default_length(float p_length);
 	float get_default_length() const;
+
+	void set_autocalculate_length_and_angle(bool p_autocalculate);
+	bool get_autocalculate_length_and_angle() const;
+	void set_length(float p_length);
+	float get_length() const;
+	void set_bone_angle(float p_angle);
+	float get_bone_angle() const;
 
 	int get_index_in_skeleton() const;
 
