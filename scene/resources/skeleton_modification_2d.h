@@ -121,6 +121,9 @@ class SkeletonModification2DLookAt : public SkeletonModification2D {
 
 private:
 	int bone_idx = -1;
+	NodePath bone2d_node;
+	ObjectID bone2d_node_cache;
+
 	NodePath target_node;
 	ObjectID target_node_cache;
 
@@ -131,7 +134,8 @@ private:
     bool constraint_angle_invert = false;
 	bool constraint_in_localspace = true;
 
-	void update_cache();
+	void update_bone2d_cache();
+	void update_target_cache();
 
 	float clamp_angle(float angle, bool invert_angle=false);
 
@@ -145,6 +149,8 @@ public:
 	virtual void execute(float delta);
 	virtual void setup_modification(SkeletonModificationStack2D *p_stack);
 
+	void set_bone2d_node(const NodePath &p_target_node);
+	NodePath get_bone2d_node() const;
 	void set_bone_index(int p_idx);
 	int get_bone_index() const;
 

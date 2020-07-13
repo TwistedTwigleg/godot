@@ -315,9 +315,14 @@ void SkeletonModification2DLookAt::execute(float delta) {
 	}
 
 	if (target_node_cache.is_null()) {
-		update_cache();
+		update_target_cache();
 		WARN_PRINT("Target cache is out of date. Updating...");
 		return;
+	}
+
+	if (bone2d_node_cache.is_null() && !bone2d_node.is_empty()) {
+		update_bone2d_cache();
+		WARN_PRINT("Bone2D node cache is out of date. Updating...");
 	}
 
 	Node2D *target = Object::cast_to<Node2D>(ObjectDB::get_instance(target_node_cache));
@@ -326,6 +331,7 @@ void SkeletonModification2DLookAt::execute(float delta) {
 	ERR_FAIL_COND_MSG(bone_idx <= -1, "Bone index is invalid. Cannot execute modification!");
 
 	Bone2D *operation_bone = stack->skeleton->get_bone(bone_idx);
+	ERR_FAIL_COND_MSG(operation_bone == nullptr, "bone_idx for modification does not point to a valid bone! Cannot execute modification");
 	Transform2D operation_transform = operation_bone->get_global_transform();
 	Transform2D target_trans = target->get_global_transform();
 
@@ -362,8 +368,44 @@ void SkeletonModification2DLookAt::setup_modification(SkeletonModificationStack2
 
 	if (stack != nullptr) {
 		is_setup = true;
-		update_cache();
+		update_target_cache();
+		update_bone2d_cache();
 	}
+}
+
+void SkeletonModification2DLookAt::update_bone2d_cache() {
+	if (!is_setup || !stack) {
+		WARN_PRINT("Cannot update Bone2D cache: modification is not properly setup!");
+		return;
+	}
+
+	bone2d_node_cache = ObjectID();
+	if (stack->skeleton) {
+		if (stack->skeleton->is_inside_tree()) {
+			if (stack->skeleton->has_node(bone2d_node)) {
+				Node *node = stack->skeleton->get_node(bone2d_node);
+				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
+						"Cannot update Bone2D cache: node is this modification's skeleton or cannot be found!");
+				bone2d_node_cache = node->get_instance_id();
+
+				Bone2D* bone = Object::cast_to<Bone2D>(node);
+				if (bone) {
+					bone_idx = bone->get_index_in_skeleton();
+				} else {
+					ERR_FAIL_MSG("Error Bone2D cache: Nodepath to Bone2D is not a Bone2D node!");
+				}
+			}
+		}
+	}
+}
+
+void SkeletonModification2DLookAt::set_bone2d_node(const NodePath &p_target_node) {
+	bone2d_node = p_target_node;
+	update_bone2d_cache();
+}
+
+NodePath SkeletonModification2DLookAt::get_bone2d_node() const {
+	return bone2d_node;
 }
 
 int SkeletonModification2DLookAt::get_bone_index() const {
@@ -372,13 +414,28 @@ int SkeletonModification2DLookAt::get_bone_index() const {
 
 void SkeletonModification2DLookAt::set_bone_index(int p_bone_idx) {
 	ERR_FAIL_COND_MSG(p_bone_idx < 0, "Bone index is out of range: The index is too low!");
-	bone_idx = p_bone_idx;
+
+	if (is_setup) {
+		if (stack->skeleton) {
+			ERR_FAIL_INDEX_MSG(p_bone_idx, stack->skeleton->get_bone_count(), "Passed-in Bone index is out of range!");
+			bone_idx = p_bone_idx;
+			bone2d_node_cache = stack->skeleton->get_bone(p_bone_idx)->get_instance_id();
+			bone2d_node = stack->skeleton->get_path_to(stack->skeleton->get_bone(p_bone_idx));
+		} else {
+			WARN_PRINT("Cannot verify the bone index for this modification...");
+			bone_idx = p_bone_idx;
+		}
+	} else {
+		WARN_PRINT("Cannot verify the bone index for this modification...");
+		bone_idx = p_bone_idx;
+	}
+	
 	_change_notify();
 }
 
-void SkeletonModification2DLookAt::update_cache() {
+void SkeletonModification2DLookAt::update_target_cache() {
 	if (!is_setup || !stack) {
-		WARN_PRINT("Cannot update cache: modification is not properly setup!");
+		WARN_PRINT("Cannot update target cache: modification is not properly setup!");
 		return;
 	}
 
@@ -388,7 +445,7 @@ void SkeletonModification2DLookAt::update_cache() {
 			if (stack->skeleton->has_node(target_node)) {
 				Node *node = stack->skeleton->get_node(target_node);
 				ERR_FAIL_COND_MSG(!node || stack->skeleton == node,
-						"Cannot update cache: Target node is this modification's skeleton or cannot be found!");
+						"Cannot update target cache: node is this modification's skeleton or cannot be found!");
 				target_node_cache = node->get_instance_id();
 			}
 		}
@@ -421,7 +478,7 @@ float SkeletonModification2DLookAt::clamp_angle(float angle, bool invert_angle) 
 
 void SkeletonModification2DLookAt::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
-	update_cache();
+	update_target_cache();
 }
 
 NodePath SkeletonModification2DLookAt::get_target_node() const {
@@ -478,6 +535,8 @@ bool SkeletonModification2DLookAt::get_constraint_in_localspace() const {
 }
 
 void SkeletonModification2DLookAt::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_bone2d_node", "bone2d_nodepath"), &SkeletonModification2DLookAt::set_bone2d_node);
+	ClassDB::bind_method(D_METHOD("get_bone2d_node"), &SkeletonModification2DLookAt::get_bone2d_node);
 	ClassDB::bind_method(D_METHOD("set_bone_index", "bone_idx"), &SkeletonModification2DLookAt::set_bone_index);
 	ClassDB::bind_method(D_METHOD("get_bone_index"), &SkeletonModification2DLookAt::get_bone_index);
 
@@ -497,6 +556,7 @@ void SkeletonModification2DLookAt::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_constraint_angle_invert"), &SkeletonModification2DLookAt::get_constraint_angle_invert);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bone_index"), "set_bone_index", "get_bone_index");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "bone2d_node", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Bone2D"), "set_bone2d_node", "get_bone2d_node");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node2D"), "set_target_node", "get_target_node");
 }
 

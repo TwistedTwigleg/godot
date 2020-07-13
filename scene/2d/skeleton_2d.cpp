@@ -135,8 +135,8 @@ void Bone2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_autocalculate_length_and_angle"), &Bone2D::get_autocalculate_length_and_angle);
 	ClassDB::bind_method(D_METHOD("set_length", "length"), &Bone2D::set_length);
 	ClassDB::bind_method(D_METHOD("get_length"), &Bone2D::get_length);
-	ClassDB::bind_method(D_METHOD("get_bone_angle", "bone_angle"), &Bone2D::get_bone_angle);
-	ClassDB::bind_method(D_METHOD("set_bone_angle"), &Bone2D::set_bone_angle);
+	ClassDB::bind_method(D_METHOD("set_bone_angle", "angle"), &Bone2D::set_bone_angle);
+	ClassDB::bind_method(D_METHOD("get_bone_angle"), &Bone2D::get_bone_angle);
 
 	ADD_PROPERTY(PropertyInfo(Variant::TRANSFORM2D, "rest"), "set_rest", "get_rest");
 }
@@ -254,6 +254,7 @@ float Bone2D::get_length() const {
 void Bone2D::set_bone_angle(float p_angle) {
 	bone_angle = p_angle;
 }
+
 float Bone2D::get_bone_angle() const {
 	return bone_angle;
 }
