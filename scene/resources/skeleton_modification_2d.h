@@ -109,6 +109,8 @@ public:
 	void set_enabled(bool p_enabled);
 	bool get_enabled();
 
+	float clamp_angle(float angle, float min_bound, float max_bound, bool invert_clamp = false);
+
 	SkeletonModification2D();
 };
 
@@ -136,8 +138,6 @@ private:
 
 	void update_bone2d_cache();
 	void update_target_cache();
-
-	float clamp_angle(float angle);
 
 protected:
 	static void _bind_methods();
@@ -187,6 +187,7 @@ private:
 		int bone_idx = -1;
 		NodePath bone2d_node;
 		ObjectID bone2d_node_cache;
+		bool rotate_from_joint = false;
 
 		bool enable_constraint = false;
 		float constraint_angle_min = 0;
@@ -207,8 +208,6 @@ private:
 
 	void ccdik_joint_update_bone2d_cache(int p_joint_idx);
 	void _execute_ccdik_joint(int p_joint_idx, Node2D *target, Node2D *tip);
-
-	float clamp_angle(int p_joint_idx, float angle);
 
 protected:
 	static void _bind_methods();
@@ -233,6 +232,8 @@ public:
 	void ccdik_joint_set_bone_index(int p_joint_idx, int p_bone_idx);
 	int ccdik_joint_get_bone_index(int p_joint_idx) const;
 
+	void ccdik_joint_set_rotate_from_joint(int p_joint_idx, bool p_rotate_from_joint);
+	bool ccdik_joint_get_rotate_from_joint(int p_joint_idx) const;
 	void ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_constraint);
 	bool ccdik_joint_get_enable_constraint(int p_joint_idx) const;
 	void ccdik_joint_set_constraint_angle_min(int p_joint_idx, float p_angle_min);

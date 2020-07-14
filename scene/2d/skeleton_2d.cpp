@@ -233,7 +233,7 @@ void Bone2D::calculate_length_and_rotation() {
 
 void Bone2D::set_autocalculate_length_and_angle(bool p_autocalculate) {
 	autocalculate_length_and_angle = p_autocalculate;
-	if (autocalculate_length_and_angle == true) {
+	if (autocalculate_length_and_angle) {
 		calculate_length_and_rotation();
 	}
 	_change_notify();

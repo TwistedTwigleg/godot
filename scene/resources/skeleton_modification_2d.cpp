@@ -239,6 +239,43 @@ bool SkeletonModification2D::get_enabled() {
 	return enabled;
 }
 
+float SkeletonModification2D::clamp_angle(float angle, float min_bound, float max_bound, bool invert) {
+	// Map to the 0 to 360 range (in radians though) instead of the -180 to 180 range.
+	if (angle < 0) {
+		angle = (Math_PI * 2) + angle;
+	}
+
+	// Make min and max in the range of 0 to 360 (in radians), and make sure they are in the right order
+	if (min_bound < 0) {
+		min_bound = (Math_PI * 2) + min_bound;
+	}
+	if (max_bound < 0) {
+		max_bound = (Math_PI * 2) + max_bound;
+	}
+	if (min_bound > max_bound) {
+		float tmp = min_bound;
+		min_bound = max_bound;
+		max_bound = tmp;
+	}
+
+	if (invert == false) { // Normal clamping:
+		if (angle < min_bound) {
+			angle = min_bound;
+		} else if (angle > max_bound) {
+			angle = max_bound;
+		}
+	} else { // Inverse clamping:
+		if (angle > min_bound && angle < max_bound) {
+			if (angle - min_bound < max_bound - angle) {
+				angle = min_bound;
+			} else {
+				angle = max_bound;
+			}
+		}
+	}
+	return angle;
+}
+
 void SkeletonModification2D::_bind_methods() {
 	BIND_VMETHOD(MethodInfo("execute"));
 	BIND_VMETHOD(MethodInfo("setup_modification"));
@@ -343,7 +380,8 @@ void SkeletonModification2DLookAt::execute(float delta) {
 
 	// Apply constraints in globalspace:
 	if (enable_constraint && !constraint_in_localspace) {
-		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation()));
+		//operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation()));
+		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), constraint_angle_min, constraint_angle_max, constraint_angle_invert));
 	}
 
 	// Convert from a global transform to a delta and then apply the delta to the local transform.
@@ -352,7 +390,7 @@ void SkeletonModification2DLookAt::execute(float delta) {
 
 	// Apply constraints in localspace:
 	if (enable_constraint && constraint_in_localspace) {
-		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation()));
+		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), constraint_angle_min, constraint_angle_max, constraint_angle_invert));
 	}
 
 	// Apply additional rotation
@@ -450,30 +488,6 @@ void SkeletonModification2DLookAt::update_target_cache() {
 			}
 		}
 	}
-}
-
-float SkeletonModification2DLookAt::clamp_angle(float angle) {
-	// Map to the 0 to 360 range (in radians though) instead of the -180 to 180 range.
-	if (angle < 0) {
-		angle = Math_PI + (Math_PI + angle);
-	}
-
-	if (constraint_angle_invert == false) { // Normal clamping:
-		if (angle < constraint_angle_min) {
-			angle = constraint_angle_min;
-		} else if (angle > constraint_angle_max) {
-			angle = constraint_angle_max;
-		}
-	} else { // Inverse clamping:
-		if (angle > constraint_angle_min && angle < constraint_angle_max) {
-			if (angle - constraint_angle_min < constraint_angle_max - angle) {
-				angle = constraint_angle_min;
-			} else {
-				angle = constraint_angle_max;
-			}
-		}
-	}
-	return angle;
 }
 
 void SkeletonModification2DLookAt::set_target_node(const NodePath &p_target_node) {
@@ -591,6 +605,8 @@ bool SkeletonModification2DCCDIK::_set(const StringName &p_path, const Variant &
 			ccdik_joint_set_bone2d_node(which, p_value);
 		} else if (what == "bone_index") {
 			ccdik_joint_set_bone_index(which, p_value);
+		} else if (what == "rotate_from_joint") {
+			ccdik_joint_set_rotate_from_joint(which, p_value);
 		} else if (what == "enable_constraint") {
 			ccdik_joint_set_enable_constraint(which, p_value);
 		} else if (what == "constraint_angle_min") {
@@ -619,6 +635,8 @@ bool SkeletonModification2DCCDIK::_get(const StringName &p_path, Variant &r_ret)
 			r_ret = ccdik_joint_get_bone2d_node(which);
 		} else if (what == "bone_index") {
 			r_ret = ccdik_joint_get_bone_index(which);
+		} else if (what == "rotate_from_joint") {
+			r_ret = ccdik_joint_get_rotate_from_joint(which);
 		} else if (what == "enable_constraint") {
 			r_ret = ccdik_joint_get_enable_constraint(which);
 		} else if (what == "constraint_angle_min") {
@@ -641,6 +659,7 @@ void SkeletonModification2DCCDIK::_get_property_list(List<PropertyInfo> *p_list)
 
 		p_list->push_back(PropertyInfo(Variant::INT, base_string + "bone_index", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::NODE_PATH, base_string + "bone2d_node", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Bone2D", PROPERTY_USAGE_DEFAULT));
+		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "rotate_from_joint", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 
 		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "enable_constraint", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 		if (ccdik_data_chain[i].enable_constraint) {
@@ -690,14 +709,22 @@ void SkeletonModification2DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node2D *
 	Bone2D *operation_bone = stack->skeleton->get_bone(ccdik_data.bone_idx);
 	Transform2D operation_transform = operation_bone->get_global_transform();
 
-	// Note: Right now is not rotating from the tip, as that was not working, so for now, just rotate from the joint using looking_at.
-	// It works decently, but I'm not sure it is really CCDIK without rotating from the tip. Will need ot try and solve this.
-	operation_transform.set_rotation(
-			operation_transform.looking_at(target->get_global_transform().get_origin()).get_rotation() - operation_bone->get_bone_angle());
+	if (ccdik_data.rotate_from_joint) {
+		// To rotate from the joint, simply look at the target!
+		operation_transform.set_rotation(
+				operation_transform.looking_at(target->get_global_transform().get_origin()).get_rotation() - operation_bone->get_bone_angle());
+	} else {
+		// How to rotate from the tip: get the difference of rotation needed from the tip to the target, from the perspective of the joint.
+		// Because we are only using the offset, we do not need to account for the bone angle of the Bone2D node.
+		float joint_to_tip = operation_transform.get_origin().angle_to_point(tip->get_global_transform().get_origin());
+		float joint_to_target = operation_transform.get_origin().angle_to_point(target->get_global_transform().get_origin());
+		operation_transform.set_rotation(
+				operation_transform.get_rotation() + (joint_to_target - joint_to_tip));
+	}
 
 	// Apply constraints in globalspace:
 	if (ccdik_data.enable_constraint && !ccdik_data.constraint_in_localspace) {
-		operation_transform.set_rotation(clamp_angle(p_joint_idx, operation_transform.get_rotation()));
+		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), ccdik_data.constraint_angle_min, ccdik_data.constraint_angle_max, ccdik_data.constraint_angle_invert));
 	}
 
 	// Convert from a global transform to a delta and then apply the delta to the local transform.
@@ -706,7 +733,7 @@ void SkeletonModification2DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node2D *
 
 	// Apply constraints in localspace:
 	if (ccdik_data.enable_constraint && ccdik_data.constraint_in_localspace) {
-		operation_transform.set_rotation(clamp_angle(p_joint_idx, operation_transform.get_rotation()));
+		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), ccdik_data.constraint_angle_min, ccdik_data.constraint_angle_max, ccdik_data.constraint_angle_invert));
 	}
 
 	// Set the local pose override, and to make sure child bones are also updated, set the transform of the bone.
@@ -790,34 +817,6 @@ void SkeletonModification2DCCDIK::ccdik_joint_update_bone2d_cache(int p_joint_id
 	}
 }
 
-float SkeletonModification2DCCDIK::clamp_angle(int p_joint_idx, float angle) {
-	// TODO: make this a generic function that can be used for all 2D modifications!
-	// Map to the 0 to 360 range (in radians though) instead of the -180 to 180 range.
-	if (angle < 0) {
-		angle = Math_PI + (Math_PI + angle);
-	}
-
-	ERR_FAIL_INDEX_V_MSG(p_joint_idx, ccdik_data_chain.size(), 0.0, "Cannot clamp angle: Joint out of range!");
-	CCDIK_Joint_Data2D ccdik_data = ccdik_data_chain[p_joint_idx];
-
-	if (ccdik_data.constraint_angle_invert == false) { // Normal clamping:
-		if (angle < ccdik_data.constraint_angle_min) {
-			angle = ccdik_data.constraint_angle_min;
-		} else if (angle > ccdik_data.constraint_angle_max) {
-			angle = ccdik_data.constraint_angle_max;
-		}
-	} else { // Inverse clamping:
-		if (angle > ccdik_data.constraint_angle_min && angle < ccdik_data.constraint_angle_max) {
-			if (angle - ccdik_data.constraint_angle_min < ccdik_data.constraint_angle_max - angle) {
-				angle = ccdik_data.constraint_angle_min;
-			} else {
-				angle = ccdik_data.constraint_angle_max;
-			}
-		}
-	}
-	return angle;
-}
-
 void SkeletonModification2DCCDIK::set_target_node(const NodePath &p_target_node) {
 	target_node = p_target_node;
 	update_target_cache();
@@ -885,6 +884,16 @@ int SkeletonModification2DCCDIK::ccdik_joint_get_bone_index(int p_joint_idx) con
 	return ccdik_data_chain[p_joint_idx].bone_idx;
 }
 
+void SkeletonModification2DCCDIK::ccdik_joint_set_rotate_from_joint(int p_joint_idx, bool p_rotate_from_joint) {
+	ERR_FAIL_INDEX_MSG(p_joint_idx, ccdik_data_chain.size(), "CCDIK joint out of range!");
+	ccdik_data_chain.write[p_joint_idx].rotate_from_joint = p_rotate_from_joint;
+}
+
+bool SkeletonModification2DCCDIK::ccdik_joint_get_rotate_from_joint(int p_joint_idx) const {
+	ERR_FAIL_INDEX_V_MSG(p_joint_idx, ccdik_data_chain.size(), false, "CCDIK joint out of range!");
+	return ccdik_data_chain[p_joint_idx].rotate_from_joint;
+}
+
 void SkeletonModification2DCCDIK::ccdik_joint_set_enable_constraint(int p_joint_idx, bool p_constraint) {
 	ERR_FAIL_INDEX_MSG(p_joint_idx, ccdik_data_chain.size(), "CCDIK joint out of range!");
 	ccdik_data_chain.write[p_joint_idx].enable_constraint = p_constraint;
@@ -949,6 +958,8 @@ void SkeletonModification2DCCDIK::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone2d_node", "joint_idx"), &SkeletonModification2DCCDIK::ccdik_joint_get_bone2d_node);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_set_bone_index", "joint_idx", "bone_idx"), &SkeletonModification2DCCDIK::ccdik_joint_set_bone_index);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_get_bone_index", "joint_idx"), &SkeletonModification2DCCDIK::ccdik_joint_get_bone_index);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_set_rotate_from_joint", "joint_idx", "rotate_from_joint"), &SkeletonModification2DCCDIK::ccdik_joint_set_rotate_from_joint);
+	ClassDB::bind_method(D_METHOD("ccdik_joint_get_rotate_from_joint", "joint_idx"), &SkeletonModification2DCCDIK::ccdik_joint_get_rotate_from_joint);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_set_enable_constraint", "joint_idx", "enable_constraint"), &SkeletonModification2DCCDIK::ccdik_joint_set_enable_constraint);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_get_enable_constraint", "joint_idx"), &SkeletonModification2DCCDIK::ccdik_joint_get_enable_constraint);
 	ClassDB::bind_method(D_METHOD("ccdik_joint_set_constraint_angle_min", "joint_idx", "angle_min"), &SkeletonModification2DCCDIK::ccdik_joint_set_constraint_angle_min);
