@@ -1154,6 +1154,14 @@ void SkeletonModification2DFABRIK::execute(float delta) {
 		Bone2D *joint_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[i].bone2d_node_cache));
 		ERR_CONTINUE_MSG(!joint_bone2d_node, "Joint " + itos(i) + " does not have a Bone2D node set!");
 		Transform2D chain_trans = fabrik_transform_chain[i];
+
+		// Apply rotation
+		if (i+1 < fabrik_data_chain.size()) {
+			chain_trans = chain_trans.looking_at(fabrik_transform_chain[i+1].get_origin());
+		} else {
+			// TODO: add target rotation override support
+			chain_trans = chain_trans.looking_at(target_global_pose.get_origin());
+		}
 		// Adjust for the bone angle
 		chain_trans.set_rotation(chain_trans.get_rotation() - joint_bone2d_node->get_bone_angle());
 
@@ -1177,7 +1185,7 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 	Vector2 final_bone2d_direction = Vector2(Math::cos(final_bone2d_angle), Math::sin(final_bone2d_angle));
 	final_bone2d_trans.set_origin(target_global_pose.get_origin() - (final_bone2d_direction * final_bone2d_node->get_length()));
 	
-	// TODO: add constraint support!
+	// TODO: add constraint support (if possible. I'm not sure if it can be applied to the final bone)
 
 	// Save the transform
 	fabrik_transform_chain.write[final_joint_index] = final_bone2d_trans;
@@ -1190,13 +1198,11 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 		Bone2D *current_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[i].bone2d_node_cache));
 		Transform2D current_pose = fabrik_transform_chain[i];
 
+		// TODO: add constraint support!
+
 		float length = current_bone2d_node->get_length() / (previous_pose.get_origin() - current_pose.get_origin()).length();
 		Vector2 finish_position = previous_pose.get_origin().lerp(current_pose.get_origin(), length);
-
-		current_pose = current_pose.looking_at(finish_position);
 		current_pose.set_origin(finish_position);
-
-		// TODO: add constraint support!
 
 		// Save the transform
 		fabrik_transform_chain.write[i] = current_pose;
@@ -1214,13 +1220,11 @@ void SkeletonModification2DFABRIK::chain_forwards() {
 		Transform2D current_pose = fabrik_transform_chain[i];
 		Transform2D next_pose = fabrik_transform_chain[i+1];
 
+		// TODO: add constraint support!
+
 		float length = current_bone2d_node->get_length() / (current_pose.get_origin() - next_pose.get_origin()).length();
 		Vector2 finish_position = current_pose.get_origin().lerp(next_pose.get_origin(), length);
-		
-		current_pose = current_pose.looking_at(finish_position);
 		current_pose.set_origin(finish_position);
-
-		// TODO: add constraint support!
 
 		// Apply to the bone
 		fabrik_transform_chain.write[i+1] = current_pose;
