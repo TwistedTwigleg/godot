@@ -384,9 +384,9 @@ void SkeletonModification2DLookAt::execute(float delta) {
 		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), constraint_angle_min, constraint_angle_max, constraint_angle_invert));
 	}
 
-	// Convert from a global transform to a delta and then apply the delta to the local transform.
-	operation_transform = operation_bone->get_global_transform().affine_inverse() * operation_transform;
-	operation_transform = operation_bone->get_transform() * operation_transform;
+	// Convert from a global transform to a local transform via the Bone2D node
+	operation_bone->set_global_transform(operation_transform);
+	operation_transform = operation_bone->get_transform();
 
 	// Apply constraints in localspace:
 	if (enable_constraint && constraint_in_localspace) {
@@ -728,8 +728,8 @@ void SkeletonModification2DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node2D *
 	}
 
 	// Convert from a global transform to a delta and then apply the delta to the local transform.
-	operation_transform = operation_bone->get_global_transform().affine_inverse() * operation_transform;
-	operation_transform = operation_bone->get_transform() * operation_transform;
+	operation_bone->set_global_transform(operation_transform);
+	operation_transform = operation_bone->get_transform();
 
 	// Apply constraints in localspace:
 	if (ccdik_data.enable_constraint && ccdik_data.constraint_in_localspace) {
@@ -1120,6 +1120,11 @@ void SkeletonModification2DFABRIK::execute(float delta) {
 			joint_trans.set_origin(joint_trans.get_origin() + fabrik_data_chain[i].magnet_position);
 			joint_bone2d_node->set_global_transform(joint_trans);
 		}
+
+		// Set them all Bone2D nodes as top level, so we can manipulate them freely without the parent-child relations, which break FABRIK.
+		Bone2D *joint_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[i].bone2d_node_cache));
+		ERR_CONTINUE_MSG(!joint_bone2d_node, "Joint " + itos(i) + " does not have a Bone2D node set!");
+		joint_bone2d_node->set_as_toplevel(true);
 	}
 
 	Bone2D *final_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[fabrik_data_chain.size() - 1].bone2d_node_cache));
@@ -1141,6 +1146,13 @@ void SkeletonModification2DFABRIK::execute(float delta) {
 			break;
 		}
 	}
+
+	// Undo the top-level setting
+	for (int i = 0; i < fabrik_data_chain.size(); i++) {
+		Bone2D *joint_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[i].bone2d_node_cache));
+		ERR_CONTINUE_MSG(!joint_bone2d_node, "Joint " + itos(i) + " does not have a Bone2D node set!");
+		joint_bone2d_node->set_as_toplevel(false);
+	}
 }
 
 void SkeletonModification2DFABRIK::chain_backwards() {
@@ -1148,9 +1160,9 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 	Bone2D *final_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[final_joint_index].bone2d_node_cache));
 	float final_bone2d_angle = final_bone2d_node->get_global_transform().get_rotation() - final_bone2d_node->get_bone_angle();
 	Vector2 final_bone2d_direction = Vector2(Math::cos(final_bone2d_angle), Math::sin(final_bone2d_angle));
+	Transform2D final_bone2d_trans = final_bone2d_node->get_global_transform();
 
 	// Set the rotation of the tip bone
-	Transform2D final_bone2d_trans = final_bone2d_node->get_global_transform();
 	final_bone2d_trans = final_bone2d_trans.looking_at(target_global_pose.get_origin());
 	final_bone2d_trans.set_rotation(final_bone2d_trans.get_rotation() - final_bone2d_node->get_bone_angle());
 
@@ -1162,11 +1174,9 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 	final_bone2d_trans.set_rotation(clamp_angle(final_bone2d_trans.get_rotation(), fabrik_data_chain[final_joint_index].constraint_angle_min,
 			fabrik_data_chain[final_joint_index].constraint_angle_max, fabrik_data_chain[final_joint_index].constraint_angle_invert));
 
-	// Convert to a local transform and apply
-	final_bone2d_trans = final_bone2d_node->get_global_transform().affine_inverse() * final_bone2d_trans;
-	final_bone2d_trans = final_bone2d_node->get_transform() * final_bone2d_trans;
-	stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[final_joint_idx].bone_idx, final_bone2d_trans, stack->strength, true);
-	final_bone2d_node->set_transform(final_bone2d_trans);
+	// Set the global transform and apply the override
+	final_bone2d_node->set_global_transform(final_bone2d_trans);
+	stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[final_joint_idx].bone_idx, final_bone2d_node->get_transform(), stack->strength, true);
 
 	int i = final_joint_index;
 	while (i >= 1) {
@@ -1191,10 +1201,8 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 		}
 
 		// Apply the position
-		current_pose = current_bone2d_node->get_global_transform().affine_inverse() * current_pose;
-		current_pose = current_bone2d_node->get_transform() * current_pose;
-		stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, current_pose, stack->strength, true);
-		current_bone2d_node->set_transform(current_pose);
+		current_bone2d_node->set_global_transform(current_pose);
+		stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, current_bone2d_node->get_transform(), stack->strength, true);
 	}
 }
 
@@ -1203,10 +1211,8 @@ void SkeletonModification2DFABRIK::chain_forwards() {
 	Transform2D origin_bone2d_trans = origin_bone2d_node->get_global_transform();
 	origin_bone2d_trans.set_origin(origin_global_pose.get_origin());
 	// Apply the position
-	origin_bone2d_trans = origin_bone2d_node->get_global_transform().affine_inverse() * origin_bone2d_trans;
-	origin_bone2d_trans = origin_bone2d_node->get_transform() * origin_bone2d_trans;
-	stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[0].bone_idx, origin_bone2d_trans, stack->strength, true);
-	origin_bone2d_node->set_transform(origin_bone2d_trans);
+	origin_bone2d_node->set_global_transform(origin_bone2d_trans);
+	stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[0].bone_idx, origin_bone2d_node->get_transform(), stack->strength, true);
 
 	for (int i = 0; i < fabrik_data_chain.size() - 1; i++) {
 		Bone2D *current_bone2d_node = Object::cast_to<Bone2D>(ObjectDB::get_instance(fabrik_data_chain[i].bone2d_node_cache));
@@ -1228,11 +1234,9 @@ void SkeletonModification2DFABRIK::chain_forwards() {
 					fabrik_data_chain[i].constraint_angle_max, fabrik_data_chain[i].constraint_angle_invert));
 		}
 
-		// Apply the position
-		current_pose = current_bone2d_node->get_global_transform().affine_inverse() * current_pose;
-		current_pose = current_bone2d_node->get_transform() * current_pose;
-		stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, current_pose, stack->strength, true);
-		current_bone2d_node->set_transform(current_pose);
+		// Apply to the bone
+		current_bone2d_node->set_global_transform(current_pose);
+		stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, current_bone2d_node->get_transform(), stack->strength, true);
 	}
 }
 
