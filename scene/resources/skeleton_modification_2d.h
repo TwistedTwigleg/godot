@@ -274,6 +274,12 @@ private:
 
 	Vector<FABRIK_Joint_Data2D> fabrik_data_chain;
 
+	// Unlike in 3D, we need a vector of Transform2D objects to perform FABRIK.
+	// This is because FABRIK (unlike CCDIK) needs to operate on transforms that are NOT
+	// affected by each other, making the transforms stored in Bone2D unusable, as well as those in Skeleton2D.
+	// For this reason, this modification stores a vector of Transform2Ds used for the calculations, which are then applied at the end.
+	Vector<Transform2D> fabrik_transform_chain;
+
 	NodePath target_node;
 	ObjectID target_node_cache;
 	void update_target_cache();
@@ -281,7 +287,6 @@ private:
 	float chain_tolarance = 0.01;
 	int chain_max_iterations = 10;
 	int chain_iterations = 0;
-	int final_joint_idx = 0;
 	Transform2D target_global_pose = Transform2D();
 	Transform2D origin_global_pose = Transform2D();
 
