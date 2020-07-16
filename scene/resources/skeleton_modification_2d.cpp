@@ -262,7 +262,13 @@ float SkeletonModification2D::clamp_angle(float angle, float min_bound, float ma
 		if (angle < min_bound) {
 			angle = min_bound;
 		} else if (angle > max_bound) {
-			angle = max_bound;
+			float delta_to_max = angle - max_bound;
+			float delta_to_beefed_up_min = (min_bound + (Math_PI * 2)) - angle;
+			if (delta_to_beefed_up_min < delta_to_max) {
+				angle = min_bound;
+			} else {
+				angle = max_bound;
+			}
 		}
 	} else { // Inverse clamping:
 		if (angle > min_bound && angle < max_bound) {

@@ -146,8 +146,8 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
-	virtual void execute(float delta);
-	virtual void setup_modification(SkeletonModificationStack2D *p_stack);
+	void execute(float delta) override;
+	void setup_modification(SkeletonModificationStack2D *p_stack) override;
 
 	void set_bone2d_node(const NodePath &p_target_node);
 	NodePath get_bone2d_node() const;
@@ -216,8 +216,8 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
-	virtual void execute(float delta);
-	virtual void setup_modification(SkeletonModificationStack2D *p_stack);
+	void execute(float delta) override;
+	void setup_modification(SkeletonModificationStack2D *p_stack) override;
 
 	void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;
@@ -301,8 +301,8 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
-	virtual void execute(float delta);
-	virtual void setup_modification(SkeletonModificationStack2D *p_stack);
+	void execute(float delta) override;
+	void setup_modification(SkeletonModificationStack2D *p_stack) override;
 
 	void set_target_node(const NodePath &p_target_node);
 	NodePath get_target_node() const;
