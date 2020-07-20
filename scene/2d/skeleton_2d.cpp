@@ -404,6 +404,7 @@ void Skeleton2D::_notification(int p_what) {
 		}
 
 		set_process_internal(true);
+		set_physics_process_internal(true);
 		request_ready();
 	}
 
@@ -412,7 +413,18 @@ void Skeleton2D::_notification(int p_what) {
 	}
 
 	if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
-		execute_modification(get_process_delta_time());
+		if (modification_stack.is_valid()) {
+			if (modification_stack->execution_mode == SkeletonModificationStack2D::EXECUTION_MODE::execution_mode_process) {
+				execute_modification(get_process_delta_time());
+			}
+		}
+	}
+	if (p_what == NOTIFICATION_INTERNAL_PHYSICS_PROCESS) {
+		if (modification_stack.is_valid()) {
+			if (modification_stack->execution_mode == SkeletonModificationStack2D::EXECUTION_MODE::execution_mode_physics_process) {
+				execute_modification(get_physics_process_delta_time());
+			}
+		}
 	}
 }
 

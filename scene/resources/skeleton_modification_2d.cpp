@@ -31,6 +31,9 @@
 #include "skeleton_modification_2d.h"
 #include "scene/2d/skeleton_2d.h"
 
+#include "scene/2d/collision_object_2d.h"
+#include "scene/2d/collision_shape_2d.h"
+
 ///////////////////////////////////////
 // ModificationStack2D
 ///////////////////////////////////////
@@ -180,6 +183,14 @@ float SkeletonModificationStack2D::get_strength() const {
 	return strength;
 }
 
+void SkeletonModificationStack2D::set_execution_mode(int p_new_mode) {
+	execution_mode = p_new_mode;
+}
+
+int SkeletonModificationStack2D::get_execution_mode() {
+	return execution_mode;
+}
+
 void SkeletonModificationStack2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("setup"), &SkeletonModificationStack2D::setup);
 	ClassDB::bind_method(D_METHOD("execute", "delta"), &SkeletonModificationStack2D::execute);
@@ -201,8 +212,12 @@ void SkeletonModificationStack2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_strength", "strength"), &SkeletonModificationStack2D::set_strength);
 	ClassDB::bind_method(D_METHOD("get_strength"), &SkeletonModificationStack2D::get_strength);
 
+	ClassDB::bind_method(D_METHOD("set_execution_mode", "execution_mode"), &SkeletonModificationStack2D::set_execution_mode);
+	ClassDB::bind_method(D_METHOD("get_execution_mode"), &SkeletonModificationStack2D::get_execution_mode);
+
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "get_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "strength", PROPERTY_HINT_RANGE, "0, 1, 0.001"), "set_strength", "get_strength");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "execution_mode", PROPERTY_HINT_ENUM, "process, physics_process"), "set_execution_mode", "get_execution_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "modification_count", PROPERTY_HINT_RANGE, "0, 100, 1"), "set_modification_count", "get_modification_count");
 }
 
@@ -1535,6 +1550,12 @@ bool SkeletonModification2DJiggle::_set(const StringName &p_path, const Variant 
 			jiggle_joint_set_gravity(which, p_value);
 		}
 		return true;
+	} else {
+		if (path == "use_colliders") {
+			set_use_colliders(p_value);
+		} else if (path == "collision_mask") {
+			set_collision_mask(p_value);
+		}
 	}
 	return true;
 }
@@ -1565,11 +1586,22 @@ bool SkeletonModification2DJiggle::_get(const StringName &p_path, Variant &r_ret
 			r_ret = jiggle_joint_get_gravity(which);
 		}
 		return true;
+	} else {
+		if (path == "use_colliders") {
+			r_ret = get_use_colliders();
+		} else if (path == "collision_mask") {
+			r_ret = get_collision_mask();
+		}
 	}
 	return true;
 }
 
 void SkeletonModification2DJiggle::_get_property_list(List<PropertyInfo> *p_list) const {
+	p_list->push_back(PropertyInfo(Variant::BOOL, "use_colliders", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	if (use_colliders) {
+		p_list->push_back(PropertyInfo(Variant::INT, "collision_mask", PROPERTY_HINT_LAYERS_2D_PHYSICS, "", PROPERTY_USAGE_DEFAULT));
+	}
+
 	for (int i = 0; i < jiggle_data_chain.size(); i++) {
 		String base_string = "joint_data/" + itos(i) + "/";
 
@@ -1577,12 +1609,12 @@ void SkeletonModification2DJiggle::_get_property_list(List<PropertyInfo> *p_list
 		p_list->push_back(PropertyInfo(Variant::NODE_PATH, base_string + "bone2d_node", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Bone2D", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "override_defaults", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 
-		if (jiggle_data_chain[i].override_defaults == true) {
+		if (jiggle_data_chain[i].override_defaults) {
 			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "stiffness", PROPERTY_HINT_RANGE, "0, 1000, 0.01", PROPERTY_USAGE_DEFAULT));
 			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "mass", PROPERTY_HINT_RANGE, "0, 1000, 0.01", PROPERTY_USAGE_DEFAULT));
 			p_list->push_back(PropertyInfo(Variant::FLOAT, base_string + "damping", PROPERTY_HINT_RANGE, "0, 1, 0.01", PROPERTY_USAGE_DEFAULT));
 			p_list->push_back(PropertyInfo(Variant::BOOL, base_string + "use_gravity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
-			if (jiggle_data_chain[i].use_gravity == true) {
+			if (jiggle_data_chain[i].use_gravity) {
 				p_list->push_back(PropertyInfo(Variant::VECTOR2, base_string + "gravity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
 			}
 		}
@@ -1638,6 +1670,30 @@ void SkeletonModification2DJiggle::_execute_jiggle_joint(int p_joint_idx, Node2D
 	jiggle_data_chain.write[p_joint_idx].dynamic_position += operation_bone_trans.get_origin() - jiggle_data_chain[p_joint_idx].last_position;
 	jiggle_data_chain.write[p_joint_idx].last_position = operation_bone_trans.get_origin();
 
+	// Collision detection/response
+	if (use_colliders) {
+		if (stack->execution_mode == SkeletonModificationStack2D::EXECUTION_MODE::execution_mode_physics_process) {
+			Ref<World2D> world_2d = stack->skeleton->get_world_2d();
+			ERR_FAIL_COND(world_2d.is_null());
+			PhysicsDirectSpaceState2D *space_state = PhysicsServer2D::get_singleton()->space_get_direct_state(world_2d->get_space());
+			PhysicsDirectSpaceState2D::RayResult ray_result;
+
+			// Add exception support?
+			bool ray_hit = space_state->intersect_ray(operation_bone_trans.get_origin(), jiggle_data_chain[p_joint_idx].dynamic_position,
+					ray_result, Set<RID>(), collision_mask);
+
+			if (ray_hit) {
+				jiggle_data_chain.write[p_joint_idx].dynamic_position = jiggle_data_chain[p_joint_idx].last_noncollision_position;
+				jiggle_data_chain.write[p_joint_idx].acceleration = Vector2(0, 0);
+				jiggle_data_chain.write[p_joint_idx].velocity = Vector2(0, 0);
+			} else {
+				jiggle_data_chain.write[p_joint_idx].last_noncollision_position = jiggle_data_chain[p_joint_idx].dynamic_position;
+			}
+		} else {
+			WARN_PRINT("Jiggle 2D modifier: You cannot detect colliders without the stack mode being set to _physics_process!");
+		}
+	}
+
 	// Rotate the bone using the dynamic position!
 	operation_bone_trans = operation_bone_trans.looking_at(jiggle_data_chain[p_joint_idx].dynamic_position);
 	operation_bone_trans.set_rotation(operation_bone_trans.get_rotation() - operation_bone->get_bone_angle());
@@ -1648,7 +1704,7 @@ void SkeletonModification2DJiggle::_execute_jiggle_joint(int p_joint_idx, Node2D
 
 void SkeletonModification2DJiggle::_update_jiggle_joint_data() {
 	for (int i = 0; i < jiggle_data_chain.size(); i++) {
-		if (jiggle_data_chain[i].override_defaults == false) {
+		if (!jiggle_data_chain[i].override_defaults) {
 			jiggle_joint_set_stiffness(i, stiffness);
 			jiggle_joint_set_mass(i, mass);
 			jiggle_joint_set_damping(i, damping);
@@ -1780,6 +1836,23 @@ void SkeletonModification2DJiggle::set_gravity(Vector2 p_gravity) {
 
 Vector2 SkeletonModification2DJiggle::get_gravity() const {
 	return gravity;
+}
+
+void SkeletonModification2DJiggle::set_use_colliders(bool p_use_colliders) {
+	use_colliders = p_use_colliders;
+	_change_notify();
+}
+
+bool SkeletonModification2DJiggle::get_use_colliders() const {
+	return use_colliders;
+}
+
+void SkeletonModification2DJiggle::set_collision_mask(int p_mask) {
+	collision_mask = p_mask;
+}
+
+int SkeletonModification2DJiggle::get_collision_mask() const {
+	return collision_mask;
 }
 
 // Jiggle joint data functions
@@ -1916,6 +1989,11 @@ void SkeletonModification2DJiggle::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_use_gravity"), &SkeletonModification2DJiggle::get_use_gravity);
 	ClassDB::bind_method(D_METHOD("set_gravity", "gravity"), &SkeletonModification2DJiggle::set_gravity);
 	ClassDB::bind_method(D_METHOD("get_gravity"), &SkeletonModification2DJiggle::get_gravity);
+
+	ClassDB::bind_method(D_METHOD("set_use_colliders", "use_colliders"), &SkeletonModification2DJiggle::set_use_colliders);
+	ClassDB::bind_method(D_METHOD("get_use_colliders"), &SkeletonModification2DJiggle::get_use_colliders);
+	ClassDB::bind_method(D_METHOD("set_collision_mask", "collision_mask"), &SkeletonModification2DJiggle::set_collision_mask);
+	ClassDB::bind_method(D_METHOD("get_collision_mask"), &SkeletonModification2DJiggle::get_collision_mask);
 
 	// Jiggle joint data functions
 	ClassDB::bind_method(D_METHOD("jiggle_joint_set_bone2d_node", "joint_idx", "bone2d_node"), &SkeletonModification2DJiggle::jiggle_joint_set_bone2d_node);
