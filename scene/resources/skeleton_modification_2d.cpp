@@ -258,21 +258,26 @@ float SkeletonModification2D::clamp_angle(float angle, float min_bound, float ma
 		max_bound = tmp;
 	}
 
-	if (invert == false) { // Normal clamping:
-		if (angle < min_bound) {
-			angle = min_bound;
-		} else if (angle > max_bound) {
-			float delta_to_max = angle - max_bound;
-			float delta_to_beefed_up_min = (min_bound + (Math_PI * 2)) - angle;
-			if (delta_to_beefed_up_min < delta_to_max) {
+	// Note: May not be the most optimal way to clamp, but it always constraints to the nearest angle.
+	if (invert == false) {
+		if (angle < min_bound || angle > max_bound) {
+			Vector2 min_bound_vec = Vector2(Math::cos(min_bound), Math::sin(min_bound));
+			Vector2 max_bound_vec = Vector2(Math::cos(max_bound), Math::sin(max_bound));
+			Vector2 angle_vec = Vector2(Math::cos(angle), Math::sin(angle));
+
+			if (angle_vec.distance_squared_to(min_bound_vec) <= angle_vec.distance_squared_to(max_bound_vec)) {
 				angle = min_bound;
 			} else {
 				angle = max_bound;
 			}
 		}
-	} else { // Inverse clamping:
+	} else {
 		if (angle > min_bound && angle < max_bound) {
-			if (angle - min_bound < max_bound - angle) {
+			Vector2 min_bound_vec = Vector2(Math::cos(min_bound), Math::sin(min_bound));
+			Vector2 max_bound_vec = Vector2(Math::cos(max_bound), Math::sin(max_bound));
+			Vector2 angle_vec = Vector2(Math::cos(angle), Math::sin(angle));
+
+			if (angle_vec.distance_squared_to(min_bound_vec) <= angle_vec.distance_squared_to(max_bound_vec)) {
 				angle = min_bound;
 			} else {
 				angle = max_bound;
