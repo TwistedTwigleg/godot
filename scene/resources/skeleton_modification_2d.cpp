@@ -400,13 +400,17 @@ void SkeletonModification2DLookAt::execute(float delta) {
 
 	// Look at the target!
 	operation_transform = operation_transform.looking_at(target_trans.get_origin());
+	// Apply whatever scale it had prior to looking_at
+	operation_transform.set_scale(operation_bone->get_global_transform().get_scale());
 
 	// Account for the direction the bone faces in:
 	operation_transform.set_rotation(operation_transform.get_rotation() - operation_bone->get_bone_angle());
 
+	// Apply additional rotation
+	operation_transform.set_rotation(operation_transform.get_rotation() + additional_rotation);
+
 	// Apply constraints in globalspace:
 	if (enable_constraint && !constraint_in_localspace) {
-		//operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation()));
 		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), constraint_angle_min, constraint_angle_max, constraint_angle_invert));
 	}
 
@@ -418,9 +422,6 @@ void SkeletonModification2DLookAt::execute(float delta) {
 	if (enable_constraint && constraint_in_localspace) {
 		operation_transform.set_rotation(clamp_angle(operation_transform.get_rotation(), constraint_angle_min, constraint_angle_max, constraint_angle_invert));
 	}
-
-	// Apply additional rotation
-	operation_transform.set_rotation(operation_transform.get_rotation() + additional_rotation);
 
 	// Set the local pose override, and to make sure child bones are also updated, set the transform of the bone.
 	stack->skeleton->set_bone_local_pose_override(bone_idx, operation_transform, stack->strength, true);
@@ -747,6 +748,9 @@ void SkeletonModification2DCCDIK::_execute_ccdik_joint(int p_joint_idx, Node2D *
 		operation_transform.set_rotation(
 				operation_transform.get_rotation() + (joint_to_target - joint_to_tip));
 	}
+
+	// Reset scale
+	operation_transform.set_scale(operation_bone->get_global_transform().get_scale());
 
 	// Apply constraints in globalspace:
 	if (ccdik_data.enable_constraint && !ccdik_data.constraint_in_localspace) {
@@ -1159,7 +1163,8 @@ void SkeletonModification2DFABRIK::execute(float delta) {
 		final_bone2d_angle = target_global_pose.get_rotation();
 	}
 	Vector2 final_bone2d_direction = Vector2(Math::cos(final_bone2d_angle), Math::sin(final_bone2d_angle));
-	float target_distance = (final_bone2d_node->get_global_transform().get_origin() + (final_bone2d_direction * final_bone2d_node->get_length())).distance_to(target->get_global_transform().get_origin());
+	float final_bone2d_length = final_bone2d_node->get_length() * Math::abs(final_bone2d_node->get_global_scale().length());
+	float target_distance = (final_bone2d_node->get_global_transform().get_origin() + (final_bone2d_direction * final_bone2d_length)).distance_to(target->get_global_transform().get_origin());
 	chain_iterations = 0;
 
 	while (target_distance > chain_tolarance) {
@@ -1171,7 +1176,7 @@ void SkeletonModification2DFABRIK::execute(float delta) {
 			final_bone2d_angle = target_global_pose.get_rotation();
 		}
 		final_bone2d_direction = Vector2(Math::cos(final_bone2d_angle), Math::sin(final_bone2d_angle));
-		target_distance = (final_bone2d_node->get_global_transform().get_origin() + (final_bone2d_direction * final_bone2d_node->get_length())).distance_to(target->get_global_transform().get_origin());
+		target_distance = (final_bone2d_node->get_global_transform().get_origin() + (final_bone2d_direction * final_bone2d_length)).distance_to(target->get_global_transform().get_origin());
 
 		chain_iterations += 1;
 		if (chain_iterations >= chain_max_iterations) {
@@ -1204,6 +1209,9 @@ void SkeletonModification2DFABRIK::execute(float delta) {
 		// Adjust for the bone angle
 		chain_trans.set_rotation(chain_trans.get_rotation() - joint_bone2d_node->get_bone_angle());
 
+		// Reset scale
+		chain_trans.set_scale(joint_bone2d_node->get_global_transform().get_scale());
+
 		// Apply to the bone, and to the override
 		joint_bone2d_node->set_global_transform(chain_trans);
 		stack->skeleton->set_bone_local_pose_override(fabrik_data_chain[i].bone_idx, joint_bone2d_node->get_transform(), stack->strength, true);
@@ -1229,7 +1237,8 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 				fabrik_data_chain[final_joint_index].constraint_angle_max, fabrik_data_chain[final_joint_index].constraint_angle_invert);
 	}
 	Vector2 final_bone2d_direction = Vector2(Math::cos(final_bone2d_angle), Math::sin(final_bone2d_angle));
-	final_bone2d_trans.set_origin(target_global_pose.get_origin() - (final_bone2d_direction * final_bone2d_node->get_length()));
+	float final_bone2d_length = final_bone2d_node->get_length() * Math::abs(final_bone2d_node->get_global_scale().length());
+	final_bone2d_trans.set_origin(target_global_pose.get_origin() - (final_bone2d_direction * final_bone2d_length));
 
 	// Save the transform
 	fabrik_transform_chain.write[final_joint_index] = final_bone2d_trans;
@@ -1256,7 +1265,8 @@ void SkeletonModification2DFABRIK::chain_backwards() {
 			current_pose.set_origin(previous_pose.get_origin() + (Vector2(Math::cos(previous_to_current_angle), Math::sin(previous_to_current_angle)) * previous_to_current_length));
 		}
 
-		float length = current_bone2d_node->get_length() / (previous_pose.get_origin() - current_pose.get_origin()).length();
+		float current_bone2d_node_length = current_bone2d_node->get_length() * Math::abs(current_bone2d_node->get_global_scale().length());
+		float length = current_bone2d_node_length / (previous_pose.get_origin() - current_pose.get_origin()).length();
 		Vector2 finish_position = previous_pose.get_origin().lerp(current_pose.get_origin(), length);
 		current_pose.set_origin(finish_position);
 
@@ -1290,7 +1300,8 @@ void SkeletonModification2DFABRIK::chain_forwards() {
 			next_pose.set_origin(current_pose.get_origin() + (Vector2(Math::cos(next_to_current_angle), Math::sin(next_to_current_angle)) * next_to_current_length));
 		}
 
-		float length = current_bone2d_node->get_length() / (current_pose.get_origin() - next_pose.get_origin()).length();
+		float current_bone2d_node_length = current_bone2d_node->get_length() * Math::abs(current_bone2d_node->get_global_scale().length());
+		float length = current_bone2d_node_length / (current_pose.get_origin() - next_pose.get_origin()).length();
 		Vector2 finish_position = current_pose.get_origin().lerp(next_pose.get_origin(), length);
 		current_pose.set_origin(finish_position);
 
@@ -1697,6 +1708,9 @@ void SkeletonModification2DJiggle::_execute_jiggle_joint(int p_joint_idx, Node2D
 	// Rotate the bone using the dynamic position!
 	operation_bone_trans = operation_bone_trans.looking_at(jiggle_data_chain[p_joint_idx].dynamic_position);
 	operation_bone_trans.set_rotation(operation_bone_trans.get_rotation() - operation_bone->get_bone_angle());
+
+	// Reset scale
+	operation_bone_trans.set_scale(operation_bone->get_global_transform().get_scale());
 
 	operation_bone->set_global_transform(operation_bone_trans);
 	stack->skeleton->set_bone_local_pose_override(jiggle_data_chain[p_joint_idx].bone_idx, operation_bone->get_transform(), stack->strength, true);
@@ -2176,8 +2190,8 @@ void SkeletonModification2DTwoBoneIK::execute(float delta) {
 	float joint_one_to_target = target_difference.length();
 	float angle_atan = Math::atan2(target_difference.y, target_difference.x);
 
-	float bone_one_length = joint_one_bone->get_length();
-	float bone_two_length = joint_two_bone->get_length();
+	float bone_one_length = joint_one_bone->get_length() * Math::abs(joint_one_bone->get_global_scale().length());
+	float bone_two_length = joint_two_bone->get_length() * Math::abs(joint_two_bone->get_global_scale().length());
 	bool override_angles_due_to_out_of_range = false;
 
 	if (bone_one_length + bone_two_length < joint_one_to_target) {
