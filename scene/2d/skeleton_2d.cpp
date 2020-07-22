@@ -403,23 +403,22 @@ void Skeleton2D::_notification(int p_what) {
 			_update_transform();
 		}
 
-		set_process_internal(true);
-		set_physics_process_internal(true);
+		set_process(true);
+		set_physics_process(true);
 		request_ready();
 	}
 
 	if (p_what == NOTIFICATION_TRANSFORM_CHANGED) {
 		RS::get_singleton()->skeleton_set_base_transform_2d(skeleton, get_global_transform());
 	}
-
-	if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
+	if (p_what == NOTIFICATION_PROCESS) {
 		if (modification_stack.is_valid()) {
 			if (modification_stack->execution_mode == SkeletonModificationStack2D::EXECUTION_MODE::execution_mode_process) {
 				execute_modification(get_process_delta_time());
 			}
 		}
 	}
-	if (p_what == NOTIFICATION_INTERNAL_PHYSICS_PROCESS) {
+	if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
 		if (modification_stack.is_valid()) {
 			if (modification_stack->execution_mode == SkeletonModificationStack2D::EXECUTION_MODE::execution_mode_physics_process) {
 				execute_modification(get_physics_process_delta_time());
