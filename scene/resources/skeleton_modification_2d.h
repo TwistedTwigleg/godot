@@ -456,6 +456,7 @@ private:
 	NodePath target_node;
 	ObjectID target_node_cache;
 	float target_minimum_distance = 6;
+	bool flip_bend_direction = false;
 
 	NodePath joint_one_bone2d_node;
 	ObjectID joint_one_bone2d_node_cache;
@@ -494,6 +495,8 @@ public:
 
 	void set_target_minimum_distance(float p_minimum_distance);
 	float get_target_minimum_distance() const;
+	void set_flip_bend_direction(bool p_flip_direction);
+	bool get_flip_bend_direction() const;
 
 	void set_joint_one_bone2d_node(const NodePath &p_node);
 	NodePath get_joint_one_bone2d_node() const;

@@ -2203,6 +2203,11 @@ void SkeletonModification2DTwoBoneIK::execute(float delta) {
 	if (!override_angles_due_to_out_of_range) {
 		float angle_0 = Math::acos(((joint_one_to_target * joint_one_to_target) + (bone_one_length * bone_one_length) - (bone_two_length * bone_two_length)) / (2.0 * joint_one_to_target * bone_one_length));
 		float angle_1 = Math::acos(((bone_two_length * bone_two_length) + (bone_one_length * bone_one_length) - (joint_one_to_target * joint_one_to_target)) / (2.0 * bone_two_length * bone_one_length));
+		
+		if (flip_bend_direction) {
+			angle_0 = -angle_0;
+			angle_1 = -angle_1;
+		}
 
 		joint_one_bone->set_global_rotation(angle_atan - angle_0 - joint_one_bone->get_bone_angle());
 		joint_two_bone->set_rotation(-Math_PI - angle_1 - joint_two_bone->get_bone_angle() - joint_one_bone->get_bone_angle());
@@ -2335,6 +2340,14 @@ void SkeletonModification2DTwoBoneIK::set_target_minimum_distance(float p_distan
 
 float SkeletonModification2DTwoBoneIK::get_target_minimum_distance() const {
 	return target_minimum_distance;
+}
+
+void SkeletonModification2DTwoBoneIK::set_flip_bend_direction(bool p_flip_direction) {
+	flip_bend_direction = p_flip_direction;
+}
+
+bool SkeletonModification2DTwoBoneIK::get_flip_bend_direction() const {
+	return flip_bend_direction;
 }
 
 NodePath SkeletonModification2DTwoBoneIK::get_joint_one_bone2d_node() const {
@@ -2491,6 +2504,8 @@ void SkeletonModification2DTwoBoneIK::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_target_minimum_distance", "minimum_distance"), &SkeletonModification2DTwoBoneIK::set_target_minimum_distance);
 	ClassDB::bind_method(D_METHOD("get_target_minimum_distance"), &SkeletonModification2DTwoBoneIK::get_target_minimum_distance);
+	ClassDB::bind_method(D_METHOD("set_flip_bend_direction", "flip_direction"), &SkeletonModification2DTwoBoneIK::set_flip_bend_direction);
+	ClassDB::bind_method(D_METHOD("get_flip_bend_direction"), &SkeletonModification2DTwoBoneIK::get_flip_bend_direction);
 
 	ClassDB::bind_method(D_METHOD("set_joint_one_bone2d_node", "bone2d_node"), &SkeletonModification2DTwoBoneIK::set_joint_one_bone2d_node);
 	ClassDB::bind_method(D_METHOD("get_joint_one_bone2d_node"), &SkeletonModification2DTwoBoneIK::get_joint_one_bone2d_node);
@@ -2524,6 +2539,7 @@ void SkeletonModification2DTwoBoneIK::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "target_nodepath", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Node2D"), "set_target_node", "get_target_node");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_minimum_distance", PROPERTY_HINT_NONE, ""), "set_target_minimum_distance", "get_target_minimum_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "flip_bend_direction", PROPERTY_HINT_NONE, ""), "set_flip_bend_direction", "get_flip_bend_direction");
 	ADD_GROUP("", "");
 }
 
