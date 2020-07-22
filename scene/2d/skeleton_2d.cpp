@@ -31,6 +31,11 @@
 #include "skeleton_2d.h"
 #include "scene/resources/skeleton_modification_2d.h"
 
+#ifdef TOOLS_ENABLED
+#include "editor/editor_settings.h"
+#include "editor/plugins/canvas_item_editor_plugin.h"
+#endif //TOOLS_ENABLED
+
 bool Bone2D::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
@@ -88,10 +93,18 @@ void Bone2D::_notification(int p_what) {
 			skeleton->bones.push_back(bone);
 			skeleton->_make_bone_setup_dirty();
 		}
+
+#ifdef TOOLS_ENABLED
+		update();
+#endif // TOOLS_ENABLED
 	}
 	if (p_what == NOTIFICATION_LOCAL_TRANSFORM_CHANGED) {
 		if (skeleton) {
 			skeleton->_make_transform_dirty();
+
+#ifdef TOOLS_ENABLED
+			update();
+#endif // TOOLS_ENABLED
 		}
 	}
 	if (p_what == NOTIFICATION_MOVED_IN_PARENT) {
@@ -119,7 +132,165 @@ void Bone2D::_notification(int p_what) {
 			calculate_length_and_rotation();
 		}
 	}
+
+#ifdef TOOLS_ENABLED
+	// Bone2D Editor gizmo drawing:
+	if (p_what == NOTIFICATION_DRAW) {
+		if (editor_gizmo_rid.is_null()) {
+			editor_gizmo_rid = RenderingServer::get_singleton()->canvas_item_create();
+			RenderingServer::get_singleton()->canvas_item_set_parent(editor_gizmo_rid, get_canvas_item());
+			RenderingServer::get_singleton()->canvas_item_set_z_as_relative_to_parent(editor_gizmo_rid, true);
+			RenderingServer::get_singleton()->canvas_item_set_z_index(editor_gizmo_rid, 10);
+		}
+		RenderingServer::get_singleton()->canvas_item_clear(editor_gizmo_rid);
+		// Undo scaling
+		Transform2D editor_gizmo_trans = Transform2D();
+		editor_gizmo_trans.set_scale(Vector2(1, 1) / get_global_scale());
+		RenderingServer::get_singleton()->canvas_item_set_transform(editor_gizmo_rid, editor_gizmo_trans);
+
+		Color bone_color1 = EditorSettings::get_singleton()->get("editors/2d/bone_color1");
+		Color bone_color2 = EditorSettings::get_singleton()->get("editors/2d/bone_color2");
+		Color bone_ik_color = EditorSettings::get_singleton()->get("editors/2d/bone_ik_color");
+		Color bone_outline_color = EditorSettings::get_singleton()->get("editors/2d/bone_outline_color");
+		Color bone_selected_color = EditorSettings::get_singleton()->get("editors/2d/bone_selected_color");
+
+		bool Bone2D_found = false;
+		for (int i = 0; i < get_child_count(); i++) {
+			Bone2D *child_node = nullptr;
+			child_node = Object::cast_to<Bone2D>(get_child(i));
+			if (!child_node) {
+				continue;
+			}
+			Bone2D_found = true;
+
+			Vector<Vector2> bone_shape;
+			Vector<Vector2> bone_shape_outline;
+
+			_editor_get_bone_shape(&bone_shape, &bone_shape_outline, child_node);
+
+			Vector<Color> colors;
+			if (has_meta("_local_pose_override_enabled_")) {
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+			} else {
+				colors.push_back(bone_color1);
+				colors.push_back(bone_color2);
+				colors.push_back(bone_color1);
+				colors.push_back(bone_color2);
+			}
+
+			Vector<Color> outline_colors;
+			if (CanvasItemEditor::get_singleton()->editor_selection->is_selected(this)) {
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+			} else {
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+			}
+
+			RenderingServer::get_singleton()->canvas_item_add_polygon(editor_gizmo_rid, bone_shape_outline, outline_colors);
+			RenderingServer::get_singleton()->canvas_item_add_polygon(editor_gizmo_rid, bone_shape, colors);
+		}
+
+		if (!Bone2D_found) {
+			Vector<Vector2> bone_shape;
+			Vector<Vector2> bone_shape_outline;
+
+			_editor_get_bone_shape(&bone_shape, &bone_shape_outline, nullptr);
+
+			Vector<Color> colors;
+			if (has_meta("_local_pose_override_enabled_")) {
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+			} else {
+				colors.push_back(bone_color1);
+				colors.push_back(bone_color2);
+				colors.push_back(bone_color1);
+				colors.push_back(bone_color2);
+			}
+
+			Vector<Color> outline_colors;
+			if (CanvasItemEditor::get_singleton()->editor_selection->is_selected(this)) {
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+				outline_colors.push_back(bone_selected_color);
+			} else {
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+				outline_colors.push_back(bone_outline_color);
+			}
+
+			RenderingServer::get_singleton()->canvas_item_add_polygon(editor_gizmo_rid, bone_shape_outline, outline_colors);
+			RenderingServer::get_singleton()->canvas_item_add_polygon(editor_gizmo_rid, bone_shape, colors);
+		}
+	}
+#endif // TOOLS_ENALBED
 }
+
+#ifdef TOOLS_ENABLED
+bool Bone2D::_editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *outline_shape, Bone2D *other_bone) {
+	int bone_width = EditorSettings::get_singleton()->get("editors/2d/bone_width");
+	int bone_outline_width = EditorSettings::get_singleton()->get("editors/2d/bone_outline_size");
+
+	if (!is_inside_tree()) {
+		return false; //may have been removed
+	}
+	if (!other_bone && length <= 0) {
+		return false;
+	}
+
+	Vector2 rel;
+	if (other_bone) {
+		rel = (other_bone->get_global_transform().get_origin() - get_global_transform().get_origin());
+	} else {
+		float angle_to_use = get_rotation() + bone_angle;
+		rel = Vector2(cos(angle_to_use), sin(angle_to_use)) * length;
+	}
+
+	rel = rel.rotated(-get_rotation());
+
+	Vector2 relt = rel.tangent().normalized() * bone_width;
+	Vector2 reln = rel.normalized();
+	Vector2 reltn = relt.normalized();
+
+	if (shape) {
+		shape->clear();
+		shape->push_back(Vector2(0, 0));
+		shape->push_back(rel * 0.2 + relt);
+		shape->push_back(rel);
+		shape->push_back(rel * 0.2 - relt);
+	}
+
+	if (outline_shape) {
+		outline_shape->clear();
+		outline_shape->push_back((-reln - reltn) * bone_outline_width);
+		outline_shape->push_back((-reln + reltn) * bone_outline_width);
+		outline_shape->push_back(rel * 0.2 + relt + reltn * bone_outline_width);
+		outline_shape->push_back(rel + (reln + reltn) * bone_outline_width);
+		outline_shape->push_back(rel + (reln - reltn) * bone_outline_width);
+		outline_shape->push_back(rel * 0.2 - relt - reltn * bone_outline_width);
+	}
+	return true;
+}
+#endif // TOOLS_ENABLED
 
 void Bone2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_rest", "rest"), &Bone2D::set_rest);

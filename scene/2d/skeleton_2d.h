@@ -56,6 +56,11 @@ class Bone2D : public Node2D {
 
 	void calculate_length_and_rotation();
 
+#ifdef TOOLS_ENABLED
+	RID editor_gizmo_rid;
+	bool _editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *outline_shape, Bone2D *other_bone);
+#endif // TOOLS_ENABLED
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();

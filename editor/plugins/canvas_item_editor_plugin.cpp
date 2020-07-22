@@ -3511,7 +3511,7 @@ void CanvasItemEditor::_draw_axis() {
 }
 
 void CanvasItemEditor::_draw_bones() {
-	RID ci = viewport->get_canvas_item();
+	//RID ci = viewport->get_canvas_item();
 
 	if (skeleton_show_bones) {
 		Color bone_color1 = EditorSettings::get_singleton()->get("editors/2d/bone_color1");
@@ -3568,8 +3568,8 @@ void CanvasItemEditor::_draw_bones() {
 				outline_colors.push_back(bone_outline_color);
 			}
 
-			RenderingServer::get_singleton()->canvas_item_add_polygon(ci, bone_shape_outline, outline_colors);
-			RenderingServer::get_singleton()->canvas_item_add_primitive(ci, bone_shape, colors, Vector<Vector2>(), RID());
+			//RenderingServer::get_singleton()->canvas_item_add_polygon(ci, bone_shape_outline, outline_colors);
+			//RenderingServer::get_singleton()->canvas_item_add_primitive(ci, bone_shape, colors, Vector<Vector2>(), RID());
 		}
 	}
 }

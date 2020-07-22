@@ -2203,7 +2203,7 @@ void SkeletonModification2DTwoBoneIK::execute(float delta) {
 	if (!override_angles_due_to_out_of_range) {
 		float angle_0 = Math::acos(((joint_one_to_target * joint_one_to_target) + (bone_one_length * bone_one_length) - (bone_two_length * bone_two_length)) / (2.0 * joint_one_to_target * bone_one_length));
 		float angle_1 = Math::acos(((bone_two_length * bone_two_length) + (bone_one_length * bone_one_length) - (joint_one_to_target * joint_one_to_target)) / (2.0 * bone_two_length * bone_one_length));
-		
+
 		if (flip_bend_direction) {
 			angle_0 = -angle_0;
 			angle_1 = -angle_1;

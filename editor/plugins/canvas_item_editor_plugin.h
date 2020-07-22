@@ -79,6 +79,8 @@ public:
 		TOOL_MAX
 	};
 
+	EditorSelection *editor_selection;
+
 private:
 	EditorNode *editor;
 
@@ -217,7 +219,7 @@ private:
 		DRAG_KEY_MOVE
 	};
 
-	EditorSelection *editor_selection;
+	//EditorSelection *editor_selection;
 	bool selection_menu_additive_selection;
 
 	Tool tool;
