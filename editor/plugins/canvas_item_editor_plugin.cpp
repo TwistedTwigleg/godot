@@ -3538,6 +3538,11 @@ void CanvasItemEditor::_draw_bones() {
 				colors.push_back(bone_ik_color);
 				colors.push_back(bone_ik_color);
 				colors.push_back(bone_ik_color);
+			} else if (from_node->has_meta("_local_pose_override_enabled_")) {
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
+				colors.push_back(bone_ik_color);
 			} else {
 				colors.push_back(bone_color1);
 				colors.push_back(bone_color2);
@@ -3934,8 +3939,8 @@ void CanvasItemEditor::_notification(int p_what) {
 			}
 
 			Bone2D *bone = Object::cast_to<Bone2D>(b);
-			if (bone && bone->get_default_length() != E->get().length) {
-				E->get().length = bone->get_default_length();
+			if (bone && bone->get_length() != E->get().length) {
+				E->get().length = bone->get_length();
 				viewport->update();
 			}
 		}

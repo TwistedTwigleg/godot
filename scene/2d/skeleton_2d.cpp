@@ -474,9 +474,10 @@ void Skeleton2D::execute_modification(float delta) {
 
 	// A hack: Override the CanvasItem transform using the RenderingServer so the local pose override is taken into account.
 	for (int i = 0; i < bones.size(); i++) {
-		bones[i].bone->set_transform(bones.write[i].local_pose_cache);
-
 		if (bones[i].local_pose_override_amount > 0) {
+			bones[i].bone->set_meta("_local_pose_override_enabled_", true);
+			bones[i].bone->set_transform(bones[i].local_pose_cache);
+
 			Transform2D final_trans = bones[i].local_pose_cache;
 			final_trans = final_trans.interpolate_with(bones[i].local_pose_override, bones[i].local_pose_override_amount);
 
@@ -487,6 +488,8 @@ void Skeleton2D::execute_modification(float delta) {
 			}
 		} else {
 			// TODO: see if there is a way to undo the override without having to resort to setting every bone's transform.
+			bones[i].bone->remove_meta("_local_pose_override_enabled_");
+			bones[i].bone->set_transform(bones.write[i].local_pose_cache);
 			RenderingServer::get_singleton()->canvas_item_set_transform(bones[i].bone->get_canvas_item(), bones[i].local_pose_cache);
 		}
 	}
