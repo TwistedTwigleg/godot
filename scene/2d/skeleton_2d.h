@@ -59,7 +59,8 @@ class Bone2D : public Node2D {
 #ifdef TOOLS_ENABLED
 	RID editor_gizmo_rid;
 	bool _editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *outline_shape, Bone2D *other_bone);
-#endif // TOOLS_ENABLED
+	bool _editor_show_bone_gizmo = true;
+#endif // TOOLS ENABLED
 
 protected:
 	void _notification(int p_what);
@@ -87,6 +88,11 @@ public:
 	float get_bone_angle() const;
 
 	int get_index_in_skeleton() const;
+
+#ifdef TOOLS_ENABLED
+	void _editor_set_show_bone_gizmo(bool p_show_gizmo);
+	bool _editor_get_show_bone_gizmo() const;
+#endif // TOOLS_ENABLED
 
 	Bone2D();
 };

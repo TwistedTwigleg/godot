@@ -46,6 +46,13 @@ bool Bone2D::_set(const StringName &p_path, const Variant &p_value) {
 	} else if (path.begins_with("bone_angle")) {
 		set_bone_angle(Math::deg2rad(float(p_value)));
 	}
+
+#ifdef TOOLS_ENABLED
+	if (path.begins_with("editor_settings/show_bone_gizmo")) {
+		_editor_set_show_bone_gizmo(p_value);
+	}
+#endif // TOOLS_ENABLED
+
 	return true;
 }
 
@@ -59,6 +66,13 @@ bool Bone2D::_get(const StringName &p_path, Variant &r_ret) const {
 	} else if (path.begins_with("bone_angle")) {
 		r_ret = Math::rad2deg(get_bone_angle());
 	}
+
+#ifdef TOOLS_ENABLED
+	if (path.begins_with("editor_settings/show_bone_gizmo")) {
+		r_ret = _editor_get_show_bone_gizmo();
+	}
+#endif // TOOLS_ENABLED
+
 	return true;
 }
 
@@ -68,6 +82,10 @@ void Bone2D::_get_property_list(List<PropertyInfo> *p_list) const {
 		p_list->push_back(PropertyInfo(Variant::FLOAT, "length", PROPERTY_HINT_RANGE, "1, 1024, 1", PROPERTY_USAGE_DEFAULT));
 		p_list->push_back(PropertyInfo(Variant::FLOAT, "bone_angle", PROPERTY_HINT_RANGE, "-360, 360, 0.01", PROPERTY_USAGE_DEFAULT));
 	}
+
+#ifdef TOOLS_ENABLED
+	p_list->push_back(PropertyInfo(Variant::BOOL, "editor_settings/show_bone_gizmo", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+#endif // TOOLS_ENABLED
 }
 
 void Bone2D::_notification(int p_what) {
@@ -143,6 +161,11 @@ void Bone2D::_notification(int p_what) {
 			RenderingServer::get_singleton()->canvas_item_set_z_index(editor_gizmo_rid, 10);
 		}
 		RenderingServer::get_singleton()->canvas_item_clear(editor_gizmo_rid);
+
+		if (!_editor_show_bone_gizmo) {
+			return;
+		}
+
 		// Undo scaling
 		Transform2D editor_gizmo_trans = Transform2D();
 		editor_gizmo_trans.set_scale(Vector2(1, 1) / get_global_scale());
@@ -264,7 +287,6 @@ bool Bone2D::_editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *out
 		float angle_to_use = get_rotation() + bone_angle;
 		rel = Vector2(cos(angle_to_use), sin(angle_to_use)) * length;
 	}
-
 	rel = rel.rotated(-get_rotation());
 
 	Vector2 relt = rel.tangent().normalized() * bone_width;
@@ -289,6 +311,15 @@ bool Bone2D::_editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *out
 		outline_shape->push_back(rel * 0.2 - relt - reltn * bone_outline_width);
 	}
 	return true;
+}
+
+void Bone2D::_editor_set_show_bone_gizmo(bool p_show_gizmo) {
+	_editor_show_bone_gizmo = p_show_gizmo;
+	update();
+}
+
+bool Bone2D::_editor_get_show_bone_gizmo() const {
+	return _editor_show_bone_gizmo;
 }
 #endif // TOOLS_ENABLED
 

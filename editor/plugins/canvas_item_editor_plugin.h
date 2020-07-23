@@ -183,10 +183,7 @@ private:
 		VIEW_FRAME_TO_SELECTION,
 		PREVIEW_CANVAS_SCALE,
 		SKELETON_MAKE_BONES,
-		SKELETON_CLEAR_BONES,
-		SKELETON_SHOW_BONES,
-		SKELETON_SET_IK_CHAIN,
-		SKELETON_CLEAR_IK_CHAIN
+		SKELETON_SHOW_BONES
 	};
 
 	enum DragType {
@@ -277,7 +274,6 @@ private:
 	bool snap_scale;
 	bool snap_relative;
 	bool snap_pixel;
-	bool skeleton_show_bones;
 	bool key_pos;
 	bool key_rot;
 	bool key_scale;
@@ -412,8 +408,7 @@ private:
 	bool _is_node_movable(const Node *p_node, bool p_popup_warning = false);
 	void _find_canvas_items_at_pos(const Point2 &p_pos, Node *p_node, Vector<_SelectResult> &r_items, const Transform2D &p_parent_xform = Transform2D(), const Transform2D &p_canvas_xform = Transform2D());
 	void _get_canvas_items_at_pos(const Point2 &p_pos, Vector<_SelectResult> &r_items, bool p_allow_locked = false);
-	void _get_bones_at_pos(const Point2 &p_pos, Vector<_SelectResult> &r_items);
-
+	
 	void _find_canvas_items_in_rect(const Rect2 &p_rect, Node *p_node, List<CanvasItem *> *r_items, const Transform2D &p_parent_xform = Transform2D(), const Transform2D &p_canvas_xform = Transform2D());
 	bool _select_click_on_item(CanvasItem *item, Point2 p_click_pos, bool p_append);
 
@@ -423,9 +418,7 @@ private:
 
 	void _add_canvas_item(CanvasItem *p_canvas_item);
 
-	void _save_canvas_item_ik_chain(const CanvasItem *p_canvas_item, List<float> *p_bones_length, List<Dictionary> *p_bones_state);
 	void _save_canvas_item_state(List<CanvasItem *> p_canvas_items, bool save_bones = false);
-	void _restore_canvas_item_ik_chain(CanvasItem *p_canvas_item, const List<Dictionary> *p_bones_state);
 	void _restore_canvas_item_state(List<CanvasItem *> p_canvas_items, bool restore_bones = false);
 	void _commit_canvas_item_state(List<CanvasItem *> p_canvas_items, String action_name, bool commit_bones = false);
 
@@ -442,8 +435,6 @@ private:
 	void _selection_menu_hide();
 
 	UndoRedo *undo_redo;
-	bool _build_bones_list(Node *p_node);
-	bool _get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *outline_shape, Map<BoneKey, BoneList>::Element *bone);
 
 	List<CanvasItem *> _get_edited_canvas_items(bool retreive_locked = false, bool remove_canvas_item_if_parent_in_selection = true);
 	Rect2 _get_encompassing_rect_from_list(List<CanvasItem *> p_list);
@@ -473,7 +464,6 @@ private:
 	void _draw_control_helpers(Control *control);
 	void _draw_selection();
 	void _draw_axis();
-	void _draw_bones();
 	void _draw_invisible_nodes_positions(Node *p_node, const Transform2D &p_parent_xform = Transform2D(), const Transform2D &p_canvas_xform = Transform2D());
 	void _draw_locks_and_groups(Node *p_node, const Transform2D &p_parent_xform = Transform2D(), const Transform2D &p_canvas_xform = Transform2D());
 	void _draw_hover();
@@ -498,8 +488,6 @@ private:
 	void _selection_changed();
 
 	void _focus_selection(int p_op);
-
-	void _solve_IK(Node2D *leaf_node, Point2 target_position);
 
 	SnapTarget snap_target[2];
 	Transform2D snap_transform;
@@ -545,11 +533,6 @@ private:
 
 	HSplitContainer *palette_split;
 	VSplitContainer *bottom_split;
-
-	bool bone_list_dirty;
-	void _queue_update_bone_list();
-	void _update_bone_list();
-	void _tree_changed(Node *);
 
 	void _popup_warning_temporarily(Control *p_control, const float p_duration);
 	void _popup_warning_depop(Control *p_control);
