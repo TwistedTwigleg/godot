@@ -283,11 +283,12 @@ bool Bone2D::_editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *out
 	Vector2 rel;
 	if (other_bone) {
 		rel = (other_bone->get_global_transform().get_origin() - get_global_transform().get_origin());
+		rel = rel.rotated(-get_global_rotation()); // Undo Bone2D node's rotation so its drawn correctly regardless of the node's rotation
 	} else {
 		float angle_to_use = get_rotation() + bone_angle;
 		rel = Vector2(cos(angle_to_use), sin(angle_to_use)) * length;
+		rel = rel.rotated(-get_rotation()); // Undo Bone2D node's rotation so its drawn correctly regardless of the node's rotation
 	}
-	rel = rel.rotated(-get_rotation());
 
 	Vector2 relt = rel.tangent().normalized() * bone_width;
 	Vector2 reln = rel.normalized();
@@ -473,6 +474,14 @@ Bone2D::Bone2D() {
 	for (int i = 0; i < 3; i++) {
 		rest[i] = Vector2(0, 0);
 	}
+}
+
+Bone2D::~Bone2D() {
+#ifdef TOOLS_ENABLED
+	if (!editor_gizmo_rid.is_null()) {
+		RenderingServer::get_singleton()->free(editor_gizmo_rid);
+	}
+#endif // TOOLS_ENABLED
 }
 
 //////////////////////////////////////

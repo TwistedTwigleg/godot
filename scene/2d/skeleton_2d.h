@@ -95,6 +95,7 @@ public:
 #endif // TOOLS_ENABLED
 
 	Bone2D();
+	~Bone2D();
 };
 
 class SkeletonModificationStack2D;
