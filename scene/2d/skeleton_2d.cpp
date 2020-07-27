@@ -286,7 +286,7 @@ bool Bone2D::_editor_get_bone_shape(Vector<Vector2> *shape, Vector<Vector2> *out
 		rel = rel.rotated(-get_global_rotation()); // Undo Bone2D node's rotation so its drawn correctly regardless of the node's rotation
 	} else {
 		float angle_to_use = get_rotation() + bone_angle;
-		rel = Vector2(cos(angle_to_use), sin(angle_to_use)) * length;
+		rel = Vector2(cos(angle_to_use), sin(angle_to_use)) * (length * MIN(get_global_scale().x, get_global_scale().y));
 		rel = rel.rotated(-get_rotation()); // Undo Bone2D node's rotation so its drawn correctly regardless of the node's rotation
 	}
 

@@ -2210,7 +2210,7 @@ void SkeletonModification2DTwoBoneIK::execute(float delta) {
 		}
 
 		joint_one_bone->set_global_rotation(angle_atan - angle_0 - joint_one_bone->get_bone_angle());
-		joint_two_bone->set_rotation(-Math_PI - angle_1 - joint_two_bone->get_bone_angle() - joint_one_bone->get_bone_angle());
+		joint_two_bone->set_rotation(-Math_PI - angle_1 - joint_two_bone->get_bone_angle() + joint_one_bone->get_bone_angle());
 	} else {
 		joint_one_bone->set_global_rotation(angle_atan - joint_one_bone->get_bone_angle());
 		joint_two_bone->set_global_rotation(angle_atan - joint_two_bone->get_bone_angle());
