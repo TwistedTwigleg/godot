@@ -119,11 +119,17 @@ void Bone2D::_notification(int p_what) {
 	if (p_what == NOTIFICATION_LOCAL_TRANSFORM_CHANGED) {
 		if (skeleton) {
 			skeleton->_make_transform_dirty();
-
-#ifdef TOOLS_ENABLED
-			update();
-#endif // TOOLS_ENABLED
 		}
+#ifdef TOOLS_ENABLED
+		update();
+
+		if (get_parent()) {
+			Bone2D* parent_bone = Object::cast_to<Bone2D>(get_parent());
+			if (parent_bone) {
+				parent_bone->update();
+			}
+		}
+#endif // TOOLS_ENABLED
 	}
 	if (p_what == NOTIFICATION_MOVED_IN_PARENT) {
 		if (skeleton) {
@@ -448,6 +454,10 @@ bool Bone2D::get_autocalculate_length_and_angle() const {
 
 void Bone2D::set_length(float p_length) {
 	length = p_length;
+
+#ifdef TOOLS_ENABLED
+		update();
+#endif // TOOLS_ENABLED
 }
 
 float Bone2D::get_length() const {
@@ -456,6 +466,10 @@ float Bone2D::get_length() const {
 
 void Bone2D::set_bone_angle(float p_angle) {
 	bone_angle = p_angle;
+
+#ifdef TOOLS_ENABLED
+		update();
+#endif // TOOLS_ENABLED
 }
 
 float Bone2D::get_bone_angle() const {
