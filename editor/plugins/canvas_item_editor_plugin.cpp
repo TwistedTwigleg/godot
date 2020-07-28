@@ -4576,9 +4576,8 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 
 		} break;
 		case SKELETON_MAKE_BONES: {
-			// TODO: not working right now!
-
 			Map<Node *, Object *> &selection = editor_selection->get_selection();
+			Node *editor_root = EditorNode::get_singleton()->get_edited_scene()->get_tree()->get_edited_scene_root();
 
 			undo_redo->create_action(TTR("Create Custom Bone2D(s) from Node(s)"));
 			for (Map<Node *, Object *>::Element *E = selection.front(); E; E = E->next()) {
@@ -4588,7 +4587,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 				String new_bone_name = n2d->get_name();
 				new_bone_name += "Bone2D";
 				new_bone->set_name(new_bone_name);
-				new_bone->set_global_transform(n2d->get_global_transform());
+				new_bone->set_transform(n2d->get_transform());
 
 				Node *n2d_parent = n2d->get_parent();
 				if (!n2d_parent) {
@@ -4599,18 +4598,24 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 				undo_redo->add_do_method(n2d_parent, "remove_child", n2d);
 				undo_redo->add_do_method(new_bone, "add_child", n2d);
 				undo_redo->add_do_method(n2d, "set_transform", Transform2D());
-				undo_redo->add_do_method(new_bone, "set_owner", n2d->get_owner());
-				undo_redo->add_do_method(n2d, "set_owner", n2d->get_owner());
+				undo_redo->add_do_method(this, "_set_owner_for_node_and_children", new_bone, editor_root);
 
 				undo_redo->add_undo_method(new_bone, "remove_child", n2d);
 				undo_redo->add_undo_method(n2d_parent, "add_child", n2d);
 				undo_redo->add_undo_method(n2d, "set_transform", new_bone->get_transform());
-				undo_redo->add_undo_method(n2d, "set_owner", n2d_parent);
 				undo_redo->add_undo_method(new_bone, "queue_free");
+				undo_redo->add_undo_method(this, "_set_owner_for_node_and_children", n2d, editor_root);
 			}
 			undo_redo->commit_action();
 
 		} break;
+	}
+}
+
+void CanvasItemEditor::_set_owner_for_node_and_children(Node *node, Node *owner) {
+	node->set_owner(owner);
+	for (int i = 0; i < node->get_child_count(); i++) {
+		_set_owner_for_node_and_children(node->get_child(i), owner);
 	}
 }
 
@@ -4684,6 +4689,8 @@ void CanvasItemEditor::_bind_methods() {
 	ClassDB::bind_method("_unhandled_key_input", &CanvasItemEditor::_unhandled_key_input);
 	ClassDB::bind_method(D_METHOD("set_state"), &CanvasItemEditor::set_state);
 	ClassDB::bind_method(D_METHOD("update_viewport"), &CanvasItemEditor::update_viewport);
+
+	ClassDB::bind_method("_set_owner_for_node_and_children", &CanvasItemEditor::_set_owner_for_node_and_children);
 
 	ADD_SIGNAL(MethodInfo("item_lock_status_changed"));
 	ADD_SIGNAL(MethodInfo("item_group_status_changed"));
