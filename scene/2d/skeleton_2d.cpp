@@ -113,6 +113,11 @@ void Bone2D::_notification(int p_what) {
 		}
 
 #ifdef TOOLS_ENABLED
+		// Only draw the gizmo in the editor!
+		if (Engine::get_singleton()->is_editor_hint() == false) {
+			return;
+		}
+
 		update();
 #endif // TOOLS_ENABLED
 	}
@@ -121,6 +126,11 @@ void Bone2D::_notification(int p_what) {
 			skeleton->_make_transform_dirty();
 		}
 #ifdef TOOLS_ENABLED
+		// Only draw the gizmo in the editor!
+		if (Engine::get_singleton()->is_editor_hint() == false) {
+			return;
+		}
+
 		update();
 
 		if (get_parent()) {
@@ -160,6 +170,12 @@ void Bone2D::_notification(int p_what) {
 #ifdef TOOLS_ENABLED
 	// Bone2D Editor gizmo drawing:
 	if (p_what == NOTIFICATION_DRAW) {
+
+		// Only draw the gizmo in the editor!
+		if (Engine::get_singleton()->is_editor_hint() == false) {
+			return;
+		}
+
 		if (editor_gizmo_rid.is_null()) {
 			editor_gizmo_rid = RenderingServer::get_singleton()->canvas_item_create();
 			RenderingServer::get_singleton()->canvas_item_set_parent(editor_gizmo_rid, get_canvas_item());

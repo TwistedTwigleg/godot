@@ -58,6 +58,7 @@
 #include "scene/2d/physics_body_2d.h"
 #include "scene/2d/polygon_2d.h"
 #include "scene/2d/position_2d.h"
+#include "scene/2d/physical_bone_2d.h"
 #include "scene/2d/ray_cast_2d.h"
 #include "scene/2d/remote_transform_2d.h"
 #include "scene/2d/skeleton_2d.h"
@@ -623,6 +624,8 @@ void register_scene_types() {
 	ClassDB::register_class<SkeletonModification2DFABRIK>();
 	ClassDB::register_class<SkeletonModification2DJiggle>();
 	ClassDB::register_class<SkeletonModification2DTwoBoneIK>();
+
+	ClassDB::register_class<PhysicalBone2D>();
 
 	OS::get_singleton()->yield(); //may take time to init
 
