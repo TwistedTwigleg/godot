@@ -31,8 +31,8 @@
 #ifndef PHYSICAL_BONE_2D_H
 #define PHYSICAL_BONE_2D_H
 
-#include "scene/2d/physics_body_2d.h"
 #include "scene/2d/joints_2d.h"
+#include "scene/2d/physics_body_2d.h"
 
 #include "scene/2d/skeleton_2d.h"
 
@@ -48,14 +48,13 @@ protected:
 	static void _bind_methods();
 
 private:
-
 	Skeleton2D *parent_skeleton;
 	int bone2d_index = -1;
 	NodePath bone2d_nodepath;
 	ObjectID bone2d_node_cache;
 
 	// TODO: make child joint only required if there is a PhysicalBone2D child. Root PhysicalBone2D nodes shouldn't need joints.
-    Joint2D *child_joint;
+	Joint2D *child_joint;
 	bool auto_configure_joint = true;
 
 	bool simulate_physics = false;
@@ -69,10 +68,10 @@ private:
 	void _stop_physics_simulation();
 
 	void _update_bone2d_cache();
+	void _position_at_bone2d();
 
 public:
-    
-	Joint2D* get_joint() const;
+	Joint2D *get_joint() const;
 	bool get_auto_configure_joint() const;
 	void set_auto_configure_joint(bool p_auto_configure);
 
@@ -86,9 +85,9 @@ public:
 	int get_bone2d_index() const;
 
 	String get_configuration_warning() const override;
-	
-    PhysicalBone2D();
-    ~PhysicalBone2D();
+
+	PhysicalBone2D();
+	~PhysicalBone2D();
 };
 
 #endif // PHYSICAL_BONE_2D_H
