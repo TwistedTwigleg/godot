@@ -2560,6 +2560,19 @@ SkeletonModification2DTwoBoneIK::~SkeletonModification2DTwoBoneIK() {
 bool SkeletonModification2DPhysicalBones::_set(const StringName &p_path, const Variant &p_value) {
 	String path = p_path;
 
+#ifdef TOOLS_ENABLED
+	// Exposes a way to fetch the PhysicalBone2D nodes from the Godot editor.
+	if (is_setup) {
+		if (Engine::get_singleton()->is_editor_hint()) {
+			if (path.begins_with("fetch_bones")) {
+				fetch_physical_bones();
+				_change_notify();
+				return true;
+			}
+		}
+	}
+#endif //TOOLS_ENABLED
+
 	if (path.begins_with("joint_")) {
 		int which = path.get_slicec('_', 1).to_int();
 		String what = path.get_slicec('_', 2);
@@ -2576,6 +2589,14 @@ bool SkeletonModification2DPhysicalBones::_set(const StringName &p_path, const V
 bool SkeletonModification2DPhysicalBones::_get(const StringName &p_path, Variant &r_ret) const {
 	String path = p_path;
 
+#ifdef TOOLS_ENABLED
+	if (Engine::get_singleton()->is_editor_hint()) {
+		if (path.begins_with("fetch_bones")) {
+			return true; // Do nothing!
+		}
+	}
+#endif //TOOLS_ENABLED
+
 	if (path.begins_with("joint_")) {
 		int which = path.get_slicec('_', 1).to_int();
 		String what = path.get_slicec('_', 2);
@@ -2590,6 +2611,12 @@ bool SkeletonModification2DPhysicalBones::_get(const StringName &p_path, Variant
 }
 
 void SkeletonModification2DPhysicalBones::_get_property_list(List<PropertyInfo> *p_list) const {
+#ifdef TOOLS_ENABLED
+	if (Engine::get_singleton()->is_editor_hint()) {
+		p_list->push_back(PropertyInfo(Variant::BOOL, "fetch_bones", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT));
+	}
+#endif //TOOLS_ENABLED
+
 	for (int i = 0; i < physical_bone_chain.size(); i++) {
 		String base_string = "joint_" + itos(i) + "_";
 
@@ -2615,8 +2642,9 @@ void SkeletonModification2DPhysicalBones::execute(float delta) {
 		PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(bone_data.physical_bone_node_cache));
 		ERR_CONTINUE_MSG(!physical_bone, "PhysicalBone2D not found at index " + itos(i) + "!");
 		ERR_FAIL_INDEX_MSG(physical_bone->get_bone2d_index(), stack->skeleton->get_bone_count(), "PhysicalBone2D at index " + itos(i) + " has invalid Bone2D!");
-
 		Bone2D *bone_2d = stack->skeleton->get_bone(physical_bone->get_bone2d_index());
+
+		// TODO: make sure the PhysicalBone2D is simulating before applying.
 
 		bone_2d->set_global_transform(physical_bone->get_global_transform());
 		stack->skeleton->set_bone_local_pose_override(physical_bone->get_bone2d_index(), bone_2d->get_transform(), stack->strength, true);
@@ -2667,6 +2695,79 @@ void SkeletonModification2DPhysicalBones::set_physical_bone_chain_length(int p_l
 	_change_notify();
 }
 
+void SkeletonModification2DPhysicalBones::fetch_physical_bones() {
+	ERR_FAIL_COND_MSG(!stack->skeleton, "No skeleton found! Cannot fetch physical bones!");
+
+	physical_bone_chain.clear();
+
+	List<Node *> node_queue = List<Node *>();
+	node_queue.push_back(stack->skeleton);
+
+	while (node_queue.size() > 0) {
+		Node *node_to_process = node_queue[0];
+		node_queue.pop_front();
+
+		PhysicalBone2D *potential_bone = Object::cast_to<PhysicalBone2D>(node_to_process);
+		if (potential_bone) {
+			PhysicalBone_Data2D new_data = PhysicalBone_Data2D();
+			new_data.physical_bone_node = stack->skeleton->get_path_to(potential_bone);
+			new_data.physical_bone_node_cache = potential_bone->get_instance_id();
+			physical_bone_chain.push_back(new_data);
+		}
+		for (int i = 0; i < node_to_process->get_child_count(); i++) {
+			node_queue.push_back(node_to_process->get_child(i));
+		}
+	}
+}
+
+void SkeletonModification2DPhysicalBones::start_simulation(const TypedArray<StringName> &p_bones) {
+	if (p_bones.size() <= 0) {
+		// Simulate all the bones!
+		for (int i = 0; i < physical_bone_chain.size(); i++) {
+			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
+			if (!physical_bone) {
+				continue;
+			}
+
+			physical_bone->set_simulate_physics(true);
+		}
+	} else {
+		for (int i = 0; i < physical_bone_chain.size(); i++) {
+			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
+			if (!physical_bone) {
+				continue;
+			}
+			if (p_bones.has(physical_bone->get_name())) {
+				physical_bone->set_simulate_physics(true);
+			}
+		}
+	}
+}
+
+void SkeletonModification2DPhysicalBones::stop_simulation(const TypedArray<StringName> &p_bones) {
+	if (p_bones.size() <= 0) {
+		// Stop all the bones!
+		for (int i = 0; i < physical_bone_chain.size(); i++) {
+			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
+			if (!physical_bone) {
+				continue;
+			}
+
+			physical_bone->set_simulate_physics(false);
+		}
+	} else {
+		for (int i = 0; i < physical_bone_chain.size(); i++) {
+			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
+			if (!physical_bone) {
+				continue;
+			}
+			if (p_bones.has(physical_bone->get_name())) {
+				physical_bone->set_simulate_physics(false);
+			}
+		}
+	}
+}
+
 void SkeletonModification2DPhysicalBones::physical_bone_set_node(int p_joint_idx, const NodePath &p_nodepath) {
 	ERR_FAIL_INDEX_MSG(p_joint_idx, physical_bone_chain.size(), "Joint index out of range!");
 	physical_bone_chain.write[p_joint_idx].physical_bone_node = p_nodepath;
@@ -2679,12 +2780,15 @@ NodePath SkeletonModification2DPhysicalBones::physical_bone_get_node(int p_joint
 }
 
 void SkeletonModification2DPhysicalBones::_bind_methods() {
-
 	ClassDB::bind_method(D_METHOD("set_physical_bone_chain_length", "length"), &SkeletonModification2DPhysicalBones::set_physical_bone_chain_length);
 	ClassDB::bind_method(D_METHOD("get_physical_bone_chain_length"), &SkeletonModification2DPhysicalBones::get_physical_bone_chain_length);
 
 	ClassDB::bind_method(D_METHOD("physical_bone_set_node", "joint_idx", "physicalbone2d_node"), &SkeletonModification2DPhysicalBones::physical_bone_set_node);
 	ClassDB::bind_method(D_METHOD("physical_bone_get_node", "joint_idx"), &SkeletonModification2DPhysicalBones::physical_bone_get_node);
+
+	ClassDB::bind_method(D_METHOD("fetch_physical_bones"), &SkeletonModification2DPhysicalBones::fetch_physical_bones);
+	ClassDB::bind_method(D_METHOD("start_simulation", "bones"), &SkeletonModification2DPhysicalBones::start_simulation, DEFVAL(Array()));
+	ClassDB::bind_method(D_METHOD("stop_simulation", "bones"), &SkeletonModification2DPhysicalBones::stop_simulation, DEFVAL(Array()));
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "physical_bone_chain_length", PROPERTY_HINT_RANGE, "0,100,1"), "set_physical_bone_chain_length", "get_physical_bone_chain_length");
 }

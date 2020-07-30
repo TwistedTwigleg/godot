@@ -564,6 +564,10 @@ public:
 	void physical_bone_set_node(int p_joint_idx, const NodePath &p_path);
 	NodePath physical_bone_get_node(int p_joint_idx) const;
 
+	void fetch_physical_bones();
+	void start_simulation(const TypedArray<StringName> &p_bones);
+	void stop_simulation(const TypedArray<StringName> &p_bones);
+
 	SkeletonModification2DPhysicalBones();
 	~SkeletonModification2DPhysicalBones();
 };
