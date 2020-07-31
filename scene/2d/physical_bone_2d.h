@@ -44,7 +44,6 @@ protected:
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	void _notification(int p_what);
-	void _direct_state_changed(Object *p_state);
 	static void _bind_methods();
 
 private:

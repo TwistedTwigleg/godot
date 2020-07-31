@@ -548,6 +548,11 @@ private:
 
 	void _physical_bone_update_cache(int p_joint_idx);
 
+	bool _simulation_state_dirty = false;
+	TypedArray<StringName> _simulation_state_dirty_names;
+	bool _simulation_state_dirty_process;
+	void _update_simulation_state();
+
 protected:
 	static void _bind_methods();
 	bool _get(const StringName &p_path, Variant &r_ret) const;

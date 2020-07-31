@@ -2631,6 +2631,10 @@ void SkeletonModification2DPhysicalBones::execute(float delta) {
 		return;
 	}
 
+	if (_simulation_state_dirty) {
+		_update_simulation_state();
+	}
+
 	for (int i = 0; i < physical_bone_chain.size(); i++) {
 		PhysicalBone_Data2D bone_data = physical_bone_chain[i];
 		if (bone_data.physical_bone_node_cache.is_null()) {
@@ -2644,10 +2648,10 @@ void SkeletonModification2DPhysicalBones::execute(float delta) {
 		ERR_FAIL_INDEX_MSG(physical_bone->get_bone2d_index(), stack->skeleton->get_bone_count(), "PhysicalBone2D at index " + itos(i) + " has invalid Bone2D!");
 		Bone2D *bone_2d = stack->skeleton->get_bone(physical_bone->get_bone2d_index());
 
-		// TODO: make sure the PhysicalBone2D is simulating before applying.
-
-		bone_2d->set_global_transform(physical_bone->get_global_transform());
-		stack->skeleton->set_bone_local_pose_override(physical_bone->get_bone2d_index(), bone_2d->get_transform(), stack->strength, true);
+		if (physical_bone->get_simulate_physics()) {
+			bone_2d->set_global_transform(physical_bone->get_global_transform());
+			stack->skeleton->set_bone_local_pose_override(physical_bone->get_bone2d_index(), bone_2d->get_transform(), stack->strength, true);
+		}
 	}
 }
 
@@ -2721,39 +2725,39 @@ void SkeletonModification2DPhysicalBones::fetch_physical_bones() {
 }
 
 void SkeletonModification2DPhysicalBones::start_simulation(const TypedArray<StringName> &p_bones) {
-	if (p_bones.size() <= 0) {
-		// Simulate all the bones!
-		for (int i = 0; i < physical_bone_chain.size(); i++) {
-			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
-			if (!physical_bone) {
-				continue;
-			}
+	_simulation_state_dirty = true;
+	_simulation_state_dirty_names = p_bones;
+	_simulation_state_dirty_process = true;
 
-			physical_bone->set_simulate_physics(true);
-		}
-	} else {
-		for (int i = 0; i < physical_bone_chain.size(); i++) {
-			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
-			if (!physical_bone) {
-				continue;
-			}
-			if (p_bones.has(physical_bone->get_name())) {
-				physical_bone->set_simulate_physics(true);
-			}
-		}
+	if (is_setup) {
+		_update_simulation_state();
 	}
 }
 
 void SkeletonModification2DPhysicalBones::stop_simulation(const TypedArray<StringName> &p_bones) {
-	if (p_bones.size() <= 0) {
-		// Stop all the bones!
+	_simulation_state_dirty = true;
+	_simulation_state_dirty_names = p_bones;
+	_simulation_state_dirty_process = false;
+
+	if (is_setup) {
+		_update_simulation_state();
+	}
+}
+
+void SkeletonModification2DPhysicalBones::_update_simulation_state() {
+	if (!_simulation_state_dirty) {
+		return;
+	}
+	_simulation_state_dirty = false;
+
+	if (_simulation_state_dirty_names.size() <= 0) {
 		for (int i = 0; i < physical_bone_chain.size(); i++) {
-			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(ObjectDB::get_instance(physical_bone_chain[i].physical_bone_node_cache));
+			PhysicalBone2D *physical_bone = Object::cast_to<PhysicalBone2D>(stack->skeleton->get_node(physical_bone_chain[i].physical_bone_node));
 			if (!physical_bone) {
 				continue;
 			}
 
-			physical_bone->set_simulate_physics(false);
+			physical_bone->set_simulate_physics(_simulation_state_dirty_process);
 		}
 	} else {
 		for (int i = 0; i < physical_bone_chain.size(); i++) {
@@ -2761,8 +2765,8 @@ void SkeletonModification2DPhysicalBones::stop_simulation(const TypedArray<Strin
 			if (!physical_bone) {
 				continue;
 			}
-			if (p_bones.has(physical_bone->get_name())) {
-				physical_bone->set_simulate_physics(false);
+			if (_simulation_state_dirty_names.has(physical_bone->get_name())) {
+				physical_bone->set_simulate_physics(_simulation_state_dirty_process);
 			}
 		}
 	}

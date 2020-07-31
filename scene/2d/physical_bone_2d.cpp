@@ -73,6 +73,14 @@ void PhysicalBone2D::_notification(int p_what) {
 				child_joint->set_global_position(node_a->get_global_transform().get_origin());
 			}
 		}
+
+		// Remove any collision layers and masks if we're disabled.
+		// We do this so the RigidBody can still have it's layers and masks set like normal, but they will not be applied
+		// unless physics are told to simulate, only making them effective when we want them to be.
+		if (!_internal_simulate_physics) {
+			PhysicsServer2D::get_singleton()->body_set_collision_layer(get_rid(), 0);
+			PhysicsServer2D::get_singleton()->body_set_collision_mask(get_rid(), 0);
+		}
 	}
 
 // Only in the editor: keep the PhysicalBone2D at the Bone2D position (if there is one) at all times.
@@ -123,27 +131,6 @@ void PhysicalBone2D::_find_joint_child() {
 			break;
 		}
 	}
-}
-
-void PhysicalBone2D::_direct_state_changed(Object *p_state) {
-	if (!simulate_physics || !_internal_simulate_physics) {
-		return;
-	}
-	PhysicsDirectBodyState2D *state;
-	state = Object::cast_to<PhysicsDirectBodyState2D>(p_state);
-
-	if (!state) {
-		// This is not the physics we are looking for, so ignore it!
-		return;
-	}
-
-	Transform2D global_transform(state->get_transform());
-
-	// Add rotation constraints here? Might be something to add in the future...
-
-	set_notify_transform(false);
-	set_global_transform(global_transform);
-	set_notify_transform(true);
 }
 
 String PhysicalBone2D::get_configuration_warning() const {
@@ -200,24 +187,27 @@ void PhysicalBone2D::_auto_configure_joint() {
 }
 
 void PhysicalBone2D::_start_physics_simulation() {
-	if (_internal_simulate_physics || !parent_skeleton) {
+	if (_internal_simulate_physics) {
 		return;
 	}
 
 	// Reset to Bone2D position
 	_position_at_bone2d();
 
+	// Let the RigidBody executing its force integration.
 	PhysicsServer2D::get_singleton()->body_set_force_integration_callback(get_rid(), this, "_direct_state_changed");
+
+	// Apply the layers and masks
+	PhysicsServer2D::get_singleton()->body_set_collision_layer(get_rid(), get_collision_layer());
+	PhysicsServer2D::get_singleton()->body_set_collision_mask(get_rid(), get_collision_mask());
+
 	_internal_simulate_physics = true;
 }
 
 void PhysicalBone2D::_stop_physics_simulation() {
-	if (!parent_skeleton) {
-		return;
-	}
-
 	if (_internal_simulate_physics) {
-		PhysicsServer3D::get_singleton()->body_set_force_integration_callback(get_rid(), nullptr, "");
+		// Stop the RigidBody from executing its force integration.
+		PhysicsServer2D::get_singleton()->body_set_force_integration_callback(get_rid(), nullptr, "");
 		_internal_simulate_physics = false;
 
 		// Reset to Bone2D position
@@ -242,8 +232,8 @@ void PhysicalBone2D::set_simulate_physics(bool p_simulate) {
 	if (p_simulate == simulate_physics) {
 		return;
 	}
-
 	simulate_physics = p_simulate;
+
 	if (simulate_physics) {
 		_start_physics_simulation();
 	} else {
@@ -340,6 +330,8 @@ void PhysicalBone2D::_bind_methods() {
 }
 
 PhysicalBone2D::PhysicalBone2D() {
+	// Stop the RigidBody from executing its force integration.
+	PhysicsServer2D::get_singleton()->body_set_force_integration_callback(get_rid(), nullptr, "");
 }
 
 PhysicalBone2D::~PhysicalBone2D() {
