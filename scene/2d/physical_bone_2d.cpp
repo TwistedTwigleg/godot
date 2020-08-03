@@ -30,22 +30,10 @@
 
 #include "physical_bone_2d.h"
 
-void PhysicalBone2D::_get_property_list(List<PropertyInfo> *p_list) const {
-}
-
-bool PhysicalBone2D::_set(const StringName &p_path, const Variant &p_value) {
-	return true;
-}
-
-bool PhysicalBone2D::_get(const StringName &p_path, Variant &r_ret) const {
-	return true;
-}
-
 void PhysicalBone2D::_notification(int p_what) {
 	if (p_what == NOTIFICATION_ENTER_TREE) {
 		_find_skeleton_parent();
 		_find_joint_child();
-		_update_bone2d_cache();
 
 		// Configure joint
 		if (child_joint && auto_configure_joint) {
@@ -251,7 +239,6 @@ bool PhysicalBone2D::is_simulating_physics() const {
 
 void PhysicalBone2D::set_bone2d_nodepath(const NodePath &p_nodepath) {
 	bone2d_nodepath = p_nodepath;
-	_update_bone2d_cache();
 	_change_notify();
 }
 
@@ -282,31 +269,6 @@ void PhysicalBone2D::set_bone2d_index(int p_bone_idx) {
 
 int PhysicalBone2D::get_bone2d_index() const {
 	return bone2d_index;
-}
-
-void PhysicalBone2D::_update_bone2d_cache() {
-	if (!is_inside_tree()) {
-		return;
-	}
-
-	bone2d_node_cache = ObjectID();
-	if (parent_skeleton) {
-		if (parent_skeleton->is_inside_tree()) {
-			if (parent_skeleton->has_node(bone2d_nodepath)) {
-				Node *node = parent_skeleton->get_node(bone2d_nodepath);
-				ERR_FAIL_COND_MSG(!node || parent_skeleton == node,
-						"Cannot update Bone2d cache: node is a Skeleton2D or cannot be found!");
-				bone2d_node_cache = node->get_instance_id();
-
-				Bone2D *bone = Object::cast_to<Bone2D>(node);
-				if (bone) {
-					bone2d_index = bone->get_index_in_skeleton();
-				} else {
-					ERR_FAIL_MSG("Bone2D cache: Nodepath to Bone2D is not a Bone2D node!");
-				}
-			}
-		}
-	}
 }
 
 void PhysicalBone2D::_bind_methods() {

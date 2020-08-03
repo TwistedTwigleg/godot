@@ -134,7 +134,7 @@ void Bone2D::_notification(int p_what) {
 		update();
 
 		if (get_parent()) {
-			Bone2D* parent_bone = Object::cast_to<Bone2D>(get_parent());
+			Bone2D *parent_bone = Object::cast_to<Bone2D>(get_parent());
 			if (parent_bone) {
 				parent_bone->update();
 			}
@@ -170,7 +170,6 @@ void Bone2D::_notification(int p_what) {
 #ifdef TOOLS_ENABLED
 	// Bone2D Editor gizmo drawing:
 	if (p_what == NOTIFICATION_DRAW) {
-
 		// Only draw the gizmo in the editor!
 		if (Engine::get_singleton()->is_editor_hint() == false) {
 			return;
@@ -472,7 +471,7 @@ void Bone2D::set_length(float p_length) {
 	length = p_length;
 
 #ifdef TOOLS_ENABLED
-		update();
+	update();
 #endif // TOOLS_ENABLED
 }
 
@@ -484,7 +483,7 @@ void Bone2D::set_bone_angle(float p_angle) {
 	bone_angle = p_angle;
 
 #ifdef TOOLS_ENABLED
-		update();
+	update();
 #endif // TOOLS_ENABLED
 }
 

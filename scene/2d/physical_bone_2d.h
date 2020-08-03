@@ -40,9 +40,6 @@ class PhysicalBone2D : public RigidBody2D {
 	GDCLASS(PhysicalBone2D, RigidBody2D);
 
 protected:
-	bool _set(const StringName &p_name, const Variant &p_value);
-	bool _get(const StringName &p_name, Variant &r_ret) const;
-	void _get_property_list(List<PropertyInfo> *p_list) const;
 	void _notification(int p_what);
 	static void _bind_methods();
 
@@ -50,7 +47,6 @@ private:
 	Skeleton2D *parent_skeleton;
 	int bone2d_index = -1;
 	NodePath bone2d_nodepath;
-	ObjectID bone2d_node_cache;
 
 	// TODO: make child joint only required if there is a PhysicalBone2D child. Root PhysicalBone2D nodes shouldn't need joints.
 	Joint2D *child_joint;
@@ -65,8 +61,6 @@ private:
 
 	void _start_physics_simulation();
 	void _stop_physics_simulation();
-
-	void _update_bone2d_cache();
 	void _position_at_bone2d();
 
 public:
